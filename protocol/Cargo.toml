@@ -1,0 +1,18 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "protocol"
+version = "0.1.0"
+authors = ["Facebook Inc"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+common = {path = "../common", version = "0.1.0"}
+crypto = {path = "../crypto", version = "0.1.0"}
+
+log = "0.4"
+env_logger = "0.7.1"
+csv = "1.1.1"

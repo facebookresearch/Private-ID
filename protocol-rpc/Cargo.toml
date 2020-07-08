@@ -1,0 +1,73 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "protocol-rpc"
+version = "0.1.0"
+authors = ["Facebook Inc"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "cross-psi-server"
+path = "src/rpc/cross-psi/server.rs"
+
+[[bin]]
+name = "cross-psi-client"
+path = "src/rpc/cross-psi/client.rs"
+
+[[bin]]
+name = "private-id-server"
+path = "src/rpc/private-id/server.rs"
+
+[[bin]]
+name = "private-id-client"
+path = "src/rpc/private-id/client.rs"
+
+[[bin]]
+name = "pjc-server"
+path = "src/rpc/pjc/server.rs"
+
+[[bin]]
+name = "pjc-client"
+path = "src/rpc/pjc/client.rs"
+
+[lib]
+name = "rpc"
+path = "src/lib.rs"
+
+[features]
+avx2 = ["crypto/avx2"]
+
+[dependencies]
+common = {path = "../common", version = "0.1.0"}
+crypto = {path = "../crypto", version = "0.1.0"}
+protocol = {path = "../protocol", version = "0.1.0"}
+
+log = "0.4"
+env_logger = "0.7.1"
+tonic = {version="0.1.1", features=["tls", "tls-roots", "prost"]}
+tokio = { version = "0.2", features = ["sync", "rt-threaded", "time", "stream", "fs", "macros"] }
+tokio-rustls = "0.12.1"
+tower = { version = "0.3.0" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+prost-types = "0.6"
+prost = "0.6"
+futures =  { version = "0.3", features = ["thread-pool", "alloc"]}
+http = "0.2"
+url = "2.1.0"
+async-stream = "0.2"
+rayon = "1.3.0"
+bytes = "0.4"
+clap = "~2.33.0"
+csv = "1.1.1"
+indicatif = "0.13.0"
+ctrlc = "3.1.3"
+retry = "0.5.1"
+bincode = "1.2.1"
+
+
+[build-dependencies]
+tonic-build = {  version = "0.1.1" }

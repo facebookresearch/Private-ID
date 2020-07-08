@@ -1,0 +1,15 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+# SPDX-License-Identifier: Apache-2.0
+
+edition = "2018"
+unstable_features = true
+comment_width = 100
+merge_imports = true
+use_field_init_shorthand = true
+wrap_comments = true
+
+# Ignore generated files.
+ignore = [
+"./protocol-rpc/src/proto/stub_gen_cross_psi.rs",
+"./protocol-rpc/src/proto/stub_gen_private_id.rs",
+]

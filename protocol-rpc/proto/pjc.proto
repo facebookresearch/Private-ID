@@ -1,0 +1,55 @@
+//  Copyright (c) Facebook, Inc. and its affiliates.
+//  SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+package pjc;
+
+import "common.proto";
+
+message Init {
+    common.Payload public_key = 1;
+}
+
+message InitAck {
+}
+
+message FeatureQuery {
+   uint64 feature_index = 1;
+}
+
+message FeatureAck {
+    FeatureQuery query_ack = 1;
+}
+
+message KeysAck {}
+
+message Commitment {}
+
+message CommitmentAck {}
+
+message EncryptedSum {
+    common.Payload payload = 1;
+}
+
+message Stats {
+    repeated EncryptedSum encrypted_sums  = 1;
+}
+message StatsAck {}
+
+message ServiceResponse {
+    oneof Ack {
+        KeysAck keys_ack = 1;
+        FeatureAck feature_ack = 2;
+        InitAck init_ack = 3;
+    }
+}
+
+service PJC {
+    rpc KeyExchange(Init) returns(InitAck){}
+    rpc RecvUCompanyKeys(ServiceResponse) returns(stream common.Payload) {}
+    rpc SendECompanyKeys(stream common.Payload) returns(ServiceResponse) {}
+    rpc SendUPartnerKeys(stream common.Payload) returns(ServiceResponse) {}
+    rpc SendUPartnerFeature(stream common.Payload) returns(ServiceResponse) {}
+
+    rpc RecvStats(Commitment) returns (Stats) {}
+}
