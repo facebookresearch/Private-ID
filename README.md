@@ -36,7 +36,7 @@ env RUST_LOG=info cargo run --bin private-id-client -- \
 --tls-dir etc/example/dummy_certs
 ```
 
-### CROSS-PSI 
+### PS3I 
 
 This protocol does an inner join based on email addresses as keys and then generates additive share of a feature associated with that email address. The shares are generated in the designated output files as 64 bit numbers
 
