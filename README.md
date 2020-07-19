@@ -4,7 +4,7 @@ Private-ID is a collection of algorithms to match records between two parties, w
 
 ### Build
 
-Private-ID is implemented in Rust to take advantage of the languages security features and to leverage the encrypion libraries that we depend on. It should compile with the nightly Rust toolchain.
+Private-ID is implemented in Rust to take advantage of the languages security features and to leverage the encryption libraries that we depend on. It should compile with the nightly Rust toolchain.
 
 The following should build and run the unit tests for the building blocks used by the protocols
 
@@ -61,7 +61,7 @@ env RUST_LOG=info cargo run --bin cross-psi-client -- \
 ```
 
 ### Private Join and Compute
-This is an implementation of Google's [Private Join and Compute](https://github.com/google/private-join-and-compute) protocol, that does a inner join based on email addresses and computes a sum of the corresppnding feature for the Partner.
+This is an implementation of Google's [Private Join and Compute](https://github.com/google/private-join-and-compute) protocol, that does a inner join based on email addresses and computes a sum of the corresponding feature for the Partner.
 
 ```bash
 env RUST_LOG=info cargo run --bin pjc-client -- \
