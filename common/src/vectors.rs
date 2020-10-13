@@ -84,12 +84,12 @@ where
 ///
 /// assert_eq!(v, vec![1, 2, 3]);
 /// ```
-pub fn dedup_unstable<T>(v: &mut Vec<T>, TRY_PARALLEL: bool)
+pub fn dedup_unstable<T>(v: &mut Vec<T>, allow_parallel: bool)
 where
     T: Ord + Send,
 {
     const LARGE_INPUT: usize = 1000000;
-    if v.len() < LARGE_INPUT || !TRY_PARALLEL {
+    if v.len() < LARGE_INPUT || !allow_parallel {
         debug!("Using sequential implementation of the vector");
         v.sort_unstable();  // web assembly can only use this
     } else {
