@@ -6,7 +6,7 @@ extern crate rand_core;
 extern crate rayon;
 extern crate sha2;
 
-use rand_core::OsRng;
+use crate::random::CsRng;  // web-capable abstraction replacing rand_core::OsRng
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sha2::Sha512;
 use std::fmt::{Debug, Error, Formatter};
@@ -288,14 +288,13 @@ impl Debug for ECRistrettoParallel {
 /// [CSPRNG](https://rust-num.github.io/num/rand/index.html#cryptographic-security)
 /// random generator.
 pub fn gen_scalar() -> Scalar {
-    let mut rng = OsRng;
+    let mut rng = CsRng::new();
     Scalar::random(&mut rng)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{distributions, thread_rng, Rng};
 
     fn vec_compare<T: PartialEq>(va: &[T], vb: &[T]) -> bool {
         (va.len() == vb.len()) &&  // zip stops at the shortest
@@ -312,7 +311,7 @@ mod tests {
     }
 
     fn gen_points(n: usize) -> Vec<RistrettoPoint> {
-        let mut rng = OsRng;
+        let mut rng = CsRng::new();
         (0..n)
             .map(|_| RistrettoPoint::random(&mut rng))
             .collect::<Vec<RistrettoPoint>>()
@@ -321,7 +320,7 @@ mod tests {
     #[test]
     fn compress_decompress_works() {
         let n = 100;
-        let mut rng = OsRng;
+        let mut rng = CsRng::new();
         let key = Scalar::random(&mut rng);
         for _ in 0..3 {
             let items = gen_points(n);
@@ -356,7 +355,7 @@ mod tests {
 
     #[test]
     fn exp_op_is_identical_for_serial_and_parr() {
-        let mut rng = OsRng;
+        let mut rng = CsRng::new();
         let n = 100;
         // let chunk_size = 3;
         // its important to keep the chunk size smaller
@@ -375,7 +374,7 @@ mod tests {
 
     #[test]
     fn enc_op_is_identical_for_serial_and_parr() {
-        let mut rng = OsRng;
+        let mut rng = CsRng::new();
         let n = 100;
         // let chunk_size = 3;
         for _ in 0..10 {

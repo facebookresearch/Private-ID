@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 common = {path = "../common", version = "0.1.0"}
 crypto = {path = "../crypto", version = "0.1.0"}
+serde_json = "1.0"
 
 log = "0.4"
 env_logger = "0.7.1"

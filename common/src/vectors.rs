@@ -71,7 +71,8 @@ where
 /// De-duplicates the slice in place
 /// the vector becomes sorted.
 ///
-/// The alg switches to parallel implementation for the sizes larger than 1M records
+/// The alg switches to parallel implementation
+/// for sizes larger than 1M records when supported.
 ///
 /// ## Example
 ///
@@ -79,20 +80,20 @@ where
 /// use common::vectors;
 ///
 /// let mut v = vec![1, 2, 3, 1, 1];
-/// vectors::dedup_unstable(&mut v);
+/// vectors::dedup_unstable(&mut v, true);
 ///
 /// assert_eq!(v, vec![1, 2, 3]);
 /// ```
-pub fn dedup_unstable<T>(v: &mut Vec<T>)
+pub fn dedup_unstable<T>(v: &mut Vec<T>, TRY_PARALLEL: bool)
 where
     T: Ord + Send,
 {
     const LARGE_INPUT: usize = 1000000;
-    if v.len() < LARGE_INPUT {
+    if v.len() < LARGE_INPUT || !TRY_PARALLEL {
         debug!("Using sequential implementation of the vector");
-        v.sort_unstable()
+        v.sort_unstable();  // web assembly can only use this
     } else {
-        debug!("Using paerallel implementation of the vector");
+        debug!("Using parallel implementation of the vector");
         v.par_sort_unstable();
     }
     v.dedup();
@@ -136,15 +137,15 @@ mod tests {
     #[test]
     fn test_dedup() {
         let mut v = vec![1, 2, 3, 1, 1];
-        dedup_unstable(&mut v);
+        dedup_unstable(&mut v, true);
         assert_eq!(v, vec![1, 2, 3]);
 
         let mut v2: Vec<i8> = vec![];
-        dedup_unstable(&mut v2);
+        dedup_unstable(&mut v2, true);
         assert_eq!(v2, vec![]);
 
         let mut v3: Vec<i8> = vec![1, 1, 1, 1, 1];
-        dedup_unstable(&mut v3);
+        dedup_unstable(&mut v3, true);
         assert_eq!(v3, vec![1]);
     }
 
@@ -157,7 +158,7 @@ mod tests {
             .take(x.len() * 1000001)
             .map(|x| *x)
             .collect::<Vec<u8>>();
-        dedup_unstable(&mut y);
+        dedup_unstable(&mut y, true);
         assert_eq!(y, vec![1u8, 2u8, 3u8]);
     }
 }

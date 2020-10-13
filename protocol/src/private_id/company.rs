@@ -6,9 +6,13 @@ extern crate csv;
 use std::sync::{Arc, RwLock};
 
 use crypto::{
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
+    eccipher::{gen_scalar, ECCipher},
     prelude::*,
 };
+#[cfg(target_arch = "wasm32")]
+use crypto::eccipher::ECRistrettoSequential as ECRistretto;
+#[cfg(not(target_arch = "wasm32"))]
+use crypto::eccipher::ECRistrettoParallel as ECRistretto;
 
 use common::{
     files,
@@ -17,7 +21,7 @@ use common::{
 };
 
 use crate::{
-    fileio::{load_data, KeyedCSV},
+    fileio::{load_data, load_json, KeyedCSV},
     private_id::traits::CompanyPrivateIdProtocol,
 };
 
@@ -26,7 +30,7 @@ use super::{fill_permute, ProtocolError};
 #[derive(Debug)]
 pub struct CompanyPrivateId {
     private_keys: (Scalar, Scalar),
-    ec_cipher: ECRistrettoParallel,
+    ec_cipher: ECRistretto,
     // TODO: consider using dyn pid::crypto::ECCipher trait?
     plain_data: Arc<RwLock<KeyedCSV>>,
     permutation: Arc<RwLock<Vec<usize>>>,
@@ -45,7 +49,7 @@ impl CompanyPrivateId {
     pub fn new() -> CompanyPrivateId {
         CompanyPrivateId {
             private_keys: (gen_scalar(), gen_scalar()),
-            ec_cipher: ECRistrettoParallel::default(),
+            ec_cipher: ECRistretto::default(),
             plain_data: Arc::new(RwLock::default()),
             permutation: Arc::new(RwLock::default()),
             v_company: Arc::new(RwLock::default()),
@@ -64,6 +68,17 @@ impl CompanyPrivateId {
             (*self.plain_data.clone().read().unwrap()).records.len(),
         );
     }
+
+    pub fn load_json(&self, json: &str, input_with_headers: bool) -> bool {
+        let success = load_json(self.plain_data.clone(), json, input_with_headers);
+        if success {
+            fill_permute(
+                self.permutation.clone(),
+                (*self.plain_data.clone().read().unwrap()).records.len(),
+            );
+        }
+        success
+    }
 }
 
 impl Default for CompanyPrivateId {
@@ -80,9 +95,9 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                 .clone()
                 .write()
                 .map(|mut d| {
-                    let t = timer::Timer::new_silent("Load e_company");
+                    #[cfg(not(target_arch="wasm32"))]  let t = timer::Timer::new_silent("Load e_company");
                     d.append(&mut self.ec_cipher.to_points(&data));
-                    t.qps("deserialize", data.len());
+                    #[cfg(not(target_arch="wasm32"))]  t.qps("deserialize", data.len());
                 })
                 .map_err(|_| {
                     ProtocolError::ErrorDeserialization("Cannot load e_company".to_string())
@@ -92,9 +107,9 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                 .clone()
                 .write()
                 .map(|mut d| {
-                    let t = timer::Timer::new_silent("Load v_company");
+                    #[cfg(not(target_arch="wasm32"))]  let t = timer::Timer::new_silent("Load v_company");
                     d.append(&mut self.ec_cipher.to_points(&data));
-                    t.qps("deserialize", data.len());
+                    #[cfg(not(target_arch="wasm32"))]  t.qps("deserialize", data.len());
                 })
                 .map_err(|_| {
                     ProtocolError::ErrorDeserialization("Cannot load v_company".to_string())
@@ -108,14 +123,14 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
             .clone()
             .write()
             .map(|mut data| {
-                let t = timer::Timer::new_silent("load_u_partner");
+                #[cfg(not(target_arch="wasm32"))]  let t = timer::Timer::new_silent("load_u_partner");
                 if data.is_empty() {
                     data.extend(
                         &self
                             .ec_cipher
                             .to_points_encrypt(&u_partner_payload, &self.private_keys.0),
                     );
-                    t.qps("deserialize_exp", u_partner_payload.len());
+                    #[cfg(not(target_arch="wasm32"))]  t.qps("deserialize_exp", u_partner_payload.len());
                 }
             })
             .map_err(|err| {
@@ -133,14 +148,14 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
             .clone()
             .write()
             .map(|mut data| {
-                let t = timer::Timer::new_silent("load_s_prime_partner");
+                #[cfg(not(target_arch="wasm32"))]  let t = timer::Timer::new_silent("load_s_prime_partner");
                 if data.is_empty() {
                     for k in &s_prime_partner_payload {
                         let record = (*self.plain_data.clone().read().unwrap())
                             .get_empty_record_with_key(k.to_string(), na_val);
                         data.push(record);
                     }
-                    t.qps("deserialize_exp", s_prime_partner_payload.len());
+                    #[cfg(not(target_arch="wasm32"))]  t.qps("deserialize_exp", s_prime_partner_payload.len());
                 }
             })
             .map_err(|err| {
@@ -154,19 +169,19 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
     fn get_permuted_keys(&self) -> Result<TPayload, ProtocolError> {
         match self.plain_data.clone().read() {
             Ok(pdata) => {
-                let t = timer::Timer::new_silent("u_company");
+                #[cfg(not(target_arch="wasm32"))]  let t = timer::Timer::new_silent("u_company");
                 let plain_keys = pdata.get_plain_keys();
                 let mut u = self
                     .ec_cipher
                     .hash_encrypt_to_bytes(&plain_keys.as_slice(), &self.private_keys.0);
-                t.qps("encryption", u.len());
+                #[cfg(not(target_arch="wasm32"))]  t.qps("encryption", u.len());
 
                 self.permutation
                     .clone()
                     .read()
                     .map(|pm| {
                         permute(&pm, &mut u);
-                        t.qps("permutation", pm.len());
+                        #[cfg(not(target_arch="wasm32"))]  t.qps("permutation", pm.len());
                         u
                     })
                     .map_err(|err| {
@@ -188,9 +203,9 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
             .clone()
             .read()
             .map(|data| {
-                let t = timer::Timer::new_silent("v_partner");
+                #[cfg(not(target_arch="wasm32"))]  let t = timer::Timer::new_silent("v_partner");
                 let u = self.ec_cipher.encrypt_to_bytes(&data, &self.private_keys.1);
-                t.qps("exp_serialize", u.len());
+                #[cfg(not(target_arch="wasm32"))]  t.qps("exp_serialize", u.len());
                 u
             })
             .map_err(|err| {
@@ -314,5 +329,34 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                     .unwrap();
             })
             .map_err(|_| ProtocolError::ErrorIO("Unable to write company view to file".to_string()))
+    }
+
+    fn stringify_id_map(&self, use_row_numbers: bool) -> String {
+        let mut output = "".to_owned();
+        let _ = self
+            .id_map
+            .clone()
+            .read()
+            .map(|view_map| {
+                let mut slice = view_map.iter().collect::<Vec<_>>();
+                if slice.iter().any(|vec| vec.is_empty()) {
+                    panic!("Got empty rows to print out");
+                }
+                slice[0..].sort_by(|a, b| a[0].cmp(&b[0]));
+
+                output.push_str("-----BEGIN FULL VIEW-----");
+                output.push_str("\n");
+                for (i, line) in slice.iter().enumerate() {
+                    let mut record = line.to_vec();
+                    if use_row_numbers {
+                        record[0] = i.to_string();
+                    }
+                    output.push_str(&format!("{}", record.join("\t")));
+                    output.push_str("\n");
+                }
+                output.push_str("-----END FULL VIEW-----");
+                output.push_str("\n");
+            });
+        output
     }
 }
