@@ -295,6 +295,7 @@ pub fn gen_scalar() -> Scalar {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{distributions, thread_rng, Rng};
 
     fn vec_compare<T: PartialEq>(va: &[T], vb: &[T]) -> bool {
         (va.len() == vb.len()) &&  // zip stops at the shortest
