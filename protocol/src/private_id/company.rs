@@ -332,31 +332,6 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
     }
 
     fn stringify_id_map(&self, use_row_numbers: bool) -> String {
-        let mut output = "".to_owned();
-        let _ = self
-            .id_map
-            .clone()
-            .read()
-            .map(|view_map| {
-                let mut slice = view_map.iter().collect::<Vec<_>>();
-                if slice.iter().any(|vec| vec.is_empty()) {
-                    panic!("Got empty rows to print out");
-                }
-                slice[0..].sort_by(|a, b| a[0].cmp(&b[0]));
-
-                output.push_str("-----BEGIN FULL VIEW-----");
-                output.push_str("\n");
-                for (i, line) in slice.iter().enumerate() {
-                    let mut record = line.to_vec();
-                    if use_row_numbers {
-                        record[0] = i.to_string();
-                    }
-                    output.push_str(&format!("{}", record.join("\t")));
-                    output.push_str("\n");
-                }
-                output.push_str("-----END FULL VIEW-----");
-                output.push_str("\n");
-            });
-        output
+        files::stringify_id_map(self.id_map.clone(), use_row_numbers)
     }
 }
