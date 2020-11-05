@@ -15,6 +15,7 @@ pub trait PartnerPrivateIdProtocol {
 
     fn create_id_map(&self, partner: TPayload, company: TPayload, na_val: Option<&str>);
     fn print_id_map(&self, limit: usize, input_with_headers: bool, use_row_numbers: bool);
+    fn stringify_id_map(&self, use_row_numbers: bool) -> String;
     fn save_id_map(
         &self,
         path: &str,
@@ -41,6 +42,7 @@ pub trait CompanyPrivateIdProtocol {
     ) -> Result<(), ProtocolError>;
 
     fn print_id_map(&self, limit: usize, input_with_headers: bool, use_row_numbers: bool);
+    fn stringify_id_map(&self, use_row_numbers: bool) -> String;
     fn save_id_map(
         &self,
         path: &str,

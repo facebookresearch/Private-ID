@@ -6,9 +6,13 @@ extern crate csv;
 use std::sync::{Arc, RwLock};
 
 use crypto::{
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
+    eccipher::{gen_scalar, ECCipher},
     prelude::*,
 };
+#[cfg(target_arch = "wasm32")]
+use crypto::eccipher::ECRistrettoSequential as ECRistretto;
+#[cfg(not(target_arch = "wasm32"))]
+use crypto::eccipher::ECRistrettoParallel as ECRistretto;
 
 use common::{
     files,
@@ -17,7 +21,7 @@ use common::{
 };
 
 use crate::{
-    fileio::{load_data, KeyedCSV},
+    fileio::{load_data, load_json, KeyedCSV},
     private_id::traits::CompanyPrivateIdProtocol,
 };
 
@@ -26,7 +30,7 @@ use super::{fill_permute, ProtocolError};
 #[derive(Debug)]
 pub struct CompanyPrivateId {
     private_keys: (Scalar, Scalar),
-    ec_cipher: ECRistrettoParallel,
+    ec_cipher: ECRistretto,
     // TODO: consider using dyn pid::crypto::ECCipher trait?
     plain_data: Arc<RwLock<KeyedCSV>>,
     permutation: Arc<RwLock<Vec<usize>>>,
@@ -45,7 +49,7 @@ impl CompanyPrivateId {
     pub fn new() -> CompanyPrivateId {
         CompanyPrivateId {
             private_keys: (gen_scalar(), gen_scalar()),
-            ec_cipher: ECRistrettoParallel::default(),
+            ec_cipher: ECRistretto::default(),
             plain_data: Arc::new(RwLock::default()),
             permutation: Arc::new(RwLock::default()),
             v_company: Arc::new(RwLock::default()),
@@ -63,6 +67,17 @@ impl CompanyPrivateId {
             self.permutation.clone(),
             (*self.plain_data.clone().read().unwrap()).records.len(),
         );
+    }
+
+    pub fn load_json(&self, json: &str, input_with_headers: bool) -> bool {
+        let success = load_json(self.plain_data.clone(), json, input_with_headers);
+        if success {
+            fill_permute(
+                self.permutation.clone(),
+                (*self.plain_data.clone().read().unwrap()).records.len(),
+            );
+        }
+        success
     }
 }
 
@@ -314,5 +329,9 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                     .unwrap();
             })
             .map_err(|_| ProtocolError::ErrorIO("Unable to write company view to file".to_string()))
+    }
+
+    fn stringify_id_map(&self, use_row_numbers: bool) -> String {
+        files::stringify_id_map(self.id_map.clone(), use_row_numbers)
     }
 }

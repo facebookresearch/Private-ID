@@ -6,8 +6,13 @@ use std::{
     fmt::{Error, Formatter},
     ops::SubAssign,
     sync::{Arc, RwLock},
-    time::Instant,
 };
+
+// OS
+#[cfg(not(target_arch = "wasm32"))]  use time::Instant;
+
+// Web browser
+#[cfg(target_arch = "wasm32")]  use wasm_timer::Instant;
 
 /// A simple struct that allows to do naive timing outputs
 ///
@@ -199,8 +204,12 @@ impl Timer {
     /// Resets the duration of an internal timer
     /// useful when reusing the timer
     pub fn reset(&self) {
-        if let Ok(mut t) = self.start.clone().write() {
+        if cfg!(target_arch = "wasm32") {
+            panic!("Reset not implimented for wasm-timer")
+        } else if let Ok(mut t) = self.start.clone().write() {
             let z = t.elapsed();
+
+            #[cfg(not(target_arch = "wasm32"))]  // No method `sub_assign` implimented for wasm-timer: don't compile.
             t.sub_assign(z);
         } else {
             panic!("Unable to reset the timer")

@@ -12,6 +12,7 @@ use std::{
 
 use crate::shared::TFeatures;
 use common::{files, timer};
+use serde_json::{Value};
 
 /// load text and update the protocol
 pub fn load_data_with_features<T>(
@@ -91,7 +92,7 @@ impl KeyedCSV {
         }
         record
     }
-    /// Returns a writable CSV record extended with non-key values from the input CSV  
+    /// Returns a writable CSV record extended with non-key values from the input CSV
     /// If there is no other column but key, it adds the plain key for debugging purposes
     pub fn get_record_with_keys(&self, enc_key: String, raw_key: &str) -> Vec<String> {
         let mut record = vec![enc_key];
@@ -137,4 +138,42 @@ pub fn load_data(data: Arc<RwLock<KeyedCSV>>, path: &str, has_headers: bool) {
         }
         t.qps("text read", text_len);
     }
+}
+
+pub fn load_json(data: Arc<RwLock<KeyedCSV>>, json_table: &str, has_headers: bool) -> bool {
+    // Read json object from dynamic str into the expected Vec<Vec> form (previously from a CSV)
+    let table: Value = serde_json::from_str(json_table).unwrap();
+    let table: &Vec<Value> = table.as_array().unwrap();
+    let table_len = table.len();
+
+    let mut lines: Vec<Vec<String>> = vec![vec!["".to_string()]; table.len()];  // -OR- files::read_csv_as_strings(path)
+    for (row_num, row) in table.iter().enumerate() {
+        // info!("Row #{}\t{}", row_num, row);
+        lines[row_num] = vec![row.as_str().unwrap().to_string()];
+    }
+
+    let mut ret = false;
+    if let Ok(mut wguard) = data.write() {
+        if wguard.records.is_empty() {
+            let mut line_it = lines.drain(..);
+            if has_headers {
+                if let Some(headers) = line_it.next() {
+                    wguard.headers = headers;
+                }
+            }
+            for line in line_it {
+                if let Some((key, rest)) = line.split_first() {
+                    wguard.records.insert(key.to_string(), rest.to_vec());
+                }
+            }
+            let keys_len = wguard.records.len();
+            info!(
+                "Read {} lines from json (dedup: {} lines)",
+                table_len,
+                table_len - keys_len
+            );
+            ret = true
+        }
+    }
+    ret
 }
