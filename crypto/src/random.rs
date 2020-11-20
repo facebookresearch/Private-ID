@@ -1,3 +1,6 @@
+//  Copyright (c) Facebook, Inc. and its affiliates.
+//  SPDX-License-Identifier: Apache-2.0
+
 // Web-capable implementation of RngCore to replace the one in rand_core::OsRng
 
 extern crate rand_core;
