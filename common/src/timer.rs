@@ -9,7 +9,7 @@ use std::{
 };
 
 // OS
-#[cfg(not(target_arch = "wasm32"))]  use time::Instant;
+#[cfg(not(target_arch = "wasm32"))]  use std::time::Instant;
 
 // Web browser
 #[cfg(target_arch = "wasm32")]  use wasm_timer::Instant;
