@@ -1,368 +1,337 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate common;
-extern crate crypto;
+extern crate csv;
 
-use log::info;
-use std::{
-    collections::HashMap,
-    path::Path,
-    sync::{Arc, RwLock},
+use std::sync::{Arc, RwLock};
+
+use crypto::{
+    eccipher::{gen_scalar, ECCipher},
+    prelude::*,
+};
+#[cfg(target_arch = "wasm32")]
+use crypto::eccipher::ECRistrettoSequential as ECRistretto;
+#[cfg(not(target_arch = "wasm32"))]
+use crypto::eccipher::ECRistrettoParallel as ECRistretto;
+
+use common::{
+    files,
+    permutations::{permute, undo_permute},
+    timer,
 };
 
 use crate::{
-    cross_psi::traits::*,
-    fileio::load_data_with_features,
-    shared::{LoadData, Reveal, ShareableEncKey, TFeatures},
+    fileio::{load_data, load_json, KeyedCSV},
+    private_id::traits::CompanyPrivateIdProtocol,
 };
-use common::timer;
 
-use crypto::{
-    eccipher,
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    he,
-    he::PaillierParallel,
-    prelude::{rand_bigints, BigInt, ByteBuffer, EncryptionKey, Scalar, TPayload},
-};
+use super::{fill_permute, ProtocolError};
 
 #[derive(Debug)]
-pub struct CompanyCrossPsi {
-    ec_cipher: eccipher::ECRistrettoParallel,
-    he_cipher: he::PaillierParallel,
+pub struct CompanyPrivateId {
+    private_keys: (Scalar, Scalar),
+    ec_cipher: ECRistretto,
+    // TODO: consider using dyn pid::crypto::ECCipher trait?
+    plain_data: Arc<RwLock<KeyedCSV>>,
+    permutation: Arc<RwLock<Vec<usize>>>,
 
-    ec_key: Scalar,
-    partner_he_public_key: Arc<RwLock<EncryptionKey>>,
+    v_company: Arc<RwLock<Vec<TPoint>>>,
+    e_company: Arc<RwLock<Vec<TPoint>>>,
+    e_partner: Arc<RwLock<Vec<TPoint>>>,
 
-    self_num_records: Arc<RwLock<usize>>,
-    self_num_features: Arc<RwLock<usize>>,
-    partner_num_records: Arc<RwLock<usize>>,
-    partner_num_features: Arc<RwLock<usize>>,
+    s_prime_company: Arc<RwLock<Vec<ByteBuffer>>>,
+    s_prime_partner: Arc<RwLock<Vec<ByteBuffer>>>,
 
-    plaintext_keys: Arc<RwLock<Vec<String>>>,
-    plaintext_features: Arc<RwLock<TFeatures>>,
-
-    self_permutation: Arc<RwLock<Vec<usize>>>,
-    // These are double encrypted - once by partner
-    // and once by company
-    encrypted_company_keys: Arc<RwLock<TPayload>>,
-
-    partner_intersection_mask: Arc<RwLock<Vec<bool>>>,
-    self_intersection_indices: Arc<RwLock<Vec<usize>>>,
-
-    //TODO: WARN: this is single column only (yet)
-    additive_mask: Arc<RwLock<Vec<BigInt>>>,
-    partner_shares: Arc<RwLock<HashMap<usize, TPayload>>>,
-    self_shares: Arc<RwLock<HashMap<usize, Vec<BigInt>>>>,
+    id_map: Arc<RwLock<Vec<Vec<String>>>>,
 }
 
-impl CompanyCrossPsi {
-    pub fn new() -> CompanyCrossPsi {
-        CompanyCrossPsi {
-            ec_cipher: ECRistrettoParallel::new(),
-            he_cipher: PaillierParallel::new(),
-
-            ec_key: gen_scalar(),
-            partner_he_public_key: Arc::new(RwLock::new(EncryptionKey {
-                n: BigInt::zero(),
-                nn: BigInt::zero(),
-            })),
-
-            self_num_records: Arc::new(RwLock::default()),
-            self_num_features: Arc::new(RwLock::default()),
-            partner_num_records: Arc::new(RwLock::default()),
-            partner_num_features: Arc::new(RwLock::default()),
-
-            plaintext_features: Arc::new(RwLock::default()),
-            plaintext_keys: Arc::new(RwLock::default()),
-
-            self_permutation: Arc::new(RwLock::default()),
-
-            encrypted_company_keys: Arc::new(RwLock::default()),
-
-            partner_intersection_mask: Arc::new(RwLock::default()),
-            self_intersection_indices: Arc::new(RwLock::default()),
-
-            additive_mask: Arc::new(RwLock::default()),
-            partner_shares: Arc::new(RwLock::default()),
-            self_shares: Arc::new(RwLock::default()),
+impl CompanyPrivateId {
+    pub fn new() -> CompanyPrivateId {
+        CompanyPrivateId {
+            private_keys: (gen_scalar(), gen_scalar()),
+            ec_cipher: ECRistretto::default(),
+            plain_data: Arc::new(RwLock::default()),
+            permutation: Arc::new(RwLock::default()),
+            v_company: Arc::new(RwLock::default()),
+            e_company: Arc::new(RwLock::default()),
+            e_partner: Arc::new(RwLock::default()),
+            s_prime_company: Arc::new(RwLock::default()),
+            s_prime_partner: Arc::new(RwLock::default()),
+            id_map: Arc::new(RwLock::default()),
         }
     }
 
-    pub fn get_self_num_features(&self) -> usize {
-        *self.self_num_features.clone().read().unwrap()
+    pub fn load_data(&self, path: &str, input_with_headers: bool) {
+        load_data(self.plain_data.clone(), path, input_with_headers);
+        fill_permute(
+            self.permutation.clone(),
+            (*self.plain_data.clone().read().unwrap()).records.len(),
+        );
     }
 
-    pub fn get_self_num_records(&self) -> usize {
-        *self.self_num_records.clone().read().unwrap()
-    }
-
-    pub fn get_partner_num_features(&self) -> usize {
-        *self.partner_num_features.clone().read().unwrap()
-    }
-
-    pub fn get_partner_num_records(&self) -> usize {
-        *self.partner_num_records.clone().read().unwrap()
-    }
-
-    pub fn set_partner_num_features(&self, partner_num_features: usize) {
-        *self.partner_num_features.clone().write().unwrap() = partner_num_features;
-    }
-
-    pub fn set_partner_num_records(&self, partner_num_records: usize) {
-        *self.partner_num_records.clone().write().unwrap() = partner_num_records;
-    }
-
-    pub fn set_partner_he_public_key(&self, partner_he_pub_key: EncryptionKey) {
-        *self.partner_he_public_key.clone().write().unwrap() = partner_he_pub_key;
-    }
-
-    pub fn fill_permute_self(&self) {
-        if let Ok(mut permute) = self.self_permutation.clone().write() {
-            permute.clear();
-            permute.append(&mut common::permutations::gen_permute_pattern(
-                self.get_self_num_records(),
-            ));
+    pub fn load_json(&self, json: &str, input_with_headers: bool) -> bool {
+        let success = load_json(self.plain_data.clone(), json, input_with_headers);
+        if success {
+            fill_permute(
+                self.permutation.clone(),
+                (*self.plain_data.clone().read().unwrap()).records.len(),
+            );
         }
+        success
     }
 }
 
-impl Default for CompanyCrossPsi {
+impl Default for CompanyPrivateId {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl LoadData for CompanyCrossPsi {
-    fn load_data<T>(&self, input_path: T)
-    where
-        T: AsRef<Path>,
-    {
-        load_data_with_features(
-            input_path,
-            self.plaintext_keys.clone(),
-            self.plaintext_features.clone(),
-            self.self_num_features.clone(),
-            self.self_num_records.clone(),
-        )
+impl CompanyPrivateIdProtocol for CompanyPrivateId {
+    fn set_encrypted_company(&self, name: String, data: TPayload) -> Result<(), ProtocolError> {
+        match name.as_str() {
+            "e_company" => self
+                .e_company
+                .clone()
+                .write()
+                .map(|mut d| {
+                    let t = timer::Timer::new_silent("Load e_company");
+                    d.append(&mut self.ec_cipher.to_points(&data));
+                    t.qps("deserialize", data.len());
+                })
+                .map_err(|_| {
+                    ProtocolError::ErrorDeserialization("Cannot load e_company".to_string())
+                }),
+            "v_company" => self
+                .v_company
+                .clone()
+                .write()
+                .map(|mut d| {
+                    let t = timer::Timer::new_silent("Load v_company");
+                    d.append(&mut self.ec_cipher.to_points(&data));
+                    t.qps("deserialize", data.len());
+                })
+                .map_err(|_| {
+                    ProtocolError::ErrorDeserialization("Cannot load v_company".to_string())
+                }),
+            _ => panic!("wrong name"),
+        }
     }
-}
 
-impl ShareableEncKey for CompanyCrossPsi {
-    fn get_he_public_key(&self) -> EncryptionKey {
-        (*self.he_cipher.enc_key.clone()).clone()
+    fn set_encrypted_partner_keys(&self, u_partner_payload: TPayload) -> Result<(), ProtocolError> {
+        self.e_partner
+            .clone()
+            .write()
+            .map(|mut data| {
+                let t = timer::Timer::new_silent("load_u_partner");
+                if data.is_empty() {
+                    data.extend(
+                        &self
+                            .ec_cipher
+                            .to_points_encrypt(&u_partner_payload, &self.private_keys.0),
+                    );
+                    t.qps("deserialize_exp", u_partner_payload.len());
+                }
+            })
+            .map_err(|err| {
+                error!("Cannot load e_company {}", err);
+                ProtocolError::ErrorDeserialization("cannot load u_partner".to_string())
+            })
     }
-}
 
-impl CompanyCrossPsiProtocol for CompanyCrossPsi {
-    fn get_permuted_keys(&self) -> TPayload {
-        let t = timer::Builder::new()
-            .label("u_company")
-            .size(self.get_self_num_records())
-            .build();
+    fn write_partner_to_id_map(
+        &self,
+        s_prime_partner_payload: TPayload,
+        na_val: Option<&String>,
+    ) -> Result<(), ProtocolError> {
+        self.id_map
+            .clone()
+            .write()
+            .map(|mut data| {
+                let t = timer::Timer::new_silent("load_s_prime_partner");
+                if data.is_empty() {
+                    for k in &s_prime_partner_payload {
+                        let record = (*self.plain_data.clone().read().unwrap())
+                            .get_empty_record_with_key(k.to_string(), na_val);
+                        data.push(record);
+                    }
+                    t.qps("deserialize_exp", s_prime_partner_payload.len());
+                }
+            })
+            .map_err(|err| {
+                error!("Cannot load s_double_prime_partner {}", err);
+                ProtocolError::ErrorDeserialization(
+                    "cannot load s_double_prime_partner".to_string(),
+                )
+            })
+    }
 
-        if let (Ok(perm), Ok(mut text)) = (
-            self.self_permutation.clone().read(),
-            self.plaintext_keys.clone().write(),
+    fn get_permuted_keys(&self) -> Result<TPayload, ProtocolError> {
+        match self.plain_data.clone().read() {
+            Ok(pdata) => {
+                let t = timer::Timer::new_silent("u_company");
+                let plain_keys = pdata.get_plain_keys();
+                let mut u = self
+                    .ec_cipher
+                    .hash_encrypt_to_bytes(&plain_keys.as_slice(), &self.private_keys.0);
+                t.qps("encryption", u.len());
+
+                self.permutation
+                    .clone()
+                    .read()
+                    .map(|pm| {
+                        permute(&pm, &mut u);
+                        t.qps("permutation", pm.len());
+                        u
+                    })
+                    .map_err(|err| {
+                        error!("Cannot permute {}", err);
+                        ProtocolError::ErrorEncryption("cannot permute u_company".to_string())
+                    })
+            }
+            Err(e) => {
+                error!("Unable to encrypt UCompany: {}", e);
+                Err(ProtocolError::ErrorEncryption(
+                    "cannot encrypt UCompany".to_string(),
+                ))
+            }
+        }
+    }
+
+    fn get_encrypted_partner_keys(&self) -> Result<TPayload, ProtocolError> {
+        self.e_partner
+            .clone()
+            .read()
+            .map(|data| {
+                let t = timer::Timer::new_silent("v_partner");
+                let u = self.ec_cipher.encrypt_to_bytes(&data, &self.private_keys.1);
+                t.qps("exp_serialize", u.len());
+                u
+            })
+            .map_err(|err| {
+                error!("Unable to encrypt VPartner: {}", err);
+                ProtocolError::ErrorDeserialization("cannot encrypt VPartner".to_string())
+            })
+    }
+
+    fn calculate_set_diff(&self) -> Result<(), ProtocolError> {
+        match (
+            self.e_partner.clone().read(),
+            self.e_company.clone().read(),
+            self.s_prime_company.clone().write(),
+            self.s_prime_partner.clone().write(),
         ) {
-            common::permutations::permute(perm.as_slice(), &mut text);
-            let res = self
-                .ec_cipher
-                .hash_encrypt_to_bytes(text.as_slice(), &self.ec_key);
-            t.qps("keys EC enc", res.len());
-            res
-        } else {
-            panic!("Unable to make u_company keys happen")
+            (Ok(e_partner), Ok(e_company), Ok(mut s_prime_company), Ok(mut s_prime_partner)) => {
+                let e_company_bytes = self
+                    .ec_cipher
+                    .encrypt_to_bytes(&e_company, &self.private_keys.1);
+                let e_partner_bytes = self
+                    .ec_cipher
+                    .encrypt_to_bytes(&e_partner, &self.private_keys.1);
+
+                s_prime_partner.clear();
+                s_prime_partner.extend(common::vectors::subtract_set(
+                    &e_partner_bytes,
+                    &e_company_bytes,
+                ));
+
+                s_prime_company.clear();
+                s_prime_company.extend(common::vectors::subtract_set(
+                    &e_company_bytes,
+                    &e_partner_bytes,
+                ));
+                Ok(())
+            }
+            _ => {
+                error!("Unable to obtain locks to buffers for set diff operation");
+                Err(ProtocolError::ErrorCalcSetDiff(
+                    "cannot calculate set difference".to_string(),
+                ))
+            }
         }
     }
 
-    fn get_permuted_features(&self, feature_id: usize) -> TPayload {
-        let t = timer::Builder::new()
-            .silent(true)
-            .label("u_company")
-            .size(self.get_self_num_records())
-            .build();
+    fn get_set_diff_output(&self, name: String) -> Result<TPayload, ProtocolError> {
+        match name.as_str() {
+            "s_prime_partner" => self
+                .s_prime_partner
+                .clone()
+                .read()
+                .map(|data| data.to_vec())
+                .map_err(|err| {
+                    error!("Unable to get s_prime_partner: {}", err);
+                    ProtocolError::ErrorDeserialization("cannot obtain s_prime_partner".to_string())
+                }),
+            "s_prime_company" => self
+                .s_prime_company
+                .clone()
+                .read()
+                .map(|data| data.to_vec())
+                .map_err(|err| {
+                    error!("Unable to get s_prime_company: {}", err);
+                    ProtocolError::ErrorDeserialization("cannot obtain s_prime_company".to_string())
+                }),
+            _ => panic!("wrong name"),
+        }
+    }
 
-        if let (Ok(perm), Ok(mut features)) = (
-            self.self_permutation.clone().read(),
-            self.plaintext_features.clone().write(),
+    fn write_company_to_id_map(&self) {
+        match (
+            self.permutation.clone().read(),
+            self.plain_data.clone().read(),
+            self.v_company.clone().read(),
+            self.id_map.clone().write(),
         ) {
-            let feature = &mut features[feature_id];
-            common::permutations::permute(perm.as_slice(), feature);
-
-            let res = self.he_cipher.enc_serialise_u64(&feature);
-            t.qps(format!("feature {} HE enc", feature_id).as_str(), res.len());
-            res
-        } else {
-            panic!("Cannot HE encrypt column {} ", feature_id);
-        }
-    }
-
-    fn set_encrypted_company_keys(&self, mut data: TPayload) {
-        if let Ok(mut keys) = self.encrypted_company_keys.clone().write() {
-            keys.clear();
-            keys.extend(data.drain(..))
-        } else {
-            panic!("Cannot upload e_company keys");
-        }
-    }
-
-    fn generate_additive_shares(&self, feature_id: usize, values: TPayload) {
-        let t = timer::Builder::new()
-            .label("server")
-            .silent(true)
-            .extra_label("additive shares mask")
-            .build();
-        let filtered_values: TPayload =
-            if let Ok(mask) = self.partner_intersection_mask.clone().read() {
-                values
+            (Ok(pm), Ok(plain_data), Ok(v_company), Ok(mut id_map)) => {
+                let mut company_encrypt = self.ec_cipher.encrypt(&v_company, &self.private_keys.1);
+                undo_permute(&pm, &mut company_encrypt);
+                for (k, v) in self
+                    .ec_cipher
+                    .to_bytes(&company_encrypt)
                     .iter()
-                    .zip(mask.iter())
-                    .filter(|(_, &b)| b)
-                    .map(|(a, _)| a.clone())
-                    .collect::<TPayload>()
-            } else {
-                panic!("unable to get masked vals")
-            };
+                    .zip(plain_data.get_plain_keys().iter())
+                {
+                    let record = plain_data.get_record_with_keys(k.to_string(), &v);
+                    id_map.push(record);
+                }
 
-        // Generate random mask
-        {
-            *self.additive_mask.clone().write().unwrap() = rand_bigints(filtered_values.len());
-        }
-
-        if let (Ok(key), Ok(mask), Ok(mut partner_shares)) = (
-            self.partner_he_public_key.clone().read(),
-            self.additive_mask.clone().read(),
-            self.partner_shares.clone().write(),
-        ) {
-            let res = self
-                .he_cipher
-                .subtract_plaintext(&key, filtered_values, &mask);
-            t.qps("masking values in the intersection", res.len());
-            partner_shares.insert(feature_id, res);
-        } else {
-            panic!("Unable to add additive shares with the intersection")
-        }
-    }
-
-    fn get_shares(&self, feature_index: usize) -> TPayload {
-        if let Ok(mut shares) = self.partner_shares.clone().write() {
-            if !shares.contains_key(&feature_index) {
-                panic!("No feature_index {} for shares", feature_index);
-            }
-            shares.remove(&feature_index).unwrap()
-        } else {
-            panic!("Unable to read shares");
-        }
-    }
-
-    fn set_self_shares(&self, feature_index: usize, data: TPayload) {
-        if let Ok(mut shares) = self.self_shares.clone().write() {
-            info!(
-                "Saving self-shares for feature index {} len {}",
-                feature_index,
-                data.len()
-            );
-            shares.insert(feature_index, self.he_cipher.decrypt(data));
-        } else {
-            panic!("Unable to write shares");
-        }
-    }
-
-    fn calculate_intersection(&self, keys: TPayload) {
-        let partner_keys = self.ec_cipher.to_bytes(
-            &self
-                .ec_cipher
-                .to_points_encrypt(keys.as_slice(), &self.ec_key),
-        );
-
-        // find the index of the intersection
-
-        if let (Ok(company_keys), Ok(mut partner_mask), Ok(mut company_indices)) = (
-            self.encrypted_company_keys.clone().read(),
-            self.partner_intersection_mask.clone().write(),
-            self.self_intersection_indices.clone().write(),
-        ) {
-            if company_keys.is_empty() {
-                panic!("e_partner keys should be uploaded after e_company keys are uploaded");
-            }
-
-            partner_mask.clear();
-
-            partner_mask.extend(common::vectors::vec_intersection_mask(
-                partner_keys.as_slice(),
-                company_keys.as_slice(),
-            ));
-
-            // TODO: can this be a parallel forall
-            for (flag, partner_key) in partner_mask.iter().zip(&partner_keys) {
-                if *flag {
-                    let index = company_keys
-                        .iter()
-                        .position(|x| *x == *partner_key)
-                        .unwrap();
-                    company_indices.push(index);
+                if !plain_data.headers.is_empty() {
+                    id_map.insert(0, plain_data.headers.clone());
                 }
             }
-
-            info!(
-                "Company-Partner Intersection size: {}",
-                company_indices.len()
-            );
-        } else {
-            panic!("Unable to find interesection");
+            _ => panic!("Cannot make v"),
         }
     }
 
-    fn get_company_indices(&self) -> TPayload {
-        if let Ok(indices) = self.self_intersection_indices.clone().read() {
-            let mut index_buffer: TPayload = Vec::with_capacity(indices.len());
-            for index in indices.iter() {
-                index_buffer.push(ByteBuffer {
-                    buffer: (*index as u64).to_le_bytes().to_vec(),
-                });
-            }
-            index_buffer
-        } else {
-            panic!("Unable to fetch company indices");
-        }
+    fn print_id_map(&self, limit: usize, input_with_headers: bool, use_row_numbers: bool) {
+        let _ = self
+            .id_map
+            .clone()
+            .read()
+            .map(|data| {
+                files::write_vec_to_stdout(&data, limit, input_with_headers, use_row_numbers)
+                    .unwrap()
+            })
+            .map_err(|_| {});
     }
-}
 
-impl Reveal for CompanyCrossPsi {
-    fn reveal<T: AsRef<Path>>(&self, path: T) {
-        if let (Ok(indices), Ok(additive_mask), Ok(mut self_shares)) = (
-            self.self_intersection_indices.clone().read(),
-            self.additive_mask.clone().read(),
-            self.self_shares.clone().write(),
-        ) {
-            let max_val = BigInt::one() << 64;
+    fn save_id_map(
+        &self,
+        path: &str,
+        input_with_headers: bool,
+        use_row_numbers: bool,
+    ) -> Result<(), ProtocolError> {
+        self.id_map
+            .clone()
+            .write()
+            .map(|mut data| {
+                files::write_vec_to_csv(&mut data, path, input_with_headers, use_row_numbers)
+                    .unwrap();
+            })
+            .map_err(|_| ProtocolError::ErrorIO("Unable to write company view to file".to_string()))
+    }
 
-            let mut filtered_shares: Vec<BigInt> = Vec::with_capacity(indices.len());
-
-            for index in indices.iter() {
-                filtered_shares.push((self_shares[&0][*index]).clone());
-            }
-            self_shares.remove(&0);
-
-            let company_shares = filtered_shares
-                .iter()
-                .map(|z| (Option::<u64>::from(&z.mod_floor(&max_val))).unwrap())
-                .collect::<Vec<u64>>();
-
-            let partner_shares: Vec<u64> = additive_mask
-                .iter()
-                .map(|z| (Option::<u64>::from(&z.mod_floor(&max_val))).unwrap())
-                .collect::<Vec<u64>>();
-
-            let mut out: Vec<Vec<u64>> =
-                Vec::with_capacity(self.get_self_num_features() + self.get_partner_num_features());
-            out.push(partner_shares);
-            out.push(company_shares);
-            info!("revealing columns to output file");
-            common::files::write_u64cols_to_file(&mut out, path).unwrap();
-        } else {
-            panic!("Unable to reveal");
-        }
+    fn stringify_id_map(&self, use_row_numbers: bool) -> String {
+        files::stringify_id_map(self.id_map.clone(), use_row_numbers)
     }
 }
