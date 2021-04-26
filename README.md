@@ -79,4 +79,4 @@ env RUST_LOG=info cargo run --bin pjc-server -- \
 --tls-dir etc/example/dummy_certs
 ```
 ## License
-Private-ID is Apache 2.0 licensed, as found in the LICENSE file
+Private-ID is Apache 2.0 licensed, as found in the [LICENSE](/LICENSE) file
