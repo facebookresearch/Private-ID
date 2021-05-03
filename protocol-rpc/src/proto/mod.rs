@@ -9,6 +9,10 @@ pub mod gen_private_id {
     tonic::include_proto!("privateid");
 }
 
+pub mod gen_private_id_multi_key {
+    tonic::include_proto!("privateidmultikey");
+}
+
 pub mod gen_crosspsi {
     tonic::include_proto!("crosspsi");
 }
@@ -17,16 +21,24 @@ pub mod gen_pjc {
     tonic::include_proto!("pjc");
 }
 
+pub mod gen_suid_create {
+    tonic::include_proto!("suidcreate");
+}
+
 pub mod streaming;
 
 use gen_crosspsi::cross_psi_client::CrossPsiClient;
 use gen_pjc::pjc_client::PjcClient;
 use gen_private_id::private_id_client::PrivateIdClient;
+use gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClient;
+use gen_suid_create::suid_create_client::SuidCreateClient;
 use tonic::transport::Channel;
 pub enum RpcClient {
     PrivateId(PrivateIdClient<Channel>),
+    PrivateIdMultiKey(PrivateIdMultiKeyClient<Channel>),
     CrossPsi(CrossPsiClient<Channel>),
     Pjc(PjcClient<Channel>),
+    SuidCreate(SuidCreateClient<Channel>),
 }
 
 use crypto::{he::BigIntWrapper, prelude::*};

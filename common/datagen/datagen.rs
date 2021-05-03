@@ -145,7 +145,7 @@ fn main() {
         .unwrap()
         .parse::<usize>()
         .expect("size param");
-    let dir = matches.value_of("dir").unwrap_or_else(|| "./");
+    let dir = matches.value_of("dir").unwrap_or("./");
 
     let fn_a = format!("{}/input_{}_size_{}_cols_{}.csv", dir, "a", size, cols);
     let fn_b = format!("{}/input_{}_size_{}_cols_{}.csv", dir, "b", size, cols);

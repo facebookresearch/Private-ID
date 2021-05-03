@@ -189,6 +189,24 @@ impl PaillierParallel {
             .collect::<Vec<ByteBuffer>>()
     }
 
+    pub fn enc_serialise(&self, raw_text: &[BigInt]) -> Vec<ByteBuffer> {
+        let key = self.enc_key.clone();
+        // let zero_enc = Paillier::encrypt(key.as_ref(), RawPlaintext::from(BigInt::from(0)));
+        raw_text
+            .into_par_iter()
+            //.map_with(zero_enc, |zero_enc_local, item| {
+            .map(|item| {
+                let enc_text = Paillier::encrypt(key.as_ref(), RawPlaintext::from(item.clone()));
+                ByteBuffer {
+                    buffer: bincode::serialize(&BigIntWrapper {
+                        raw: BigInt::from(enc_text),
+                    })
+                    .unwrap(),
+                }
+            })
+            .collect::<Vec<ByteBuffer>>()
+    }
+
     pub fn subtract_plaintext(
         &self,
         key: &EncryptionKey,
@@ -207,6 +225,30 @@ impl PaillierParallel {
                 );
                 let w = BigIntWrapper {
                     raw: BigInt::from(Paillier::add(key, lhs, neg_rhs)),
+                };
+                ByteBuffer {
+                    buffer: bincode::serialize(&w).unwrap(),
+                }
+            })
+            .collect::<Vec<ByteBuffer>>()
+    }
+
+    pub fn add_plaintext(
+        &self,
+        key: &EncryptionKey,
+        lhs: Vec<ByteBuffer>,
+        rhs: &[BigInt],
+    ) -> Vec<ByteBuffer> {
+        let it_lhs = lhs.into_par_iter();
+        let it_rhs = rhs.into_par_iter();
+        it_lhs
+            .zip_eq(it_rhs)
+            .map(|(lhs_bytes, rhs)| {
+                let lhs = RawCiphertext::from(
+                    (bincode::deserialize::<BigIntWrapper>(&lhs_bytes.buffer).unwrap()).raw,
+                );
+                let w = BigIntWrapper {
+                    raw: BigInt::from(Paillier::add(key, lhs, RawPlaintext::from(rhs))),
                 };
                 ByteBuffer {
                     buffer: bincode::serialize(&w).unwrap(),
@@ -307,14 +349,38 @@ mod tests {
         assert_eq!(target_sum, res_sum)
     }
 
+    // Test both subtract_plaintext and add_plaintext
+    #[test]
+    fn test_additive_shares_first() {
+        let cipher = PaillierParallel::new();
+
+        // random values generation
+        let data: Vec<u64> = aux::rand_vec_u64(1000);
+        let data_bigint: Vec<BigInt> = data.iter().map(|x| BigInt::from(*x)).collect();
+
+        // Generating masking variables from 1024 bit domain
+        let v_rand = domain::rand_bigints(data.len());
+
+        // Raw text HE encrypted
+        let data_enc = cipher.enc_serialise_u64(data.as_slice());
+
+        // HE subtract
+        let v_share1_enc = cipher.subtract_plaintext(cipher.enc_key.as_ref(), data_enc, &v_rand);
+        // HE add the same - this shouuld get us back to where we started
+        let v_raw_enc = cipher.add_plaintext(cipher.enc_key.as_ref(), v_share1_enc, &v_rand);
+
+        let v_raw = cipher.decrypt(v_raw_enc);
+        assert!(aux::vec_compare(&data_bigint, &v_raw));
+    }
+
     /// The test checks that additive shares actually work
     /// it can fail with the prob ~ 2^-960
     /// if it happens, you must be lucky!
     #[test]
-    fn test_additive_shares_bigint() {
+    fn test_additive_shares_second() {
         let cipher = PaillierParallel::new();
 
-        // that is 2^l from the paper
+        // that is 2^l
         let output_domain: u64 = 1 << 32 as u64;
 
         // Same as output domain, in BigInt type
@@ -418,6 +484,14 @@ mod tests {
             let v_enc = cipher.enc(&v);
             let v_dec = cipher.dec(&v_enc);
             assert!(aux::vec_compare(&v, &v_dec));
+        }
+
+        // Now test encrypting and decrypting as arrays
+        {
+            let cipher = PaillierParallel::new();
+            let enc_v = cipher.enc_serialise(v.as_slice());
+            let dec_v = cipher.decrypt(enc_v);
+            assert!(aux::vec_compare(&v, &dec_v));
         }
     }
 

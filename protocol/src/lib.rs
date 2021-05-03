@@ -7,10 +7,20 @@
 #[macro_use]
 extern crate log;
 
-#[cfg(not(target_arch = "wasm32"))]  pub mod cross_psi;
 pub mod fileio;
-#[cfg(not(target_arch = "wasm32"))]  pub mod pjc;
 pub mod private_id;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod cross_psi;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod pjc;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod private_id_multi_key;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod suid_create;
 
 pub mod shared {
     extern crate crypto;
@@ -24,7 +34,7 @@ pub mod shared {
     pub type TFeatures = Vec<Vec<TDomain>>;
 
     /// trait to get the encryption key
-    #[cfg(not(target_arch = "wasm32"))]  /// Omit HE becasue wasm32 only supports Private-ID+ECCipher
+    #[cfg(not(target_arch = "wasm32"))]
     pub trait ShareableEncKey {
         fn get_he_public_key(&self) -> EncryptionKey;
     }

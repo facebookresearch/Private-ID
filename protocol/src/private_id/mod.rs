@@ -28,16 +28,16 @@ impl fmt::Display for ProtocolError {
 impl Error for ProtocolError {}
 
 fn fill_permute(permutation: Arc<RwLock<Vec<usize>>>, text_len: usize) {
-    #[cfg(not(target_arch = "wasm32"))]  let _ = timer::Builder::new()
+    let _ = timer::Builder::new()
         .label("gen_permutation")
         .size(text_len)
         .build();
-    #[cfg(not(target_arch = "wasm32"))]  let t = timer::Timer::new_silent("fill permute");
+    let t = timer::Timer::new_silent("fill permute");
     if let Ok(mut wguard) = permutation.write() {
         if wguard.is_empty() {
             let mut pm = gen_permute_pattern(text_len);
             wguard.append(&mut pm);
-            #[cfg(not(target_arch = "wasm32"))]  t.qps("gen permutation", pm.len())
+            t.qps("gen permutation", pm.len())
         }
     }
 }

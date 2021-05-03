@@ -71,8 +71,8 @@ where
 /// De-duplicates the slice in place
 /// the vector becomes sorted.
 ///
-/// The alg switches to parallel implementation
-/// for sizes larger than 1M records when supported.
+/// The alg switches to parallel implementation for
+/// sizes larger than 1M records when `allow_parallel` flag is set
 ///
 /// ## Example
 ///
@@ -89,11 +89,11 @@ where
     T: Ord + Send,
 {
     const LARGE_INPUT: usize = 1000000;
-    if v.len() < LARGE_INPUT || !allow_parallel {
+    if !allow_parallel || v.len() < LARGE_INPUT {
         debug!("Using sequential implementation of the vector");
-        v.sort_unstable();  // web assembly can only use this
+        v.sort_unstable()
     } else {
-        debug!("Using parallel implementation of the vector");
+        debug!("Using paerallel implementation of the vector");
         v.par_sort_unstable();
     }
     v.dedup();

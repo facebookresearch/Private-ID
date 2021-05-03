@@ -8,11 +8,13 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-// OS
-#[cfg(not(target_arch = "wasm32"))]  use std::time::Instant;
+// Native
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
 
-// Web browser
-#[cfg(target_arch = "wasm32")]  use wasm_timer::Instant;
+// Web Broswer
+#[cfg(target_arch = "wasm32")]
+use wasm_timer::Instant;
 
 /// A simple struct that allows to do naive timing outputs
 ///
@@ -205,11 +207,9 @@ impl Timer {
     /// useful when reusing the timer
     pub fn reset(&self) {
         if cfg!(target_arch = "wasm32") {
-            panic!("Reset not implimented for wasm-timer")
+            panic!("Reset not implemented for wasm-timer")
         } else if let Ok(mut t) = self.start.clone().write() {
             let z = t.elapsed();
-
-            #[cfg(not(target_arch = "wasm32"))]  // No method `sub_assign` implimented for wasm-timer: don't compile.
             t.sub_assign(z);
         } else {
             panic!("Unable to reset the timer")

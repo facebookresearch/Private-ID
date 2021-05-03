@@ -1,0 +1,62 @@
+//  Copyright (c) Facebook, Inc. and its affiliates.
+//  SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+package privateidmultikey;
+
+import "common.proto";
+
+message Init {}
+message InitAck {}
+message UCompanyAck {}
+message WCompanyAck {}
+message ECompanyAck {}
+message UPartnerAck {}
+message VPartnerAck {}
+message SPartnerAck {}
+message SPrimePartnerAck {}
+message CalculateSetDiffAck {}
+message Commitment {}
+message CommitmentAck {}
+
+message Step1Barrier {
+    ECompanyAck e_company_ack = 1;
+    UPartnerAck u_partner_ack = 3;
+}
+
+message ServiceResponse {
+    oneof Ack {
+        Init init = 1;
+        InitAck init_ack = 2;
+        UCompanyAck u_company_ack = 3;
+        WCompanyAck w_company_ack = 4;
+        ECompanyAck e_company_ack = 5;
+        UPartnerAck u_partner_ack = 6;
+        VPartnerAck v_partner_ack = 7;
+        SPartnerAck s_partner_ack = 8;
+        SPrimePartnerAck s_prime_partner_ack = 9;
+        CalculateSetDiffAck calculate_set_diff_ack = 10;
+        Commitment commitment = 11;
+        Step1Barrier step1_barrier = 12;
+    }
+}
+
+service PrivateIdMultiKey {
+
+    rpc Initialize(Init) returns(ServiceResponse){}
+    rpc RecvUCompany(ServiceResponse) returns(stream common.Payload) {}
+
+    rpc SendECompany(stream common.Payload) returns(ServiceResponse) {}
+    rpc SendUPartner(stream common.Payload) returns(ServiceResponse) {}
+    rpc SendSPrimePartner(stream common.Payload) returns(ServiceResponse) {}
+    rpc SendWCompany(stream common.Payload) returns(ServiceResponse) {}
+
+    rpc CalculateSetDiff(Step1Barrier) returns (ServiceResponse) {}
+
+    rpc RecvSPrimeCompany(ServiceResponse) returns(stream common.Payload) {}
+    rpc RecvSPartner(ServiceResponse) returns(stream common.Payload) {}
+    rpc RecvVCompany(ServiceResponse) returns(stream common.Payload) {}
+    rpc RecvVPartner(ServiceResponse) returns(stream common.Payload) {}
+
+    rpc Reveal(Commitment) returns (CommitmentAck) {}
+}

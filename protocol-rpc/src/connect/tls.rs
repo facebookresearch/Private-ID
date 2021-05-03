@@ -67,10 +67,13 @@ impl TlsContext {
                 "Path {} is not a directory",
                 tls_dir_path.as_ref().display()
             );
-            panic!(format!(
-                "Path {} is not a directory",
-                tls_dir_path.as_ref().display()
-            ));
+            panic!(
+                "{}",
+                format!(
+                    "Path {} is not a directory",
+                    tls_dir_path.as_ref().display()
+                )
+            );
         }
         let prefix = if is_server {
             "server".to_string()

@@ -6,7 +6,7 @@ extern crate rand_core;
 extern crate rayon;
 extern crate sha2;
 
-use crate::random::CsRng;  // web-capable abstraction replacing rand_core::OsRng
+use rand::rngs::OsRng;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sha2::Sha512;
 use std::fmt::{Debug, Error, Formatter};
@@ -23,6 +23,9 @@ pub trait ECCipher {
 
     /// Given the point on a curve, exponentiates it to the power `pow`
     fn encrypt(&self, points: &[Self::Item], pow: &Scalar) -> Vec<Self::Item>;
+
+    /// Mapping plain text to EC Curve using Sha512
+    fn hash(&self, plaintext: &[String]) -> Vec<Self::Item>;
 
     /// Mapping plain text to EC Curve using Sha512
     /// and exponentiating the point to `key` power
@@ -60,6 +63,13 @@ impl ECRistrettoSequential {
 
 impl ECCipher for ECRistrettoSequential {
     type Item = RistrettoPoint;
+
+    fn hash(&self, plaintext: &[String]) -> Vec<Self::Item> {
+        plaintext
+            .iter()
+            .map(|text| RistrettoPoint::hash_from_bytes::<Sha512>(text.as_bytes()))
+            .collect::<Vec<Self::Item>>()
+    }
 
     fn hash_encrypt(&self, plaintext: &[String], key: &Scalar) -> Vec<Self::Item> {
         plaintext
@@ -176,6 +186,14 @@ impl ECCipher for ECRistrettoParallel {
 
     // TODO: parametrise type of scalar
 
+    /// Each string maps to curve (Sha512 is used)
+    fn hash(&self, plaintext: &[String]) -> Vec<Self::Item> {
+        plaintext
+            .into_par_iter()
+            .map(|item| RistrettoPoint::hash_from_bytes::<Sha512>(item.as_bytes()))
+            .collect::<Vec<Self::Item>>()
+    }
+
     /// Encryption is a two-step operation
     ///
     /// - Step1: Each string maps to curve (Sha512 is used)
@@ -288,7 +306,7 @@ impl Debug for ECRistrettoParallel {
 /// [CSPRNG](https://rust-num.github.io/num/rand/index.html#cryptographic-security)
 /// random generator.
 pub fn gen_scalar() -> Scalar {
-    let mut rng = CsRng::new();
+    let mut rng = OsRng;
     Scalar::random(&mut rng)
 }
 
@@ -312,7 +330,7 @@ mod tests {
     }
 
     fn gen_points(n: usize) -> Vec<RistrettoPoint> {
-        let mut rng = CsRng::new();
+        let mut rng = OsRng;
         (0..n)
             .map(|_| RistrettoPoint::random(&mut rng))
             .collect::<Vec<RistrettoPoint>>()
@@ -321,7 +339,7 @@ mod tests {
     #[test]
     fn compress_decompress_works() {
         let n = 100;
-        let mut rng = CsRng::new();
+        let mut rng = OsRng;
         let key = Scalar::random(&mut rng);
         for _ in 0..3 {
             let items = gen_points(n);
@@ -356,7 +374,7 @@ mod tests {
 
     #[test]
     fn exp_op_is_identical_for_serial_and_parr() {
-        let mut rng = CsRng::new();
+        let mut rng = OsRng;
         let n = 100;
         // let chunk_size = 3;
         // its important to keep the chunk size smaller
@@ -375,7 +393,7 @@ mod tests {
 
     #[test]
     fn enc_op_is_identical_for_serial_and_parr() {
-        let mut rng = CsRng::new();
+        let mut rng = OsRng;
         let n = 100;
         // let chunk_size = 3;
         for _ in 0..10 {

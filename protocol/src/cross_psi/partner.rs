@@ -122,7 +122,7 @@ impl PartnerCrossPsi {
         }
     }
 
-    pub fn permute<T: Sized>(&self, values: &mut Vec<T>) {
+    pub fn permute<T: Sized + Clone>(&self, values: &mut Vec<T>) {
         common::permutations::permute(
             self.company_permutation.clone().read().unwrap().as_slice(),
             values,
