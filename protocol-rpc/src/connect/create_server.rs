@@ -37,7 +37,7 @@ pub fn create_server(
             _ => {
                 let msg = "Supporting --tls-dir together with direct paths is not supported yet";
                 error!("{}", msg);
-                panic!(msg)
+                panic!("{}", msg)
             }
         }
     };

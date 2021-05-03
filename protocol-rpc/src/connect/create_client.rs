@@ -22,8 +22,10 @@ use tonic::transport::{ClientTlsConfig, Endpoint};
 use crate::{
     connect::tls,
     proto::{
-        gen_crosspsi::cross_psi_client::CrossPsiClient, gen_pjc::pjc_client::PjcClient,
-        gen_private_id::private_id_client::PrivateIdClient, RpcClient,
+        gen_crosspsi::cross_psi_client::CrossPsiClient,
+        gen_pjc::pjc_client::PjcClient, gen_private_id::private_id_client::PrivateIdClient,
+        gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClient,
+        gen_suid_create::suid_create_client::SuidCreateClient, RpcClient,
     },
 };
 
@@ -53,7 +55,7 @@ pub fn create_client(
             _ => {
                 let msg = "Supporting --tls-dir together with direct paths is not supported yet";
                 error!("{}", msg);
-                panic!(msg)
+                panic!("{}", msg)
             }
         }
     };
@@ -116,8 +118,12 @@ pub fn create_client(
                     .await
                     .map(|conn| match client_name.as_str() {
                         "private-id" => RpcClient::PrivateId(PrivateIdClient::new(conn)),
+                        "private-id-multi-key" => {
+                            RpcClient::PrivateIdMultiKey(PrivateIdMultiKeyClient::new(conn))
+                        }
                         "cross-psi" => RpcClient::CrossPsi(CrossPsiClient::new(conn)),
                         "pjc" => RpcClient::Pjc(PjcClient::new(conn)),
+                        "suid-create" => RpcClient::SuidCreate(SuidCreateClient::new(conn)),
                         _ => panic!("wrong client"),
                     })
             } else {
@@ -125,10 +131,16 @@ pub fn create_client(
                     "private-id" => Ok(RpcClient::PrivateId(
                         PrivateIdClient::connect(__uri).await.unwrap(),
                     )),
+                    "private-id-multi-key" => Ok(RpcClient::PrivateIdMultiKey(
+                        PrivateIdMultiKeyClient::connect(__uri).await.unwrap(),
+                    )),
                     "cross-psi" => Ok(RpcClient::CrossPsi(
                         CrossPsiClient::connect(__uri).await.unwrap(),
                     )),
                     "pjc" => Ok(RpcClient::Pjc(PjcClient::connect(__uri).await.unwrap())),
+                    "suid-create" => Ok(RpcClient::SuidCreate(
+                        SuidCreateClient::connect(__uri).await.unwrap(),
+                    )),
                     _ => panic!("wrong client"),
                 }
             }

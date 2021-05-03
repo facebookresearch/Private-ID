@@ -1,0 +1,2 @@
+Enc(pk_mpc, SUMID1)
+Enc(pk_mpc, SUMID1)

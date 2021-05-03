@@ -12,7 +12,7 @@ use std::{
 
 use crate::shared::TFeatures;
 use common::{files, timer};
-use serde_json::{Value};
+use serde_json::Value;
 
 /// load text and update the protocol
 pub fn load_data_with_features<T>(
@@ -92,7 +92,7 @@ impl KeyedCSV {
         }
         record
     }
-    /// Returns a writable CSV record extended with non-key values from the input CSV
+    /// Returns a writable CSV record extended with non-key values from the input CSV  
     /// If there is no other column but key, it adds the plain key for debugging purposes
     pub fn get_record_with_keys(&self, enc_key: String, raw_key: &str) -> Vec<String> {
         let mut record = vec![enc_key];
@@ -110,7 +110,7 @@ impl KeyedCSV {
 pub fn load_data(data: Arc<RwLock<KeyedCSV>>, path: &str, has_headers: bool) {
     let t = timer::Timer::new_silent("load");
 
-    let mut lines = files::read_csv_as_strings(path);
+    let mut lines = files::read_csv_as_strings(path, false);
     let text_len = lines.len();
 
     if let Ok(mut wguard) = data.write() {
@@ -146,9 +146,8 @@ pub fn load_json(data: Arc<RwLock<KeyedCSV>>, json_table: &str, has_headers: boo
     let table: &Vec<Value> = table.as_array().unwrap();
     let table_len = table.len();
 
-    let mut lines: Vec<Vec<String>> = vec![vec!["".to_string()]; table.len()];  // -OR- files::read_csv_as_strings(path)
+    let mut lines: Vec<Vec<String>> = vec![vec!["".to_string()]; table.len()]; // -OR- files::read_csv_as_strings(path)
     for (row_num, row) in table.iter().enumerate() {
-        // info!("Row #{}\t{}", row_num, row);
         lines[row_num] = vec![row.as_str().unwrap().to_string()];
     }
 

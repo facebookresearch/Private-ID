@@ -4,25 +4,20 @@
 extern crate rand;
 
 use rand::{thread_rng, Rng};
-use std::collections::HashSet;
 
 /// Returns random swap permutation
 ///
-/// acyclic, with the property `p[p[i]] = i`
-///
 /// `(1 2 3 4) -> (3 4 1 2)`
+/// From https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+
 pub fn gen_permute_pattern(n: usize) -> Vec<usize> {
-    let mut cache_: HashSet<usize> = std::collections::HashSet::new();
     let mut rng_ = thread_rng();
-    let mut res_: Vec<usize> = (0..n).map(|i| i).collect::<Vec<usize>>();
-    for i in 0..n {
-        let k = rng_.gen_range(0, n);
-        if !cache_.contains(&k) && !cache_.contains(&i) {
-            cache_.insert(k);
-            cache_.insert(i);
-            res_[i] = k;
-            res_[k] = i;
-        }
+    let mut res_: Vec<usize> = (0..n).collect::<Vec<usize>>();
+
+    // To shuffle an array a of n elements (indices 0..n-1):
+    for i in 0..n - 1 {
+        let j = rng_.gen_range(i, n);
+        res_.swap(i, j);
     }
     res_
 }
@@ -41,7 +36,7 @@ pub fn gen_permute_pattern(n: usize) -> Vec<usize> {
 /// assert_eq!(v[1], 'b');
 /// assert_eq!(v[2], 'a');
 /// ```
-pub fn permute<T>(permutation: &[usize], items: &mut Vec<T>) {
+pub fn permute<T: Clone>(permutation: &[usize], items: &mut Vec<T>) {
     permute_and_undo(permutation, items, true);
 }
 
@@ -59,32 +54,31 @@ pub fn permute<T>(permutation: &[usize], items: &mut Vec<T>) {
 /// assert_eq!(v[1], 'b');
 /// assert_eq!(v[2], 'c');
 /// ```
-pub fn undo_permute<T>(permutation: &[usize], items: &mut Vec<T>) {
+pub fn undo_permute<T: Clone>(permutation: &[usize], items: &mut Vec<T>) {
     permute_and_undo(permutation, items, false);
 }
 
 /// applies or un-applies permutation
-fn permute_and_undo<T>(permutation: &[usize], items: &mut Vec<T>, is_apply: bool) {
-    let mut cache_: HashSet<usize> = std::collections::HashSet::new();
-    permutation
-        .iter()
-        .enumerate()
-        .for_each(|(i, p)| match is_apply {
-            true => {
-                if !cache_.contains(p) {
-                    items.swap(i, *p);
-                    cache_.insert(i);
-                    cache_.insert(*p);
-                }
-            }
-            false => {
-                if !cache_.contains(&i) {
-                    items.swap(i, *p);
-                    cache_.insert(i);
-                    cache_.insert(*p);
-                }
-            }
-        });
+fn permute_and_undo<T: Clone>(permutation: &[usize], items: &mut Vec<T>, is_apply: bool) {
+    let mut output = items.clone();
+
+    match is_apply {
+        true => {
+            permutation
+                .iter()
+                .enumerate()
+                .for_each(|(idx, &oidx)| output[oidx] = items[idx].clone());
+        }
+        false => {
+            permutation
+                .iter()
+                .enumerate()
+                .for_each(|(idx, &oidx)| output[idx] = items[oidx].clone());
+        }
+    };
+
+    items.clear();
+    items.extend(output);
 }
 
 #[cfg(test)]
@@ -107,16 +101,6 @@ mod tests {
         for _ in 0..NUM_TEST_ITERATIONS {
             let p = gen_permute_pattern(N);
             assert_ne!(vec_compare(&p[..], &even[..]), true);
-        }
-    }
-
-    #[test]
-    fn permutation_has_swap_property() {
-        const N: usize = 100;
-        let p = gen_permute_pattern(N);
-        assert_eq!(p.len(), N);
-        for i in 0..p.len() {
-            assert_eq!(p[p[i]], i); // swapping property
         }
     }
 
@@ -145,11 +129,6 @@ mod tests {
             assert_eq!(vec_compare(&a, &v), false);
 
             let mut a_permuted = a.to_vec();
-
-            // Due to swap property - permuting twice will restore
-            // to original sequence
-            permute(&p, &mut a);
-            assert_eq!(vec_compare(&a, &v), true);
 
             undo_permute(&p, &mut a_permuted);
             assert_eq!(vec_compare(&a_permuted, &v), true);

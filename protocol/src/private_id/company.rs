@@ -5,14 +5,14 @@ extern crate csv;
 
 use std::sync::{Arc, RwLock};
 
+#[cfg(not(target_arch = "wasm32"))]
+use crypto::eccipher::ECRistrettoParallel as ECRistretto;
+#[cfg(target_arch = "wasm32")]
+use crypto::eccipher::ECRistrettoSequential as ECRistretto;
 use crypto::{
     eccipher::{gen_scalar, ECCipher},
     prelude::*,
 };
-#[cfg(target_arch = "wasm32")]
-use crypto::eccipher::ECRistrettoSequential as ECRistretto;
-#[cfg(not(target_arch = "wasm32"))]
-use crypto::eccipher::ECRistrettoParallel as ECRistretto;
 
 use common::{
     files,
@@ -69,15 +69,15 @@ impl CompanyPrivateId {
         );
     }
 
-    pub fn load_json(&self, json: &str, input_with_headers: bool) -> bool {
-        let success = load_json(self.plain_data.clone(), json, input_with_headers);
-        if success {
+    pub fn load_json(&self, path: &str, input_with_headers: bool) -> bool {
+        let status = load_json(self.plain_data.clone(), path, input_with_headers);
+        if status {
             fill_permute(
                 self.permutation.clone(),
                 (*self.plain_data.clone().read().unwrap()).records.len(),
             );
         }
-        success
+        status
     }
 }
 
@@ -332,6 +332,12 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
     }
 
     fn stringify_id_map(&self, use_row_numbers: bool) -> String {
-        files::stringify_id_map(self.id_map.clone(), use_row_numbers)
+        let id_map_str = self
+            .id_map
+            .clone()
+            .read()
+            .map(|data| files::sort_stringify_id_map(&data, use_row_numbers))
+            .map_err(|_| {});
+        id_map_str.unwrap()
     }
 }

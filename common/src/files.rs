@@ -5,7 +5,6 @@ extern crate csv;
 
 use rayon::prelude::ParallelSliceMut;
 use std::{error::Error, path::Path, str::FromStr};
-use std::sync::{Arc, RwLock};
 
 pub struct KeyedNums<T> {
     pub key: String,
@@ -67,16 +66,17 @@ pub fn transpose_keyed_nums(mut data: Vec<KeyedNums<u64>>) -> (Vec<String>, Vec<
 
 /// Reads CSV file into vector of rows,
 /// where each row is represented as a vector of strings
-pub fn read_csv_as_strings<T>(filename: T) -> Vec<Vec<String>>
+/// All zero length fields are removed
+pub fn read_csv_as_strings<T>(filename: T, is_flexible: bool) -> Vec<Vec<String>>
 where
     T: AsRef<Path>,
 {
     let mut reader = csv::ReaderBuilder::new()
         .delimiter(b',')
-        .flexible(false)
+        .flexible(is_flexible)
         .has_headers(false)
         .from_path(filename)
-        .expect("");
+        .expect("Failure reading CSV file");
     let it = reader.records();
     it.map(|x| {
         x.unwrap()
@@ -202,29 +202,26 @@ pub fn write_vec_to_stdout(
     Ok(())
 }
 
-pub fn stringify_id_map(id_map: Arc<RwLock<Vec<Vec<String>>>>, use_row_numbers: bool) -> String {
+pub fn sort_stringify_id_map(id_map: &[Vec<String>], use_row_numbers: bool) -> String {
     let mut output = "".to_owned();
-    let _ = id_map
-        .read()
-        .map(|view_map| {
-            let mut slice = view_map.iter().collect::<Vec<_>>();
-            if slice.iter().any(|vec| vec.is_empty()) {
-                panic!("Got empty rows to print out");
-            }
-            slice[0..].sort_by(|a, b| a[0].cmp(&b[0]));
 
-            output.push_str("-----BEGIN FULL VIEW-----");
-            output.push_str("\n");
-            for (i, line) in slice.iter().enumerate() {
-                let mut record = line.to_vec();
-                if use_row_numbers {
-                    record[0] = i.to_string();
-                }
-                output.push_str(&format!("{}", record.join("\t")));
-                output.push_str("\n");
-            }
-            output.push_str("-----END FULL VIEW-----");
-            output.push_str("\n");
-        });
+    let mut sorted_id_map = id_map.iter().collect::<Vec<_>>();
+    if sorted_id_map.iter().any(|vec| vec.is_empty()) {
+        panic!("Got empty rows to print out");
+    }
+    sorted_id_map[0..].sort_by(|a, b| a[0].cmp(&b[0]));
+
+    output.push_str("-----BEGIN FULL VIEW-----");
+    output.push_str("\n");
+    for (i, line) in sorted_id_map.iter().enumerate() {
+        let mut record = line.to_vec();
+        if use_row_numbers {
+            record[0] = i.to_string();
+        }
+        output.push_str(&format!("{}", record.join("\t")));
+        output.push_str("\n");
+    }
+    output.push_str("-----END FULL VIEW-----");
+    output.push_str("\n");
     output
 }
