@@ -78,5 +78,29 @@ env RUST_LOG=info cargo run --bin pjc-server -- \
 --stdout \
 --tls-dir etc/example/dummy_certs
 ```
+### SUMID
+This is an implmentation of 2-party version of Secure Universal ID protocol. This can work on multiple keys. In the current implementation, the merger party also assumes the role of one data party and the sharer party assumes the role of all the other data parties. The data parties are the `.csv` files show below
+
+To run merger
+```bash
+env RUST_LOG=info cargo run --bin suid-create-server -- \
+        --host 0.0.0.0:10010 \
+        --input etc/docker/suid/Example1/DataParty2_input.csv \
+        --stdout \
+        --tls-dir etc/docker/dummy_certs
+```
+
+To run merger
+```bash
+env RUST_LOG=info cargo run --bin suid-create-client -- \
+     --merger localhost:10010 \
+     --input etc/docker/suid/Example1/DataParty1_input.csv \
+     --input etc/docker/suid/Example1/DataParty3_input.csv \
+     --stdout \
+     --tls-dir etc/docker/dummy_certs
+```
+
+The output will be ElGamal encrypted Universal IDs assigned to each entry in the `.csv` file
+
 ## License
 Private-ID is Apache 2.0 licensed, as found in the LICENSE file
