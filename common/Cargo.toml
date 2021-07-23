@@ -23,3 +23,9 @@ hex = "0.3.0"
 serde = {version = "1.0.104", features = ["derive"] }
 num = "0.2.1"
 wasm-timer = "0.2.5"
+aws-sdk-s3 = { git = "https://github.com/awslabs/aws-sdk-rust", tag = "v0.0.9-alpha", package = "aws-sdk-s3" }
+lazy_static = "1.4.0"
+regex = "1.5.4"
+tempfile = "3.2.0"
+thiserror = "1.0.25"
+tokio = { version = "1", features = ["full"] }

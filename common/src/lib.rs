@@ -19,3 +19,6 @@ pub mod vectors;
 
 /// Permutation utils
 pub mod permutations;
+
+/// S3 path parsing
+pub mod s3_path;

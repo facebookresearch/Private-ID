@@ -93,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ])
         .get_matches();
 
-    let input_path = matches.value_of("input").unwrap_or_else(|| "input.csv");
+    let input_path = matches.value_of("input").unwrap_or("input.csv");
     let output_path = matches.value_of("output");
 
     let no_tls = matches.is_present("no-tls");
