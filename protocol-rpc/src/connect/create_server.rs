@@ -55,7 +55,7 @@ pub fn create_server(
                 ServerTlsConfig::new()
                     .identity(ctx.identity)
                     .client_ca_root(ctx.ca),
-            )
+            ).unwrap()
         }
         None => server,
     };

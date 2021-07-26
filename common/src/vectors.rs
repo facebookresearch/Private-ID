@@ -142,7 +142,7 @@ mod tests {
 
         let mut v2: Vec<i8> = vec![];
         dedup_unstable(&mut v2, true);
-        assert_eq!(v2, vec![]);
+        assert_eq!(v2, Vec::<i8>::new());
 
         let mut v3: Vec<i8> = vec![1, 1, 1, 1, 1];
         dedup_unstable(&mut v3, true);

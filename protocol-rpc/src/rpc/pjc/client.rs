@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_matches();
 
     let global_timer = timer::Timer::new_silent("global");
-    let input_path = matches.value_of("input").unwrap_or_else(|| "input.csv");
+    let input_path = matches.value_of("input").unwrap_or("input.csv");
     // let output_path = matches.value_of("output");
 
     let mut client_context = {

@@ -11,8 +11,9 @@ use crypto::prelude::*;
 
 use crate::proto::common::Payload;
 use async_stream::stream;
-use futures::stream::Stream;
+use futures::Stream;
 use std::cmp;
+use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status, Streaming};
 
 fn chunks_count<T>(data: &[T]) -> usize {
@@ -30,7 +31,7 @@ pub fn send_data(data: TPayload) -> Request<impl Stream<Item = Payload>> {
     Request::new(s)
 }
 
-pub type TPayloadStream = tokio::sync::mpsc::Receiver<Result<Payload, Status>>;
+pub type TPayloadStream = ReceiverStream<Result<Payload, Status>>;
 
 pub async fn read_from_stream(strm: &mut Streaming<Payload>) -> Result<TPayload, Status> {
     let mut res: TPayload = Vec::default();
@@ -53,5 +54,5 @@ pub fn write_to_stream(payload: TPayload) -> Response<TPayloadStream> {
             tx.send(Ok(m)).await.unwrap();
         }
     });
-    Response::new(rx)
+    Response::new(ReceiverStream::new(rx))
 }

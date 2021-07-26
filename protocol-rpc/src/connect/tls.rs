@@ -97,8 +97,8 @@ impl TlsContext {
 
 /// Converts host string into URI object
 /// The host should contain connection string
-pub fn host_into_uri(host: &str) -> Uri {
-    let url_str = host_into_url(host).to_string();
+pub fn host_into_uri(host: &str, no_tls: bool) -> Uri {
+    let url_str = host_into_url(host, no_tls).to_string();
     url_str
         .parse()
         .unwrap_or_else(|_| panic!("Unable to convert {} to URI", host))
@@ -106,10 +106,14 @@ pub fn host_into_uri(host: &str) -> Uri {
 
 /// Converts host string into URI object
 /// The host should contain connection string
-pub fn host_into_url(host: &str) -> Url {
+pub fn host_into_url(host: &str, no_tls: bool) -> Url {
     let pre = Url::parse(host).unwrap_or_else(|_| panic!("Unable to convert {} to URL", host));
     if !vec!["http", "https", "tcp"].contains(&pre.scheme()) {
-        let z = format!("https://{}", host);
+        let z = if no_tls {
+            format!("http://{}", host)
+        } else {
+            format!("https://{}", host)
+        };
         debug!("Scheme overriden to: {} (from: {})", z, host);
         Url::parse(&z).unwrap_or_else(|_| panic!("Unable to convert {} to URL", z))
     } else {
@@ -161,24 +165,24 @@ mod tests {
 
     #[test]
     fn test_input_to_url() {
-        let r = host_into_url("http://foo.bar:10009/path?1234");
+        let r = host_into_url("http://foo.bar:10009/path?1234", true);
         assert_eq!(r.domain().unwrap(), "foo.bar");
 
-        let r2 = host_into_url("http://20.00.10.10:10009/path?1234");
+        let r2 = host_into_url("http://20.00.10.10:10009/path?1234", true);
         assert!(r2.domain().is_none());
         assert_eq!(r2.host().unwrap().to_string(), "20.0.10.10");
     }
 
     #[test]
     fn test_noscheme_to_url() {
-        let r = host_into_url("foo.bar:10009/path?1234");
+        let r = host_into_url("foo.bar:10009/path?1234", false);
         assert_eq!(r.scheme(), "https");
         assert_eq!(
-            host_into_url("http://foo.bar:10009/path?1234").scheme(),
+            host_into_url("http://foo.bar:10009/path?1234", true).scheme(),
             "http"
         );
         assert_eq!(
-            host_into_url("https://foo.bar:10009/path?1234").scheme(),
+            host_into_url("https://foo.bar:10009/path?1234", false).scheme(),
             "https"
         );
     }

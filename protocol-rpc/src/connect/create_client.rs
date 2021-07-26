@@ -40,7 +40,7 @@ pub fn create_client(
     client_name: String,
 ) -> RpcClient {
     let tls_context = if no_tls {
-        warn!("Connecting to company without TLS, avid in production");
+        warn!("Connecting to company without TLS, avoid in production");
         None
     } else {
         match (tls_dir, tls_key, tls_cert, tls_ca) {
@@ -60,13 +60,13 @@ pub fn create_client(
         }
     };
 
-    let host = tls::host_into_url(&host_pre.unwrap()).to_string();
+    let host = tls::host_into_url(&host_pre.unwrap(), no_tls).to_string();
 
     let maybe_tls = match tls_context {
         Some(ctx) => {
             let domain_name = match tls_domain {
                 Some(domain) => String::from(domain),
-                None => tls::host_into_url(&host)
+                None => tls::host_into_url(&host, no_tls)
                     .domain()
                     .unwrap_or_else(|| {
                         panic!(
@@ -108,12 +108,13 @@ pub fn create_client(
         } else {
             info!("Connecting to host: {} [retry: {}]", host, retry_count)
         }
-        let __uri = tls::host_into_uri(&host);
+        let __uri = tls::host_into_uri(&host, no_tls);
         retry_count += 1;
         let z = async {
             if has_tls {
                 Endpoint::new(__uri)?
                     .tls_config(maybe_tls.clone().unwrap())
+                    .unwrap()
                     .connect()
                     .await
                     .map(|conn| match client_name.as_str() {
