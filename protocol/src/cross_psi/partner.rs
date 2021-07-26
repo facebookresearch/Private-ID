@@ -40,7 +40,7 @@ pub struct PartnerCrossPsi {
     plaintext_features: Arc<RwLock<TFeatures>>,
     company_permutation: Arc<RwLock<Vec<usize>>>,
     self_permutation: Arc<RwLock<Vec<usize>>>,
-    additive_mask: Arc<RwLock<Vec<BigInt>>>,
+    additive_mask: Arc<RwLock<HashMap<usize, Vec<BigInt>>>>,
     self_shares: Arc<RwLock<HashMap<usize, Vec<BigInt>>>>,
     company_intersection_indices: Arc<RwLock<Vec<usize>>>,
 }
@@ -215,9 +215,9 @@ impl PartnerCrossPsiProtocol for PartnerCrossPsi {
         )
     }
 
-    fn generate_additive_shares(&self, _: usize, values: TPayload) -> TPayload {
+    fn generate_additive_shares(&self, feature_index: usize, values: TPayload) -> TPayload {
         {
-            *self.additive_mask.clone().write().unwrap() = rand_bigints(values.len());
+            self.additive_mask.clone().write().unwrap().insert(feature_index, rand_bigints(values.len()));
         }
 
         if let (Ok(key), Ok(mask)) = (
@@ -225,7 +225,7 @@ impl PartnerCrossPsiProtocol for PartnerCrossPsi {
             self.additive_mask.clone().read(),
         ) {
             self.he_cipher
-                .subtract_plaintext(key.deref(), values, &mask)
+                .subtract_plaintext(key.deref(), values, &mask[&feature_index])
         } else {
             panic!("Cannot mask with additive shares")
         }
@@ -243,37 +243,38 @@ impl PartnerCrossPsiProtocol for PartnerCrossPsi {
 
 impl Reveal for PartnerCrossPsi {
     fn reveal<T: AsRef<Path>>(&self, path: T) {
-        if let (Ok(indices), Ok(mut self_shares), Ok(mut additive_mask)) = (
+        if let (Ok(indices), Ok(self_shares), Ok(additive_mask)) = (
             self.company_intersection_indices.clone().read(),
             self.self_shares.clone().write(),
             self.additive_mask.clone().write(),
         ) {
             let output_mod = BigInt::one() << 64;
             let n = BigInt::one() << 1024;
-
-            let mut filtered_shares: Vec<BigInt> = Vec::with_capacity(indices.len());
-
-            for index in indices.iter() {
-                filtered_shares.push(additive_mask[*index].clone());
-            }
-            additive_mask.clear();
-
-            let company_shares = filtered_shares
-                .iter()
-                .map(|e| (Option::<u64>::from(&mod_sub(e, &n, &output_mod))).unwrap())
-                .collect::<Vec<u64>>();
-
-            let partner_shares = self_shares
-                .remove(&0)
-                .unwrap()
-                .iter()
-                .map(|e| (Option::<u64>::from(&mod_sub(e, &n, &output_mod))).unwrap())
-                .collect::<Vec<u64>>();
-
             let mut out: Vec<Vec<u64>> =
-                Vec::with_capacity(self.get_self_num_features() + self.get_company_num_features());
-            out.push(partner_shares);
-            out.push(company_shares);
+            Vec::with_capacity(self.get_self_num_features() + self.get_company_num_features());
+
+            for feature_index in 0..self.get_self_num_features() + self.get_company_num_features() {
+
+                if feature_index < self.get_self_num_features() {
+                    let partner_shares = self_shares[&feature_index]
+                    .iter()
+                    .map(|e| (Option::<u64>::from(&mod_sub(e, &n, &output_mod))).unwrap())
+                    .collect::<Vec<u64>>();
+                    out.push(partner_shares);
+                }
+                else {
+                    let mut filtered_shares: Vec<BigInt> = Vec::with_capacity(indices.len());
+                    for index in indices.iter() {
+                        filtered_shares.push(additive_mask[&(feature_index - self.get_self_num_features())][*index]
+                        .clone());
+                    };
+                    let company_shares = filtered_shares
+                        .iter()
+                        .map(|e| (Option::<u64>::from(&mod_sub(e, &n, &output_mod))).unwrap())
+                        .collect::<Vec<u64>>();
+                    out.push(company_shares);
+                }
+            }
             info!("revealing columns to output file");
             common::files::write_u64cols_to_file(&mut out, path).unwrap();
         }
