@@ -5,7 +5,9 @@
 #![crate_name = "crypto"]
 
 pub mod eccipher;
+pub mod gcd;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod he;
+pub mod paillier;
 pub mod prelude;
+pub mod prime;
 pub mod spoint;

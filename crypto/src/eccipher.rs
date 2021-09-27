@@ -6,7 +6,7 @@ extern crate rand_core;
 extern crate rayon;
 extern crate sha2;
 
-use rand::rngs::OsRng;
+use rand::{rngs::OsRng, RngCore};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sha2::Sha512;
 use std::fmt::{Debug, Error, Formatter};
@@ -307,7 +307,9 @@ impl Debug for ECRistrettoParallel {
 /// random generator.
 pub fn gen_scalar() -> Scalar {
     let mut rng = OsRng;
-    Scalar::random(&mut rng)
+    let mut scalar_bytes = [0u8; 64];
+    rng.fill_bytes(&mut scalar_bytes);
+    Scalar::from_bytes_mod_order_wide(&scalar_bytes)
 }
 
 #[cfg(test)]
@@ -326,13 +328,18 @@ mod tests {
         thread_rng()
             .sample_iter(&distributions::Alphanumeric)
             .take(size)
+            .map(char::from)
             .collect()
     }
 
     fn gen_points(n: usize) -> Vec<RistrettoPoint> {
         let mut rng = OsRng;
         (0..n)
-            .map(|_| RistrettoPoint::random(&mut rng))
+            .map(|_| {
+                let mut uniform_bytes = [0u8; 64];
+                rng.fill_bytes(&mut uniform_bytes);
+                RistrettoPoint::from_uniform_bytes(&uniform_bytes)
+            })
             .collect::<Vec<RistrettoPoint>>()
     }
 
@@ -340,7 +347,11 @@ mod tests {
     fn compress_decompress_works() {
         let n = 100;
         let mut rng = OsRng;
-        let key = Scalar::random(&mut rng);
+        let key = {
+            let mut scalar_bytes = [0u8; 64];
+            rng.fill_bytes(&mut scalar_bytes);
+            Scalar::from_bytes_mod_order_wide(&scalar_bytes)
+        };
         for _ in 0..3 {
             let items = gen_points(n);
             let seq = ECRistrettoSequential::new();
@@ -373,7 +384,7 @@ mod tests {
     }
 
     #[test]
-    fn exp_op_is_identical_for_serial_and_parr() {
+    fn exp_op_is_identical_for_serial_and_parallel() {
         let mut rng = OsRng;
         let n = 100;
         // let chunk_size = 3;
@@ -381,7 +392,11 @@ mod tests {
         // we need to test that the order is preserved
         // assert!(chunk_size < n);
         for _ in 0..3 {
-            let key = Scalar::random(&mut rng);
+            let key = {
+                let mut scalar_bytes = [0u8; 64];
+                rng.fill_bytes(&mut scalar_bytes);
+                Scalar::from_bytes_mod_order_wide(&scalar_bytes)
+            };
             let points = gen_points(n);
             let seq = ECRistrettoSequential::new();
             let parr = ECRistrettoParallel::new();
@@ -392,12 +407,16 @@ mod tests {
     }
 
     #[test]
-    fn enc_op_is_identical_for_serial_and_parr() {
+    fn enc_op_is_identical_for_serial_and_parallel() {
         let mut rng = OsRng;
         let n = 100;
         // let chunk_size = 3;
         for _ in 0..10 {
-            let key = Scalar::random(&mut rng);
+            let key = {
+                let mut scalar_bytes = [0u8; 64];
+                rng.fill_bytes(&mut scalar_bytes);
+                Scalar::from_bytes_mod_order_wide(&scalar_bytes)
+            };
             let text = (0..n).map(|_| random_string(16)).collect::<Vec<String>>();
 
             let seq = ECRistrettoSequential::default();
