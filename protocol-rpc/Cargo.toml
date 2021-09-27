@@ -63,7 +63,7 @@ protocol = {path = "../protocol", version = "0.1.0"}
 
 log = "0.4"
 env_logger = "0.7.1"
-tonic = {version="0.4.3", features=["tls", "tls-roots", "prost"]}
+tonic = {version="0.5.2", features=["tls", "tls-roots", "prost"]}
 tokio = { version = "1.0", features = ["rt-multi-thread", "time", "fs", "macros", "net"] }
 tokio-stream = { version =  "0.1.6", features = ["net"] }
 tokio-rustls = "0.22"
@@ -88,4 +88,4 @@ tempfile = "3.2.0"
 
 
 [build-dependencies]
-tonic-build = { version = "0.4.2" }
+tonic-build = { version = "0.5.2" }

@@ -122,17 +122,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let global_timer = timer::Timer::new_silent("global");
     let input_path_str = matches.value_of("input").unwrap_or("input.csv");
-    let input_path = match S3Path::from_str(&input_path_str) {
+    let input_path = match S3Path::from_str(input_path_str) {
         Ok(s3_path) => {
-            info!("Reading {} from S3 and copying to local path", input_path_str);
-            let local_path = s3_path.copy_to_local().await
+            info!(
+                "Reading {} from S3 and copying to local path",
+                input_path_str
+            );
+            let local_path = s3_path
+                .copy_to_local()
+                .await
                 .expect("Failed to copy s3 path to local tempfile");
-        info!("Wrote {} to tempfile {}", input_path_str, local_path);
+            info!("Wrote {} to tempfile {}", input_path_str, local_path);
             local_path
-        },
-        Err(_) => {
-            input_path_str.to_string()
         }
+        Err(_) => input_path_str.to_string(),
     };
     let input_with_headers = matches.is_present("input-with-headers");
     let output_path = matches.value_of("output");
@@ -315,14 +318,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     partner_protocol.create_id_map(v_partner, s_prime_company, na_val);
     match output_path {
         Some(p) => {
-            if let Ok(output_path_s3) = S3Path::from_str(&p) {
+            if let Ok(output_path_s3) = S3Path::from_str(p) {
                 let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
                 let (_file, path) = s3_tempfile.keep().unwrap();
                 let path = path.to_str().expect("Failed to convert path to str");
                 partner_protocol
                     .save_id_map(&String::from(path), input_with_headers, use_row_numbers)
                     .expect("Failed to save id map to tempfile");
-                output_path_s3.copy_from_local(&path).await.expect("Failed to write to S3");
+                output_path_s3
+                    .copy_from_local(&path)
+                    .await
+                    .expect("Failed to write to S3");
             } else {
                 partner_protocol
                     .save_id_map(&String::from(p), input_with_headers, use_row_numbers)

@@ -221,7 +221,7 @@ impl SuidCreate for SUIDCreateService {
             .extra_label("reveal")
             .build();
         match &self.output_path {
-            Some(p) => self.protocol.save_suids_data(&p).unwrap(),
+            Some(p) => self.protocol.save_suids_data(p).unwrap(),
             None => self.protocol.print_suids_data(),
         }
         {

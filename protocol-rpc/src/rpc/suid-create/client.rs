@@ -314,7 +314,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 13. Pop off SUIDS for party that merger sent
     let suids_party_merger = {
         let mut x = suids_for_parties.pop().unwrap();
-        x.0.extend(x.1.drain(..));
+        x.0.append(&mut x.1);
         x.0
     };
 

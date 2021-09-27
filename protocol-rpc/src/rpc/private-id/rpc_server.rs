@@ -8,11 +8,13 @@ extern crate protocol;
 extern crate tokio;
 extern crate tonic;
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::{
+    str::FromStr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
-use std::str::FromStr;
 use tonic::{Code, Request, Response, Status, Streaming};
 
 use common::{s3_path::S3Path, timer};
@@ -234,19 +236,25 @@ impl PrivateId for PrivateIdService {
         self.protocol.write_company_to_id_map();
         match &self.output_path {
             Some(p) => {
-                if let Ok(output_path_s3) = S3Path::from_str(&p) {
+                if let Ok(output_path_s3) = S3Path::from_str(p) {
                     let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
                     let (_file, path) = s3_tempfile.keep().unwrap();
                     let path = path.to_str().expect("Failed to convert path to str");
                     self.protocol
-                        .save_id_map(&String::from(path), self.input_with_headers, self.use_row_numbers)
+                        .save_id_map(
+                            &String::from(path),
+                            self.input_with_headers,
+                            self.use_row_numbers,
+                        )
                         .expect("Failed to save id map to tempfile");
-                    output_path_s3.copy_from_local(&path).await.expect("Failed to write to S3");
+                    output_path_s3
+                        .copy_from_local(&path)
+                        .await
+                        .expect("Failed to write to S3");
                 } else {
-                self
-                    .protocol
-                    .save_id_map(&p, self.input_with_headers, self.use_row_numbers)
-                    .unwrap();
+                    self.protocol
+                        .save_id_map(p, self.input_with_headers, self.use_row_numbers)
+                        .unwrap();
                 }
             }
             None => self
