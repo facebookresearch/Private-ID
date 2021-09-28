@@ -81,7 +81,7 @@ impl PartnerPrivateIdMultiKeyProtocol for PartnerPrivateIdMultiKey {
                     // Encrypt
                     (
                         self.ec_cipher
-                            .hash_encrypt_to_bytes(&d_flat.as_slice(), &self.private_keys.0),
+                            .hash_encrypt_to_bytes(d_flat.as_slice(), &self.private_keys.0),
                         offset,
                     )
                 };
@@ -230,7 +230,7 @@ impl PartnerPrivateIdMultiKeyProtocol for PartnerPrivateIdMultiKey {
                 }
 
                 // Sort the id_map by the spine
-                id_map.sort_by(|(a, _, _), (b, _, _)| a.cmp(&b));
+                id_map.sort_by(|(a, _, _), (b, _, _)| a.cmp(b));
             }
             _ => panic!("Cannot make v"),
         }

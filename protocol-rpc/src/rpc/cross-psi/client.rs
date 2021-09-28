@@ -364,7 +364,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = rpc_client::reveal(&mut client_context).await?;
 
     // 15. Request partner to output shares to file
-    partner_protocol.reveal(output_path.clone().unwrap());
+    partner_protocol.reveal(output_path.unwrap());
 
     global_timer.qps(
         "total time",

@@ -5,6 +5,9 @@ extern crate common;
 extern crate crypto;
 
 use log::info;
+use num_bigint::{BigUint, RandBigInt, ToBigInt};
+use num_traits::{One, Signed, Zero};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::{
     collections::HashMap,
     ops::Deref,
@@ -22,14 +25,14 @@ use common::timer;
 use crypto::{
     eccipher,
     eccipher::{gen_scalar, ECCipher},
-    he,
-    prelude::{mod_sub, rand_bigints, BigInt, EncryptionKey, Scalar, TPayload},
+    paillier::{subtract_plaintext, PaillierParallel},
+    prelude::{EncryptionKey, Scalar, TPayload},
 };
 
 #[derive(Debug)]
 pub struct PartnerCrossPsi {
     ec_cipher: eccipher::ECRistrettoParallel,
-    he_cipher: he::PaillierParallel,
+    he_cipher: PaillierParallel,
     ec_key: Scalar,
     company_he_public_key: Arc<RwLock<EncryptionKey>>,
     self_num_records: Arc<RwLock<usize>>,
@@ -40,8 +43,8 @@ pub struct PartnerCrossPsi {
     plaintext_features: Arc<RwLock<TFeatures>>,
     company_permutation: Arc<RwLock<Vec<usize>>>,
     self_permutation: Arc<RwLock<Vec<usize>>>,
-    additive_mask: Arc<RwLock<Vec<BigInt>>>,
-    self_shares: Arc<RwLock<HashMap<usize, Vec<BigInt>>>>,
+    additive_mask: Arc<RwLock<Vec<BigUint>>>,
+    self_shares: Arc<RwLock<HashMap<usize, Vec<BigUint>>>>,
     company_intersection_indices: Arc<RwLock<Vec<usize>>>,
 }
 
@@ -49,11 +52,11 @@ impl PartnerCrossPsi {
     pub fn new() -> PartnerCrossPsi {
         PartnerCrossPsi {
             ec_cipher: eccipher::ECRistrettoParallel::new(),
-            he_cipher: he::PaillierParallel::new(),
+            he_cipher: PaillierParallel::new(),
             ec_key: gen_scalar(),
             company_he_public_key: Arc::new(RwLock::new(EncryptionKey {
-                n: BigInt::zero(),
-                nn: BigInt::zero(),
+                n: BigUint::zero(),
+                nn: BigUint::zero(),
             })),
             self_num_records: Arc::new(RwLock::default()),
             self_num_features: Arc::new(RwLock::default()),
@@ -153,7 +156,7 @@ impl LoadData for PartnerCrossPsi {
 
 impl ShareableEncKey for PartnerCrossPsi {
     fn get_he_public_key(&self) -> EncryptionKey {
-        (*self.he_cipher.enc_key.clone()).clone()
+        self.he_cipher.enc_key.clone()
     }
 }
 
@@ -190,7 +193,7 @@ impl PartnerCrossPsiProtocol for PartnerCrossPsi {
         ) {
             let feature_column = &mut features[feature_index];
             common::permutations::permute(perm.as_slice(), feature_column);
-            let res = self.he_cipher.enc_serialise_u64(&feature_column);
+            let res = self.he_cipher.enc_serialise_u64(feature_column);
             t.qps(
                 format!("column {} HE enc", feature_index).as_str(),
                 res.len(),
@@ -216,16 +219,15 @@ impl PartnerCrossPsiProtocol for PartnerCrossPsi {
     }
 
     fn generate_additive_shares(&self, _: usize, values: TPayload) -> TPayload {
-        {
-            *self.additive_mask.clone().write().unwrap() = rand_bigints(values.len());
-        }
-
-        if let (Ok(key), Ok(mask)) = (
+        if let (Ok(key), Ok(mut mask)) = (
             self.company_he_public_key.clone().read(),
-            self.additive_mask.clone().read(),
+            self.additive_mask.clone().write(),
         ) {
-            self.he_cipher
-                .subtract_plaintext(key.deref(), values, &mask)
+            let mut rng = rand::thread_rng();
+            *mask = (0..values.len())
+                .map(|_| rng.gen_biguint_range(&BigUint::zero(), &key.n))
+                .collect();
+            subtract_plaintext(key.deref(), values, &mask)
         } else {
             panic!("Cannot mask with additive shares")
         }
@@ -234,7 +236,7 @@ impl PartnerCrossPsiProtocol for PartnerCrossPsi {
     fn set_self_shares(&self, feature_index: usize, data: TPayload) {
         if let Ok(mut shares) = self.self_shares.clone().write() {
             info!("Saving self-shares for feature {}", feature_index);
-            shares.insert(feature_index, self.he_cipher.decrypt(data));
+            shares.insert(feature_index, self.he_cipher.decrypt_vec(data));
         } else {
             panic!("Unable to write shares");
         }
@@ -243,15 +245,15 @@ impl PartnerCrossPsiProtocol for PartnerCrossPsi {
 
 impl Reveal for PartnerCrossPsi {
     fn reveal<T: AsRef<Path>>(&self, path: T) {
-        if let (Ok(indices), Ok(mut self_shares), Ok(mut additive_mask)) = (
+        if let (Ok(indices), Ok(company_key), Ok(mut self_shares), Ok(mut additive_mask)) = (
             self.company_intersection_indices.clone().read(),
+            self.company_he_public_key.clone().read(),
             self.self_shares.clone().write(),
             self.additive_mask.clone().write(),
         ) {
-            let output_mod = BigInt::one() << 64;
-            let n = BigInt::one() << 1024;
+            let output_mod: BigUint = BigUint::one() << 64;
 
-            let mut filtered_shares: Vec<BigInt> = Vec::with_capacity(indices.len());
+            let mut filtered_shares: Vec<BigUint> = Vec::with_capacity(indices.len());
 
             for index in indices.iter() {
                 filtered_shares.push(additive_mask[*index].clone());
@@ -259,15 +261,36 @@ impl Reveal for PartnerCrossPsi {
             additive_mask.clear();
 
             let company_shares = filtered_shares
-                .iter()
-                .map(|e| (Option::<u64>::from(&mod_sub(e, &n, &output_mod))).unwrap())
+                .into_par_iter()
+                .map(|item| {
+                    let o_mod = output_mod.to_bigint().unwrap();
+                    let t1 = item.to_bigint().unwrap() % &o_mod;
+                    let t2 = company_key.n.to_bigint().unwrap() % &o_mod;
+                    let s = (t1 - t2 + &o_mod) % o_mod;
+
+                    assert!(!s.is_negative());
+                    let (_, v) = s.to_u64_digits();
+                    assert_eq!(v.len(), 1);
+                    v[0]
+                })
                 .collect::<Vec<u64>>();
 
+            let partner_key = self.get_he_public_key();
             let partner_shares = self_shares
                 .remove(&0)
                 .unwrap()
-                .iter()
-                .map(|e| (Option::<u64>::from(&mod_sub(e, &n, &output_mod))).unwrap())
+                .into_par_iter()
+                .map(|item| {
+                    let o_mod = output_mod.to_bigint().unwrap();
+                    let t1 = item.to_bigint().unwrap() % &o_mod;
+                    let t2 = partner_key.n.to_bigint().unwrap() % &o_mod;
+                    let s = (t1 - t2 + &o_mod) % o_mod;
+
+                    assert!(!s.is_negative());
+                    let (_, v) = s.to_u64_digits();
+                    assert_eq!(v.len(), 1);
+                    v[0]
+                })
                 .collect::<Vec<u64>>();
 
             let mut out: Vec<Vec<u64>> =

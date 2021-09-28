@@ -127,13 +127,14 @@ fn serialize_helper<T>(data: Vec<Vec<T>>) -> (Vec<T>, TPayload, TPayload) {
 
     let d_flat = data.into_iter().flatten().collect::<Vec<_>>();
 
-    let mut metadata = TPayload::new();
-    metadata.push(ByteBuffer {
-        buffer: (d_flat.len() as u64).to_le_bytes().to_vec(),
-    });
-    metadata.push(ByteBuffer {
-        buffer: (offset.len() as u64).to_le_bytes().to_vec(),
-    });
+    let metadata = vec![
+        ByteBuffer {
+            buffer: (d_flat.len() as u64).to_le_bytes().to_vec(),
+        },
+        ByteBuffer {
+            buffer: (offset.len() as u64).to_le_bytes().to_vec(),
+        },
+    ];
 
     (d_flat, offset, metadata)
 }

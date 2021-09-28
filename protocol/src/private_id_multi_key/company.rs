@@ -179,7 +179,7 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
                     // Encrypt
                     (
                         self.ec_cipher
-                            .hash_encrypt_to_bytes(&d_flat.as_slice(), &self.private_keys.0),
+                            .hash_encrypt_to_bytes(d_flat.as_slice(), &self.private_keys.0),
                         offset,
                     )
                 };
@@ -221,9 +221,7 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
                 let s_p = e_partner.iter().map(|e| e[0]).collect::<Vec<_>>();
 
                 let mut v_c = self.ec_cipher.encrypt(
-                    &self
-                        .ec_cipher
-                        .encrypt(&s_c.as_slice(), &self.private_keys.1),
+                    &self.ec_cipher.encrypt(s_c.as_slice(), &self.private_keys.1),
                     &self.private_keys.2,
                 );
 
@@ -284,7 +282,7 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
                             let c = self.ec_cipher.encrypt(
                                 &self
                                     .ec_cipher
-                                    .encrypt(&matched.as_slice(), &self.private_keys.1),
+                                    .encrypt(matched.as_slice(), &self.private_keys.1),
                                 &self.private_keys.2,
                             );
                             let p = self
@@ -467,7 +465,7 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
                 }
 
                 // Sort the id_map by the spine
-                id_map.sort_by(|(a, _, _), (b, _, _)| a.cmp(&b));
+                id_map.sort_by(|(a, _, _), (b, _, _)| a.cmp(b));
             }
             _ => panic!("Cannot create id_map"),
         }

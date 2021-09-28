@@ -278,7 +278,7 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
             .build();
         self.protocol.write_company_to_id_map();
         match &self.output_path {
-            Some(p) => self.protocol.save_id_map(&p).unwrap(),
+            Some(p) => self.protocol.save_id_map(p).unwrap(),
             None => self.protocol.print_id_map(),
         }
         {

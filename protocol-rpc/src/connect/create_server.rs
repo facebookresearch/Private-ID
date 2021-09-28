@@ -51,11 +51,13 @@ pub fn create_server(
     server = match tls_context {
         Some(ctx) => {
             info!("Starting server with TLS support");
-            server.tls_config(
-                ServerTlsConfig::new()
-                    .identity(ctx.identity)
-                    .client_ca_root(ctx.ca),
-            ).unwrap()
+            server
+                .tls_config(
+                    ServerTlsConfig::new()
+                        .identity(ctx.identity)
+                        .client_ca_root(ctx.ca),
+                )
+                .unwrap()
         }
         None => server,
     };

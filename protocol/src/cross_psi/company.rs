@@ -5,6 +5,9 @@ extern crate common;
 extern crate crypto;
 
 use log::info;
+use num_bigint::{BigUint, RandBigInt};
+use num_traits::{identities::Zero, One};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::{
     collections::HashMap,
     path::Path,
@@ -21,15 +24,14 @@ use common::timer;
 use crypto::{
     eccipher,
     eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    he,
-    he::PaillierParallel,
-    prelude::{rand_bigints, BigInt, ByteBuffer, EncryptionKey, Scalar, TPayload},
+    paillier::{subtract_plaintext, PaillierParallel},
+    prelude::{ByteBuffer, EncryptionKey, Scalar, TPayload},
 };
 
 #[derive(Debug)]
 pub struct CompanyCrossPsi {
     ec_cipher: eccipher::ECRistrettoParallel,
-    he_cipher: he::PaillierParallel,
+    he_cipher: PaillierParallel,
 
     ec_key: Scalar,
     partner_he_public_key: Arc<RwLock<EncryptionKey>>,
@@ -51,9 +53,9 @@ pub struct CompanyCrossPsi {
     self_intersection_indices: Arc<RwLock<Vec<usize>>>,
 
     //TODO: WARN: this is single column only (yet)
-    additive_mask: Arc<RwLock<Vec<BigInt>>>,
+    additive_mask: Arc<RwLock<Vec<BigUint>>>,
     partner_shares: Arc<RwLock<HashMap<usize, TPayload>>>,
-    self_shares: Arc<RwLock<HashMap<usize, Vec<BigInt>>>>,
+    self_shares: Arc<RwLock<HashMap<usize, Vec<BigUint>>>>,
 }
 
 impl CompanyCrossPsi {
@@ -64,8 +66,8 @@ impl CompanyCrossPsi {
 
             ec_key: gen_scalar(),
             partner_he_public_key: Arc::new(RwLock::new(EncryptionKey {
-                n: BigInt::zero(),
-                nn: BigInt::zero(),
+                n: BigUint::zero(),
+                nn: BigUint::zero(),
             })),
 
             self_num_records: Arc::new(RwLock::default()),
@@ -150,7 +152,7 @@ impl LoadData for CompanyCrossPsi {
 
 impl ShareableEncKey for CompanyCrossPsi {
     fn get_he_public_key(&self) -> EncryptionKey {
-        (*self.he_cipher.enc_key.clone()).clone()
+        self.he_cipher.enc_key.clone()
     }
 }
 
@@ -190,7 +192,7 @@ impl CompanyCrossPsiProtocol for CompanyCrossPsi {
             let feature = &mut features[feature_id];
             common::permutations::permute(perm.as_slice(), feature);
 
-            let res = self.he_cipher.enc_serialise_u64(&feature);
+            let res = self.he_cipher.enc_serialise_u64(feature);
             t.qps(format!("feature {} HE enc", feature_id).as_str(), res.len());
             res
         } else {
@@ -225,19 +227,17 @@ impl CompanyCrossPsiProtocol for CompanyCrossPsi {
                 panic!("unable to get masked vals")
             };
 
-        // Generate random mask
-        {
-            *self.additive_mask.clone().write().unwrap() = rand_bigints(filtered_values.len());
-        }
-
-        if let (Ok(key), Ok(mask), Ok(mut partner_shares)) = (
+        if let (Ok(key), Ok(mut mask), Ok(mut partner_shares)) = (
             self.partner_he_public_key.clone().read(),
-            self.additive_mask.clone().read(),
+            self.additive_mask.clone().write(),
             self.partner_shares.clone().write(),
         ) {
-            let res = self
-                .he_cipher
-                .subtract_plaintext(&key, filtered_values, &mask);
+            let mut rng = rand::thread_rng();
+            *mask = (0..filtered_values.len())
+                .map(|_| rng.gen_biguint_range(&BigUint::zero(), &key.n))
+                .collect();
+
+            let res = subtract_plaintext(&key, filtered_values, &mask);
             t.qps("masking values in the intersection", res.len());
             partner_shares.insert(feature_id, res);
         } else {
@@ -263,7 +263,7 @@ impl CompanyCrossPsiProtocol for CompanyCrossPsi {
                 feature_index,
                 data.len()
             );
-            shares.insert(feature_index, self.he_cipher.decrypt(data));
+            shares.insert(feature_index, self.he_cipher.decrypt_vec(data));
         } else {
             panic!("Unable to write shares");
         }
@@ -336,9 +336,9 @@ impl Reveal for CompanyCrossPsi {
             self.additive_mask.clone().read(),
             self.self_shares.clone().write(),
         ) {
-            let max_val = BigInt::one() << 64;
+            let max_val: BigUint = BigUint::one() << 64;
 
-            let mut filtered_shares: Vec<BigInt> = Vec::with_capacity(indices.len());
+            let mut filtered_shares: Vec<BigUint> = Vec::with_capacity(indices.len());
 
             for index in indices.iter() {
                 filtered_shares.push((self_shares[&0][*index]).clone());
@@ -346,13 +346,23 @@ impl Reveal for CompanyCrossPsi {
             self_shares.remove(&0);
 
             let company_shares = filtered_shares
-                .iter()
-                .map(|z| (Option::<u64>::from(&z.mod_floor(&max_val))).unwrap())
+                .clone()
+                .into_par_iter()
+                .map(|item| {
+                    let t = (item % &max_val).to_u64_digits();
+                    assert_eq!(t.len(), 1);
+                    t[0]
+                })
                 .collect::<Vec<u64>>();
 
-            let partner_shares: Vec<u64> = additive_mask
-                .iter()
-                .map(|z| (Option::<u64>::from(&z.mod_floor(&max_val))).unwrap())
+            let partner_shares = additive_mask
+                .clone()
+                .into_par_iter()
+                .map(|item| {
+                    let t = (item % &max_val).to_u64_digits();
+                    assert_eq!(t.len(), 1);
+                    t[0]
+                })
                 .collect::<Vec<u64>>();
 
             let mut out: Vec<Vec<u64>> =

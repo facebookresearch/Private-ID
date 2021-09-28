@@ -7,8 +7,8 @@ extern crate clap;
 extern crate ctrlc;
 extern crate tonic;
 
-use common::s3_path::S3Path;
 use clap::{App, Arg, ArgGroup};
+use common::s3_path::S3Path;
 use log::info;
 use std::{
     str::FromStr,
@@ -108,17 +108,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_matches();
 
     let input_path_str = matches.value_of("input").unwrap_or("input.csv");
-    let input_path = match S3Path::from_str(&input_path_str) {
+    let input_path = match S3Path::from_str(input_path_str) {
         Ok(s3_path) => {
-            info!("Reading {} from S3 and copying to local path", input_path_str);
-            let local_path = s3_path.copy_to_local().await
+            info!(
+                "Reading {} from S3 and copying to local path",
+                input_path_str
+            );
+            let local_path = s3_path
+                .copy_to_local()
+                .await
                 .expect("Failed to copy s3 path to local tempfile");
-        info!("Wrote {} to tempfile {}", input_path_str, local_path);
+            info!("Wrote {} to tempfile {}", input_path_str, local_path);
             local_path
-        },
-        Err(_) => {
-            input_path_str.to_string()
         }
+        Err(_) => input_path_str.to_string(),
     };
     let input_with_headers = matches.is_present("input-with-headers");
     let output_path = matches.value_of("output");

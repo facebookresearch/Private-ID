@@ -76,7 +76,7 @@ impl SUIDCreateSharer {
                         let (c1_flat, c2_flat) = {
                             let x = d.clone().into_iter().flatten().collect::<Vec<_>>();
 
-                            elgamal_encrypt(self.ec_cipher.hash(&x.as_slice()), &p_key)
+                            elgamal_encrypt(self.ec_cipher.hash(x.as_slice()), &p_key)
                         };
 
                         // Unflatten
@@ -209,12 +209,12 @@ impl SUIDCreateSharerProtocol for SUIDCreateSharer {
                 let (c1_buf, c2_buf, offset) = {
                     let mut c1 = Vec::<Vec<TPoint>>::new();
                     for x in data.iter_mut() {
-                        c1.extend(x.0.drain(..));
+                        c1.append(&mut x.0);
                     }
 
                     let mut c2 = Vec::<Vec<TPoint>>::new();
                     for x in data.iter_mut() {
-                        c2.extend(x.1.drain(..));
+                        c2.append(&mut x.1);
                     }
 
                     assert_eq!(c1.len(), c2.len());
@@ -360,7 +360,7 @@ impl SUIDCreateSharerProtocol for SUIDCreateSharer {
                         .zip_eq(suids_for_party.1.iter())
                         .map(|(x1, x2)| (x1.clone().to_string(), x2.clone().to_string()))
                         .collect::<Vec<_>>();
-                    writer_helper(&s, &d, None);
+                    writer_helper(&s, d, None);
                 }
             }
             _ => panic!("Cannot print SUIDs"),
