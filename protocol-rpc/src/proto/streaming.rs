@@ -17,7 +17,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status, Streaming};
 
 fn chunks_count<T>(data: &[T]) -> usize {
-    cmp::max(32_usize, data.len() / 2000 as usize)
+    cmp::max(32_usize, data.len() / 2000_usize)
 }
 
 pub fn send_data(data: TPayload) -> Request<impl Stream<Item = Payload>> {
@@ -43,7 +43,7 @@ pub async fn read_from_stream(strm: &mut Streaming<Payload>) -> Result<TPayload,
 }
 
 pub fn write_to_stream(payload: TPayload) -> Response<TPayloadStream> {
-    let (mut tx, rx) = tokio::sync::mpsc::channel(128);
+    let (tx, rx) = tokio::sync::mpsc::channel(128);
     tokio::spawn(async move {
         for pl in payload.chunks(chunks_count(&payload)).into_iter() {
             let z = pl

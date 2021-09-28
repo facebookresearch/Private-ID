@@ -6,6 +6,9 @@ extern crate crypto;
 
 use common::timer;
 
+use num_bigint::BigUint;
+use num_traits::One;
+
 use std::{
     path::Path,
     sync::{Arc, RwLock},
@@ -19,14 +22,14 @@ use crate::{
 use crypto::{
     eccipher,
     eccipher::{gen_scalar, ECCipher},
-    he,
-    prelude::{BigInt, EncryptionKey, Scalar, TPayload},
+    paillier::PaillierParallel,
+    prelude::{EncryptionKey, Scalar, TPayload},
 };
 
 #[derive(Debug)]
 pub struct PartnerPjc {
     ec_cipher: eccipher::ECRistrettoParallel,
-    he_cipher: he::PaillierParallel,
+    he_cipher: PaillierParallel,
     ec_key: Scalar,
     self_num_features: Arc<RwLock<usize>>,
     self_num_records: Arc<RwLock<usize>>,
@@ -40,7 +43,7 @@ impl PartnerPjc {
     pub fn new() -> PartnerPjc {
         PartnerPjc {
             ec_cipher: eccipher::ECRistrettoParallel::new(),
-            he_cipher: he::PaillierParallel::new(),
+            he_cipher: PaillierParallel::new(),
             ec_key: gen_scalar(),
             self_num_features: Arc::new(RwLock::default()),
             self_num_records: Arc::new(RwLock::default()),
@@ -92,8 +95,7 @@ impl LoadData for PartnerPjc {
 
 impl ShareableEncKey for PartnerPjc {
     fn get_he_public_key(&self) -> EncryptionKey {
-        let a = self.he_cipher.enc_key.clone();
-        a.as_ref().clone()
+        self.he_cipher.enc_key.clone()
     }
 }
 
@@ -161,14 +163,19 @@ impl PartnerPJCProtocol for PartnerPjc {
     }
 
     fn decrypt_stats(&self, encrypted_sums: Vec<TPayload>) {
-        let max_val = BigInt::one() << 64;
+        let max_val: BigUint = BigUint::one() << 64;
 
         if let Ok(mut partner_stats) = self.decrypted_stats.clone().write() {
             partner_stats.clear();
 
             for (feature_index, encrypted_sum) in encrypted_sums.into_iter().enumerate() {
-                let z = self.he_cipher.decrypt(encrypted_sum);
-                let sum = (Option::<u64>::from(&(z[0].mod_floor(&max_val)))).unwrap();
+                assert_eq!(encrypted_sum.len(), 1);
+                let z = ((self.he_cipher.decrypt_vec(encrypted_sum))[0]).clone();
+                let sum = {
+                    let v = (z % &max_val).to_u64_digits();
+                    assert_eq!(v.len(), 1);
+                    v[0]
+                };
                 info!("Feature: {},  Sum {}", feature_index, sum);
 
                 partner_stats.push(sum);

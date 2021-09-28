@@ -173,7 +173,7 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                 let plain_keys = pdata.get_plain_keys();
                 let mut u = self
                     .ec_cipher
-                    .hash_encrypt_to_bytes(&plain_keys.as_slice(), &self.private_keys.0);
+                    .hash_encrypt_to_bytes(plain_keys.as_slice(), &self.private_keys.0);
                 t.qps("encryption", u.len());
 
                 self.permutation
@@ -291,7 +291,7 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                     .iter()
                     .zip(plain_data.get_plain_keys().iter())
                 {
-                    let record = plain_data.get_record_with_keys(k.to_string(), &v);
+                    let record = plain_data.get_record_with_keys(k.to_string(), v);
                     id_map.push(record);
                 }
 

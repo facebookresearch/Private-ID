@@ -40,7 +40,7 @@ impl UnionFind {
 
     pub fn make_group(&mut self, e: usize) {
         // Make sure it does not already exist
-        assert_eq!(self.sets.contains_key(&e), false);
+        assert!(!self.sets.contains_key(&e));
 
         self.sets.insert(e, (e, 1));
     }
@@ -48,7 +48,7 @@ impl UnionFind {
     // Recursive version
     pub fn find_r(&mut self, p: usize) -> usize {
         // Make sure it already exists
-        assert_eq!(self.sets.contains_key(&p), true);
+        assert!(self.sets.contains_key(&p));
 
         let &(parent, size) = self.sets.get(&p).unwrap();
 
@@ -67,7 +67,7 @@ impl UnionFind {
 
     pub fn path_to_leader(&self, p: usize) -> (usize, Vec<usize>) {
         // Make sure it already exists
-        assert_eq!(self.sets.contains_key(&p), true);
+        assert!(self.sets.contains_key(&p));
 
         // Only need to store all nodes on path to root
         let mut path = Vec::<usize>::new();
@@ -93,7 +93,7 @@ impl UnionFind {
         // Path compression
         // Note that size is unchanged since nodes are not root nodes
         for t in path.iter() {
-            let x = self.sets.get_mut(&t).unwrap();
+            let x = self.sets.get_mut(t).unwrap();
             x.0 = leader;
         }
 
@@ -213,13 +213,13 @@ impl SUIDCreateMergerProtocol for SUIDCreateMerger {
         match self.from_shuffler.clone().write() {
             Ok(mut data) => {
                 data.0.clear();
-                data.0.extend(c1_buf.drain(..));
+                data.0.append(&mut c1_buf);
 
                 data.1.clear();
-                data.1.extend(c2_buf.drain(..));
+                data.1.append(&mut c2_buf);
 
                 data.2.clear();
-                data.2.extend(psum.drain(..));
+                data.2.append(&mut psum);
 
                 Ok(())
             }
@@ -250,7 +250,7 @@ impl SUIDCreateMergerProtocol for SUIDCreateMerger {
                 let (c1_flat, c2_flat) = {
                     let d_f = {
                         let x = pdata.clone().into_iter().flatten().collect::<Vec<_>>();
-                        self.ec_cipher.hash(&x.as_slice())
+                        self.ec_cipher.hash(x.as_slice())
                     };
 
                     elgamal_encrypt(d_f, &self.keypair_m.1)
@@ -263,7 +263,7 @@ impl SUIDCreateMergerProtocol for SUIDCreateMerger {
 
                 let data_len = buf.len();
 
-                buf.extend(offset.drain(..));
+                buf.append(&mut offset);
 
                 buf.push(ByteBuffer {
                     buffer: (data_len as u64).to_le_bytes().to_vec(),
@@ -383,8 +383,8 @@ impl SUIDCreateMergerProtocol for SUIDCreateMerger {
                 to_s.0.clear();
                 to_s.1.clear();
 
-                to_s.0.extend(c1_buf.drain(..));
-                to_s.1.extend(c2_buf.drain(..));
+                to_s.0.append(&mut c1_buf);
+                to_s.1.append(&mut c2_buf);
                 Ok(())
             }
             _ => {
@@ -401,8 +401,8 @@ impl SUIDCreateMergerProtocol for SUIDCreateMerger {
             Ok(mut to_s) => {
                 let mut data = TPayload::new();
                 assert_eq!(to_s.0.len(), to_s.1.len());
-                data.extend(to_s.0.drain(..));
-                data.extend(to_s.1.drain(..));
+                data.append(&mut to_s.0);
+                data.append(&mut to_s.1);
                 Ok(data)
             }
             _ => {
@@ -424,7 +424,7 @@ impl SUIDCreateMergerProtocol for SUIDCreateMerger {
                 suids.1.extend(data.drain((data_len / 2)..));
 
                 suids.0.clear();
-                suids.0.extend(data.drain(..));
+                suids.0.append(&mut data);
                 Ok(())
             }
             _ => {

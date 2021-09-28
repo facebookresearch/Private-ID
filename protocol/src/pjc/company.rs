@@ -6,6 +6,9 @@ extern crate crypto;
 
 use common::timer;
 
+use num_bigint::BigUint;
+use num_traits::Zero;
+
 use std::{
     path::Path,
     sync::{Arc, RwLock},
@@ -19,15 +22,13 @@ use crate::{
 use crypto::{
     eccipher,
     eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    he,
-    he::{HEReducer, HeDeSer, PaillierParallel},
-    prelude::{BigInt, EncryptionKey, Scalar, TPayload, TypeHeEncKey},
+    paillier::sum_reduce_with_key,
+    prelude::{EncryptionKey, Scalar, TPayload, TypeHeEncKey},
 };
 
 #[derive(Debug)]
 pub struct CompanyPjc {
     ec_cipher: eccipher::ECRistrettoParallel,
-    he_cipher: he::PaillierParallel,
     ec_key: Scalar,
     partner_he_public_key: Arc<RwLock<TypeHeEncKey>>,
     self_num_features: Arc<RwLock<usize>>,
@@ -44,11 +45,10 @@ impl CompanyPjc {
     pub fn new() -> CompanyPjc {
         CompanyPjc {
             ec_cipher: ECRistrettoParallel::new(),
-            he_cipher: PaillierParallel::new(),
             ec_key: gen_scalar(),
             partner_he_public_key: Arc::new(RwLock::new(EncryptionKey {
-                n: BigInt::zero(),
-                nn: BigInt::zero(),
+                n: BigUint::zero(),
+                nn: BigUint::zero(),
             })),
             self_num_features: Arc::new(RwLock::default()),
             self_num_records: Arc::new(RwLock::default()),
@@ -160,14 +160,12 @@ impl CompanyPJCProtocol for CompanyPjc {
                 panic!("unable to get masked vals")
             };
 
-        let he_vals = self.he_cipher.deserialise(&masked_values);
-
         if let (Ok(public_key), Ok(mut enc_stats)) = (
             self.partner_he_public_key.clone().read(),
             self.encrypted_stats.clone().write(),
         ) {
-            let res = self.he_cipher.reduce_sum_with_key(&public_key, &he_vals);
-            enc_stats.push(self.he_cipher.serialise(&[res]));
+            let res = sum_reduce_with_key(&public_key, &masked_values);
+            enc_stats.push(vec![res]);
         } else {
             panic!("Unable to add additive shares with the intersection")
         }

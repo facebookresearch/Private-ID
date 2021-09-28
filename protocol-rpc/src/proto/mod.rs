@@ -41,21 +41,16 @@ pub enum RpcClient {
     SuidCreate(SuidCreateClient<Channel>),
 }
 
-use crypto::{he::BigIntWrapper, prelude::*};
+use crypto::prelude::*;
 
 pub mod from {
     use super::{common::*, *};
+    use num_bigint::BigUint;
 
     impl From<&EncryptionKey> for common::Payload {
         fn from(key: &EncryptionKey) -> Self {
             common::Payload {
-                payload: vec![
-                    bincode::serialize(&BigIntWrapper { raw: key.n.clone() }).unwrap(),
-                    bincode::serialize(&BigIntWrapper {
-                        raw: key.nn.clone(),
-                    })
-                    .unwrap(),
-                ],
+                payload: vec![key.n.to_bytes_le(), key.nn.to_bytes_le()],
             }
         }
     }
@@ -64,8 +59,8 @@ pub mod from {
         fn from(pld: &Payload) -> Self {
             assert_eq!(pld.payload.len(), 2);
             EncryptionKey {
-                n: (bincode::deserialize::<BigIntWrapper>(&pld.payload[0]).unwrap()).raw,
-                nn: (bincode::deserialize::<BigIntWrapper>(&pld.payload[1]).unwrap()).raw,
+                n: BigUint::from_bytes_le(&pld.payload[0]),
+                nn: BigUint::from_bytes_le(&pld.payload[1]),
             }
         }
     }
@@ -93,16 +88,19 @@ pub mod from {
 #[cfg(test)]
 mod tests {
     use super::{common::*, *};
+    use num_bigint::BigUint;
+    use num_traits::identities::Zero;
 
     #[test]
     fn test_ser_dsr_he_enc_key() {
         for _ in 1..10 {
             let k1 = EncryptionKey {
-                n: BigInt::zero(),
-                nn: BigInt::zero(),
+                n: BigUint::zero(),
+                nn: BigUint::zero(),
             };
             let k2 = EncryptionKey::from(&Payload::from(&k1));
-            assert_eq!(k1, k2);
+            assert_eq!(k1.n, k2.n);
+            assert_eq!(k1.nn, k2.nn);
         }
     }
 }
