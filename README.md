@@ -85,19 +85,19 @@ To run merger
 ```bash
 env RUST_LOG=info cargo run --bin suid-create-server -- \
         --host 0.0.0.0:10010 \
-        --input etc/docker/suid/Example1/DataParty2_input.csv \
+        --input etc/example/suid/Example1/DataParty2_input.csv \
         --stdout \
-        --tls-dir etc/docker/dummy_certs
+        --tls-dir etc/example/dummy_certs
 ```
 
 To run merger
 ```bash
 env RUST_LOG=info cargo run --bin suid-create-client -- \
      --merger localhost:10010 \
-     --input etc/docker/suid/Example1/DataParty1_input.csv \
-     --input etc/docker/suid/Example1/DataParty3_input.csv \
+     --input etc/example/suid/Example1/DataParty1_input.csv \
+     --input etc/example/suid/Example1/DataParty3_input.csv \
      --stdout \
-     --tls-dir etc/docker/dummy_certs
+     --tls-dir etc/example/dummy_certs
 ```
 
 The output will be ElGamal encrypted Universal IDs assigned to each entry in the `.csv` file
