@@ -1,0 +1,50 @@
+name: Publish Private-ID Docker Image
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  DISTRO: ubuntu
+  REGISTRY: ghcr.io
+  LOCAL_IMAGE_NAME: ${{ github.event.repository.name }}
+  LOCAL_IMAGE_TAG: latest
+  REGISTRY_IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  push:
+   runs-on: ubuntu-latest
+   name: Build and publish image
+   permissions:
+    contents: read
+    packages: write
+
+   steps:
+     - uses: actions/checkout@v2
+
+     - name: Build image
+       run: |
+        docker build -f ./Dockerfile -t ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} .
+    
+    # Tests can be added here
+
+     - name: Log into registry ${{ env.REGISTRY }}
+       uses: docker/login-action@v1
+       with:
+         registry: ${{ env.REGISTRY }}
+         username: ${{ github.actor }}
+         password: ${{ secrets.GITHUB_TOKEN }}
+
+     - name: Set output
+       id: vars
+       run: echo ::set-output name=ref::${GITHUB_REF##*/}
+
+     - name: Tag docker image
+       run: |
+          docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME }}:${{ github.sha }}
+          docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME }}:${{ steps.vars.outputs.ref }}
+          docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME }}:latest
+     
+     - name: Push image to registry
+       run: |
+          docker push --all-tags ${{ env.REGISTRY_IMAGE_NAME }}
