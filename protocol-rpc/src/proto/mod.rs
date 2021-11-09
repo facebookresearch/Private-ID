@@ -17,6 +17,10 @@ pub mod gen_crosspsi {
     tonic::include_proto!("crosspsi");
 }
 
+pub mod gen_crosspsi_xor {
+    tonic::include_proto!("crosspsixor");
+}
+
 pub mod gen_pjc {
     tonic::include_proto!("pjc");
 }
@@ -28,6 +32,7 @@ pub mod gen_suid_create {
 pub mod streaming;
 
 use gen_crosspsi::cross_psi_client::CrossPsiClient;
+use gen_crosspsi_xor::cross_psi_xor_client::CrossPsiXorClient;
 use gen_pjc::pjc_client::PjcClient;
 use gen_private_id::private_id_client::PrivateIdClient;
 use gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClient;
@@ -37,6 +42,7 @@ pub enum RpcClient {
     PrivateId(PrivateIdClient<Channel>),
     PrivateIdMultiKey(PrivateIdMultiKeyClient<Channel>),
     CrossPsi(CrossPsiClient<Channel>),
+    CrossPsiXor(CrossPsiXorClient<Channel>),
     Pjc(PjcClient<Channel>),
     SuidCreate(SuidCreateClient<Channel>),
 }

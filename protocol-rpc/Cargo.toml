@@ -18,6 +18,14 @@ name = "cross-psi-client"
 path = "src/rpc/cross-psi/client.rs"
 
 [[bin]]
+name = "cross-psi-xor-server"
+path = "src/rpc/cross-psi-xor/server.rs"
+
+[[bin]]
+name = "cross-psi-xor-client"
+path = "src/rpc/cross-psi-xor/client.rs"
+
+[[bin]]
 name = "private-id-server"
 path = "src/rpc/private-id/server.rs"
 

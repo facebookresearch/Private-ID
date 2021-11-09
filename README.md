@@ -60,6 +60,30 @@ env RUST_LOG=info cargo run --bin cross-psi-client -- \
 --no-tls
 ```
 
+### PS3I XOR
+
+This protocol does an inner join based on email addresses as keys and then generates XOR share of a feature associated with that email address. The shares are generated in the designated output files as 64 bit numbers
+
+To run Company
+
+```bash
+env RUST_LOG=info cargo run --bin cross-psi-xor-server -- \
+--host 0.0.0.0:10010 \
+--input etc/example/input_company.csv \
+--output etc/example/output_company.csv \
+--no-tls
+```
+
+To run Partner
+
+```bash
+env RUST_LOG=info cargo run --bin cross-psi-xor-client -- \
+--company localhost:10010 \
+--input etc/example/input_partner.csv \
+--output etc/example/output_partner.csv \
+--no-tls
+```
+
 ### Private Join and Compute
 This is an implementation of Google's [Private Join and Compute](https://github.com/google/private-join-and-compute) protocol, that does a inner join based on email addresses and computes a sum of the corresponding feature for the Partner.
 

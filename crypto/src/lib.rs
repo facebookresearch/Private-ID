@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 #![crate_name = "crypto"]
 
+pub mod cupcake;
 pub mod eccipher;
 pub mod gcd;
 #[cfg(not(target_arch = "wasm32"))]

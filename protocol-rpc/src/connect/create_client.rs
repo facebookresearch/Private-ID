@@ -23,6 +23,7 @@ use crate::{
     connect::tls,
     proto::{
         gen_crosspsi::cross_psi_client::CrossPsiClient,
+        gen_crosspsi_xor::cross_psi_xor_client::CrossPsiXorClient,
         gen_pjc::pjc_client::PjcClient, gen_private_id::private_id_client::PrivateIdClient,
         gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClient,
         gen_suid_create::suid_create_client::SuidCreateClient, RpcClient,
@@ -123,6 +124,7 @@ pub fn create_client(
                             RpcClient::PrivateIdMultiKey(PrivateIdMultiKeyClient::new(conn))
                         }
                         "cross-psi" => RpcClient::CrossPsi(CrossPsiClient::new(conn)),
+                        "cross-psi-xor" => RpcClient::CrossPsiXor(CrossPsiXorClient::new(conn)),
                         "pjc" => RpcClient::Pjc(PjcClient::new(conn)),
                         "suid-create" => RpcClient::SuidCreate(SuidCreateClient::new(conn)),
                         _ => panic!("wrong client"),
@@ -137,6 +139,9 @@ pub fn create_client(
                     )),
                     "cross-psi" => Ok(RpcClient::CrossPsi(
                         CrossPsiClient::connect(__uri).await.unwrap(),
+                    )),
+                    "cross-psi-xor" => Ok(RpcClient::CrossPsiXor(
+                        CrossPsiXorClient::connect(__uri).await.unwrap(),
                     )),
                     "pjc" => Ok(RpcClient::Pjc(PjcClient::connect(__uri).await.unwrap())),
                     "suid-create" => Ok(RpcClient::SuidCreate(
