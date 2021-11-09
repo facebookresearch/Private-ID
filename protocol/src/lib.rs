@@ -9,17 +9,10 @@ extern crate log;
 
 pub mod fileio;
 pub mod private_id;
-
-#[cfg(not(target_arch = "wasm32"))]
 pub mod cross_psi;
-
-#[cfg(not(target_arch = "wasm32"))]
+pub mod cross_psi_xor;
 pub mod pjc;
-
-#[cfg(not(target_arch = "wasm32"))]
 pub mod private_id_multi_key;
-
-#[cfg(not(target_arch = "wasm32"))]
 pub mod suid_create;
 
 pub mod shared {
