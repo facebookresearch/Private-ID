@@ -20,6 +20,8 @@ cp bin/release/private-id-server exec  && \
 cp bin/release/private-id-client exec  && \
 cp bin/release/cross-psi-server exec && \
 cp bin/release/cross-psi-client exec && \
+cp bin/release/cross-psi-xor-server exec && \
+cp bin/release/cross-psi-xor-client exec && \
 cp bin/release/pjc-client exec && \
 cp bin/release/pjc-server exec && \
 cp bin/release/datagen exec
@@ -33,4 +35,3 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=build /opt/private-id/exec /opt/private-id/bin
 WORKDIR /opt/private-id
-
