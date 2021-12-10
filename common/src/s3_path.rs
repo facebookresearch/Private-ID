@@ -46,8 +46,8 @@ impl S3Path {
 
     pub async fn copy_to_local(&self) -> Result<String, std::io::Error> {
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
-        let aws_cfg = aws_sdk_s3::Config::builder().region(&region).build();
-        let client = aws_sdk_s3::Client::from_conf(aws_cfg);
+        let aws_cfg = aws_config::from_env().region(region).load().await;
+        let client = aws_sdk_s3::Client::new(&aws_cfg);
         let resp = client.get_object()
             .bucket(self.get_bucket_name())
             .key(self.get_key())
@@ -70,8 +70,8 @@ impl S3Path {
         let body = aws_sdk_s3::ByteStream::from_path(path.as_ref()).await
             .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "Failed to read path as ByteStream"))?;
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
-        let aws_cfg = aws_sdk_s3::Config::builder().region(&region).build();
-        let client = aws_sdk_s3::Client::from_conf(aws_cfg);
+        let aws_cfg = aws_config::from_env().region(region).load().await;
+        let client = aws_sdk_s3::Client::new(&aws_cfg);
         client.put_object()
             .bucket(self.get_bucket_name())
             .key(self.get_key())
