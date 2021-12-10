@@ -30,3 +30,5 @@ regex = "1.5.4"
 tempfile = "3.2.0"
 thiserror = "1.0.25"
 tokio = { version = "1", features = ["full"] }
+cloud-storage = "0.10"
+tokio-util = "0.6.9"

@@ -22,3 +22,6 @@ pub mod permutations;
 
 /// S3 path parsing
 pub mod s3_path;
+
+/// GCS path parsing
+pub mod gcs_path;
