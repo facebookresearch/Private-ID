@@ -3,9 +3,7 @@
 //! for actually reading or writing to that object, but that sort of behavior
 //! can easily be built on top of this using the rust-s3 crate.
 
-use std::io::Write;
-use std::path::Path;
-use std::str::FromStr;
+use std::{io::Write, path::Path, str::FromStr};
 
 use regex::Regex;
 
@@ -48,37 +46,58 @@ impl S3Path {
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
         let aws_cfg = aws_config::from_env().region(region).load().await;
         let client = aws_sdk_s3::Client::new(&aws_cfg);
-        let resp = client.get_object()
+        let resp = client
+            .get_object()
             .bucket(self.get_bucket_name())
             .key(self.get_key())
             .send()
             .await
-            .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "Failed to read input file from S3"))?;
-        let data = resp.body.collect().await
-            .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "Failed to read body from S3 response"))?;
+            .map_err(|_| {
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Failed to read input file from S3",
+                )
+            })?;
+        let data = resp.body.collect().await.map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to read body from S3 response",
+            )
+        })?;
         let mut s3_tempfile = tempfile::NamedTempFile::new()?;
         s3_tempfile.write_all(&data.into_bytes())?;
         s3_tempfile.flush()?;
         let (_file, path) = s3_tempfile.keep()?;
-        let path = path.to_str()
-            .ok_or(std::io::Error::new(std::io::ErrorKind::Other, "Path could not be converted to str"))?;
+        let path = path.to_str().ok_or(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Path could not be converted to str",
+        ))?;
 
         Ok(path.to_string())
     }
 
     pub async fn copy_from_local(&self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
-        let body = aws_sdk_s3::ByteStream::from_path(path.as_ref()).await
-            .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "Failed to read path as ByteStream"))?;
+        let body = aws_sdk_s3::ByteStream::from_path(path.as_ref())
+            .await
+            .map_err(|_| {
+                std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Failed to read path as ByteStream",
+                )
+            })?;
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
         let aws_cfg = aws_config::from_env().region(region).load().await;
         let client = aws_sdk_s3::Client::new(&aws_cfg);
-        client.put_object()
+        client
+            .put_object()
             .bucket(self.get_bucket_name())
             .key(self.get_key())
             .body(body)
             .send()
             .await
-            .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "Failed to writeinput file to S3"))?;
+            .map_err(|_| {
+                std::io::Error::new(std::io::ErrorKind::Other, "Failed to writeinput file to S3")
+            })?;
         Ok(())
     }
 }

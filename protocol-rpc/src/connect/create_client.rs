@@ -23,8 +23,8 @@ use crate::{
     connect::tls,
     proto::{
         gen_crosspsi::cross_psi_client::CrossPsiClient,
-        gen_crosspsi_xor::cross_psi_xor_client::CrossPsiXorClient,
-        gen_pjc::pjc_client::PjcClient, gen_private_id::private_id_client::PrivateIdClient,
+        gen_crosspsi_xor::cross_psi_xor_client::CrossPsiXorClient, gen_pjc::pjc_client::PjcClient,
+        gen_private_id::private_id_client::PrivateIdClient,
         gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClient,
         gen_suid_create::suid_create_client::SuidCreateClient, RpcClient,
     },

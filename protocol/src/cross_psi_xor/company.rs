@@ -230,8 +230,11 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
 
     fn get_shares(&self, feature_index: usize) -> TPayload {
         if let Ok(mut shares) = self.partner_shares.clone().write() {
-            assert!(shares.contains_key(&feature_index),
-                "No feature_index {} for shares", feature_index);
+            assert!(
+                shares.contains_key(&feature_index),
+                "No feature_index {} for shares",
+                feature_index
+            );
             shares.remove(&feature_index).unwrap()
         } else {
             panic!("Unable to read shares");
@@ -265,8 +268,10 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
             self.partner_intersection_mask.clone().write(),
             self.self_intersection_indices.clone().write(),
         ) {
-            assert!(!company_keys.is_empty(),
-                "e_partner keys should be uploaded after e_company keys are uploaded");
+            assert!(
+                !company_keys.is_empty(),
+                "e_partner keys should be uploaded after e_company keys are uploaded"
+            );
 
             partner_mask.clear();
 
