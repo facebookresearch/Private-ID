@@ -68,10 +68,12 @@ impl S3Path {
         s3_tempfile.write_all(&data.into_bytes())?;
         s3_tempfile.flush()?;
         let (_file, path) = s3_tempfile.keep()?;
-        let path = path.to_str().ok_or(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Path could not be converted to str",
-        ))?;
+        let path = path.to_str().ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Path could not be converted to str",
+            )
+        })?;
 
         Ok(path.to_string())
     }
@@ -106,7 +108,7 @@ impl FromStr for S3Path {
     type Err = S3PathError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some(caps) = S3_PATH_REGEX.captures(&s) {
+        if let Some(caps) = S3_PATH_REGEX.captures(s) {
             Ok(S3Path {
                 bucket: caps[1].to_string(),
                 region: caps[2].to_string(),
