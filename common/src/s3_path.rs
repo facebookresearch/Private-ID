@@ -68,6 +68,7 @@ impl S3Path {
         s3_tempfile.write_all(&data.into_bytes())?;
         s3_tempfile.flush()?;
         let (_file, path) = s3_tempfile.keep()?;
+
         let path = path.to_str().ok_or_else(|| {
             std::io::Error::new(
                 std::io::ErrorKind::Other,
