@@ -17,7 +17,7 @@ use std::{
 };
 use tonic::{Code, Request, Response, Status, Streaming};
 
-use common::{s3_path::S3Path, timer};
+use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
 use protocol::private_id::{company::CompanyPrivateId, traits::CompanyPrivateIdProtocol};
 use rpc::proto::{
     common::Payload,
@@ -251,6 +251,21 @@ impl PrivateId for PrivateIdService {
                         .copy_from_local(&path)
                         .await
                         .expect("Failed to write to S3");
+                } else if let Ok(output_path_gcp) = GCSPath::from_str(p) {
+                    let gcs_tempfile = tempfile::NamedTempFile::new().unwrap();
+                    let (_file, path) = gcs_tempfile.keep().unwrap();
+                    let path = path.to_str().expect("Failed to convert path to str");
+                    self.protocol
+                        .save_id_map(
+                            &String::from(path),
+                            self.input_with_headers,
+                            self.use_row_numbers,
+                        )
+                        .expect("Failed to save id map to tempfile");
+                    output_path_gcp
+                        .copy_from_local(&path)
+                        .await
+                        .expect("Failed to write to GCS");
                 } else {
                     self.protocol
                         .save_id_map(p, self.input_with_headers, self.use_row_numbers)
