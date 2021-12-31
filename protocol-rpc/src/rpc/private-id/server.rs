@@ -146,8 +146,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Input path: {}", input_path);
 
+    let mut metrics_path: Option<String> = None;
     if output_path.is_some() {
         info!("Output path: {}", output_path.unwrap());
+        metrics_path = Some(format!("{}_metrics", output_path.unwrap()));
     } else {
         info!("Output view to stdout (first 10 items)");
     }
@@ -158,6 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         input_with_headers,
         na_val,
         use_row_numbers,
+        metrics_path,
     );
 
     let ks = service.killswitch.clone();
