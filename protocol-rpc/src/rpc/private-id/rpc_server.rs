@@ -38,6 +38,7 @@ pub struct PrivateIdService {
     na_val: Option<String>,
     use_row_numbers: bool,
     metrics_path: Option<String>,
+    metrics_obj: metrics::Metrics,
     pub killswitch: Arc<AtomicBool>,
 }
 
@@ -58,6 +59,9 @@ impl PrivateIdService {
             na_val: na_val.map(String::from),
             use_row_numbers,
             metrics_path,
+            metrics_obj: metrics::Metrics::new(
+                "private-id".to_string(),
+            ),
             killswitch: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -238,12 +242,9 @@ impl PrivateId for PrivateIdService {
             .extra_label("reveal")
             .build();
         self.protocol.write_company_to_id_map();
-        let metrics_obj = metrics::Metrics::new(
-            "private-id".to_string(),
-            Some(self.protocol.get_e_company_size()),
-            Some(self.protocol.get_e_partner_size()),
-            Some(self.protocol.get_id_map_size()),
-        );
+        self.metrics_obj.set_partner_input_size(self.protocol.get_e_partner_size());
+        self.metrics_obj.set_publisher_input_size(self.protocol.get_e_company_size());
+        self.metrics_obj.set_union_file_size(self.protocol.get_id_map_size());
         match &self.output_path {
             Some(p) => {
                 if let Ok(output_path_s3) = S3Path::from_str(p) {
@@ -292,19 +293,19 @@ impl PrivateId for PrivateIdService {
                     let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
                     let (_file, path) = s3_tempfile.keep().unwrap();
                     let path = path.to_str().expect("Failed to convert path to str");
-                    metrics_obj.save_metrics(&String::from(path))
+                    self.metrics_obj.save_metrics(&String::from(path))
                         .expect("Failed to metrics to tempfile");
                     metrics_path_s3
                         .copy_from_local(&path)
                         .await
                         .expect("Failed to write to S3");
                 } else {
-                    metrics_obj.save_metrics(p)
+                    self.metrics_obj.save_metrics(p)
                         .expect("Failed to write to metrics path");
                 }
             }
             None => {
-                metrics_obj.print_metrics();
+                self.metrics_obj.print_metrics();
             }
         }
         {
