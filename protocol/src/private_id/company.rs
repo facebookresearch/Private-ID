@@ -79,6 +79,18 @@ impl CompanyPrivateId {
         }
         status
     }
+
+    pub fn get_e_company_size(&self) -> usize {
+        self.e_company.read().unwrap().len()
+    }
+
+    pub fn get_e_partner_size(&self) -> usize {
+        self.e_partner.read().unwrap().len()
+    }
+
+    pub fn get_id_map_size(&self) -> usize {
+        self.id_map.read().unwrap().len()
+    }
 }
 
 impl Default for CompanyPrivateId {
