@@ -287,14 +287,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             _ => panic!("wrong ack"),
         };
 
-    // 12. Get data that partner has but company doesn't
-    let mut s_prime_partner = TPayload::new();
+    // 12. Get data that partner has but company doesn't (send Sp to P)
+    let mut s_partner = TPayload::new();
     let _ = rpc_client::recv(
         ServiceResponse {
             ack: Some(Ack::CalculateSetDiffAck(calculate_set_diff_ack.clone())),
         },
+        //todo rename s_prime_partner to s_partner
         "s_prime_partner".to_string(),
-        &mut s_prime_partner,
+        &mut s_partner,
         &mut client_context,
     )
     .await?;
@@ -312,9 +313,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
 
     // 14. Encrypt and send back data that partner has company doesn't
-    //     Generates s_double_prime_partner in-place
+    //     Generates s_prime_partner in-place
     let _ = rpc_client::send(
-        partner_protocol.encrypt(s_prime_partner)?,
+        partner_protocol.encrypt(s_partner)?,
+        //todo rename s_double_prime_partner to s_prime_partner
         "s_double_prime_partner".to_string(),
         &mut client_context,
     )

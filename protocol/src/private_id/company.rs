@@ -39,6 +39,9 @@ pub struct CompanyPrivateId {
     e_company: Arc<RwLock<Vec<TPoint>>>,
     e_partner: Arc<RwLock<Vec<TPoint>>>,
 
+    s_company: Arc<RwLock<Vec<ByteBuffer>>>,
+    s_partner: Arc<RwLock<Vec<ByteBuffer>>>,
+
     s_prime_company: Arc<RwLock<Vec<ByteBuffer>>>,
     s_prime_partner: Arc<RwLock<Vec<ByteBuffer>>>,
 
@@ -55,6 +58,8 @@ impl CompanyPrivateId {
             v_company: Arc::new(RwLock::default()),
             e_company: Arc::new(RwLock::default()),
             e_partner: Arc::new(RwLock::default()),
+            s_company: Arc::new(RwLock::default()),
+            s_partner: Arc::new(RwLock::default()),
             s_prime_company: Arc::new(RwLock::default()),
             s_prime_partner: Arc::new(RwLock::default()),
             id_map: Arc::new(RwLock::default()),
@@ -230,28 +235,41 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
         match (
             self.e_partner.clone().read(),
             self.e_company.clone().read(),
+            self.s_company.clone().write(),
+            self.s_partner.clone().write(),
             self.s_prime_company.clone().write(),
-            self.s_prime_partner.clone().write(),
         ) {
-            (Ok(e_partner), Ok(e_company), Ok(mut s_prime_company), Ok(mut s_prime_partner)) => {
+            (Ok(e_partner), Ok(e_company), Ok(mut s_company), Ok(mut s_partner), Ok(mut s_prime_company)) => {
                 let e_company_bytes = self
                     .ec_cipher
-                    .encrypt_to_bytes(&e_company, &self.private_keys.1);
+                    .to_bytes(&e_company);
                 let e_partner_bytes = self
                     .ec_cipher
-                    .encrypt_to_bytes(&e_partner, &self.private_keys.1);
+                    .to_bytes(&e_partner);
 
-                s_prime_partner.clear();
-                s_prime_partner.extend(common::vectors::subtract_set(
+                s_partner.clear();
+                s_partner.extend(common::vectors::subtract_set(
                     &e_partner_bytes,
                     &e_company_bytes,
                 ));
+
+                s_company.clear();
+                s_company.extend(common::vectors::subtract_set(
+                    &e_company_bytes,
+                    &e_partner_bytes,
+                ));
+
+                let s_company_point = self
+                .ec_cipher
+                .to_points(&s_company);
+
+                let s_prime_company_encrypt= self
+                .ec_cipher
+                .encrypt_to_bytes(&s_company_point, &self.private_keys.1);
 
                 s_prime_company.clear();
-                s_prime_company.extend(common::vectors::subtract_set(
-                    &e_company_bytes,
-                    &e_partner_bytes,
-                ));
+                s_prime_company.extend(s_prime_company_encrypt);
+
                 Ok(())
             }
             _ => {
@@ -306,6 +324,23 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                     let record = plain_data.get_record_with_keys(k.to_string(), v);
                     id_map.push(record);
                 }
+                /*
+                for k in self
+                    .ec_cipher
+                    .to_bytes(
+                        &self
+                            .ec_cipher
+                            .to_points_encrypt(&s_prime_partner, &self.private_keys.1),
+                    )
+                    .iter()
+                {
+                    let record = plain_data.get_empty_record_with_key(
+                        k.to_string(),
+                        na_val.map(String::from).as_ref(),
+                    );
+                    id_map.push(record);
+                }
+                */
 
                 if !plain_data.headers.is_empty() {
                     id_map.insert(0, plain_data.headers.clone());
