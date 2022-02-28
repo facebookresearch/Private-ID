@@ -55,10 +55,8 @@ impl CompanyPrivateId {
             v_company: Arc::new(RwLock::default()),
             e_company: Arc::new(RwLock::default()),
             e_partner: Arc::new(RwLock::default()),
-            // s_company: Arc::new(RwLock::default()),
             s_partner: Arc::new(RwLock::default()),
             s_prime_company: Arc::new(RwLock::default()),
-            // s_prime_partner: Arc::new(RwLock::default()),
             id_map: Arc::new(RwLock::default()),
         }
     }
