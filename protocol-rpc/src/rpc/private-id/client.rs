@@ -293,8 +293,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ServiceResponse {
             ack: Some(Ack::CalculateSetDiffAck(calculate_set_diff_ack.clone())),
         },
-        //todo rename s_prime_partner to s_partner
-        "s_prime_partner".to_string(),
+        "s_partner".to_string(),
         &mut s_partner,
         &mut client_context,
     )
@@ -316,8 +315,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     Generates s_prime_partner in-place
     let _ = rpc_client::send(
         partner_protocol.encrypt(s_partner)?,
-        //todo rename s_double_prime_partner to s_prime_partner
-        "s_double_prime_partner".to_string(),
+        "s_prime_partner".to_string(),
         &mut client_context,
     )
     .await?

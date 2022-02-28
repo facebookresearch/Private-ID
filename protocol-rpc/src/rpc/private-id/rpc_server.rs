@@ -24,7 +24,7 @@ use rpc::proto::{
     common::Payload,
     gen_private_id::{
         private_id_server::PrivateId, service_response::*, CalculateSetDiffAck, Commitment,
-        CommitmentAck, ECompanyAck, Init, InitAck, SDoublePrimePartnerAck, ServiceResponse,
+        CommitmentAck, ECompanyAck, Init, InitAck, SPrimePartnerAck, ServiceResponse,
         Step1Barrier, UPartnerAck, VCompanyAck,
     },
     streaming::{read_from_stream, write_to_stream, TPayloadStream},
@@ -72,7 +72,7 @@ impl PrivateId for PrivateIdService {
     type RecvUCompanyStream = TPayloadStream;
     type RecvVPartnerStream = TPayloadStream;
     type RecvSPrimeCompanyStream = TPayloadStream;
-    type RecvSPrimePartnerStream = TPayloadStream;
+    type RecvSPartnerStream = TPayloadStream;
 
     async fn initialize(&self, _: Request<Init>) -> Result<Response<ServiceResponse>, Status> {
         let _ = timer::Builder::new()
@@ -132,16 +132,16 @@ impl PrivateId for PrivateIdService {
             .map_err(|_| Status::new(Code::Aborted, "cannot init the protocol for partner"))
     }
 
-    async fn recv_s_prime_partner(
+    async fn recv_s_partner(
         &self,
         _: Request<ServiceResponse>,
-    ) -> Result<Response<Self::RecvSPrimePartnerStream>, Status> {
+    ) -> Result<Response<Self::RecvSPartnerStream>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("recv_s_partner")
             .build();
         self.protocol
-            .get_set_diff_output("s_prime_partner".to_string())
+            .get_set_diff_output("s_partner".to_string())
             .map(write_to_stream)
             .map_err(|_| Status::new(Code::Aborted, "cannot init the protocol for partner"))
     }
@@ -217,7 +217,7 @@ impl PrivateId for PrivateIdService {
             .map_err(|_| Status::internal("unable to recv_company"))
     }
 
-    async fn send_s_double_prime_partner(
+    async fn send_s_prime_partner(
         &self,
         request: Request<Streaming<Payload>>,
     ) -> Result<Response<ServiceResponse>, Status> {
@@ -230,7 +230,7 @@ impl PrivateId for PrivateIdService {
             .write_partner_to_id_map(read_from_stream(&mut strm).await?, self.na_val.as_ref())
             .map(|_| {
                 Response::new(ServiceResponse {
-                    ack: Some(Ack::SDoublePrimePartnerAck(SDoublePrimePartnerAck {})),
+                    ack: Some(Ack::SPrimePartnerAck(SPrimePartnerAck {})),
                 })
             })
             .map_err(|_| Status::internal("error loading"))
