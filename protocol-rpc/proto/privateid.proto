@@ -14,7 +14,7 @@ message ECompanyAck {}
 message UPartnerAck {}
 message VPartnerAck {}
 message SPartnerAck {}
-message SDoublePrimePartnerAck {}
+message SPrimePartnerAck {}
 message CalculateSetDiffAck {}
 message Commitment {}
 message CommitmentAck {}
@@ -35,7 +35,7 @@ message ServiceResponse {
         UPartnerAck u_partner_ack = 6;
         VPartnerAck v_partner_ack = 7;
         SPartnerAck s_partner_ack = 8;
-        SDoublePrimePartnerAck s_double_prime_partner_ack = 9;
+        SPrimePartnerAck s_prime_partner_ack = 9;
         CalculateSetDiffAck calculate_set_diff_ack = 10;
         Commitment commitment = 11;
         Step1Barrier step1_barrier = 12;
@@ -56,8 +56,8 @@ service PrivateId {
     rpc CalculateSetDiff(Step1Barrier) returns (ServiceResponse) {}
 
     rpc RecvSPrimeCompany(ServiceResponse) returns(stream common.Payload) {}
-    rpc RecvSPrimePartner(ServiceResponse) returns(stream common.Payload) {}
+    rpc RecvSPartner(ServiceResponse) returns(stream common.Payload) {}
 
-    rpc SendSDoublePrimePartner(stream common.Payload) returns(ServiceResponse) {}
+    rpc SendSPrimePartner(stream common.Payload) returns(ServiceResponse) {}
     rpc Reveal(Commitment) returns (CommitmentAck) {}
 }
