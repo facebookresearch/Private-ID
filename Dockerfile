@@ -24,7 +24,9 @@ cp bin/release/cross-psi-xor-server exec && \
 cp bin/release/cross-psi-xor-client exec && \
 cp bin/release/pjc-client exec && \
 cp bin/release/pjc-server exec && \
-cp bin/release/datagen exec
+cp bin/release/datagen exec && \
+cp bin/release/private-id-multi-key-server exec && \
+cp bin/release/private-id-multi-key-client exec
 
 
 # thin container with binaries
