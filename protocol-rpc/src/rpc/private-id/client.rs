@@ -8,7 +8,6 @@ extern crate ctrlc;
 extern crate protocol;
 extern crate retry;
 extern crate rpc;
-extern crate tokio_rustls;
 extern crate tonic;
 
 use clap::{App, Arg, ArgGroup};

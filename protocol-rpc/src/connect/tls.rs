@@ -2,14 +2,13 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 extern crate log;
-extern crate tokio_rustls;
 extern crate tonic;
 
 use log::{debug, error, info};
 
 use futures::executor::block_on;
 use http::Uri;
-use std::{fs, io::BufReader, path::Path};
+use std::path::Path;
 use tonic::transport::{Certificate, Identity};
 use url::Url;
 
@@ -119,44 +118,6 @@ pub fn host_into_url(host: &str, no_tls: bool) -> Url {
     } else {
         pre
     }
-}
-
-/// Reads pem-format certificate from path
-/// Returns cert in byte-format usable for tonic
-pub fn load_tonic_pem_cert<T>(path: T) -> Vec<u8>
-where
-    T: AsRef<Path> + Copy,
-{
-    let rustls_cert = load_rustls_cert(path);
-    rustls_cert.0
-}
-
-/// Reads certificates from path,
-/// if there are multiple certs in the file (chain), reads them into vector
-/// returns rustls certificate within tokio_rustls package
-pub(crate) fn load_rustls_certs<T>(path: T) -> Vec<tokio_rustls::rustls::Certificate>
-where
-    T: AsRef<Path> + Copy,
-{
-    let certfile = fs::File::open(path)
-        .unwrap_or_else(|_| panic!("cannot open certificate file {}", path.as_ref().display()));
-    let mut reader = BufReader::new(certfile);
-    tokio_rustls::rustls::internal::pemfile::certs(&mut reader).unwrap()
-}
-
-/// Reads a single certificate from the file,
-/// will panic if the file contains more than one cert
-/// returns rustls certificate within tokio_rustls package
-pub(crate) fn load_rustls_cert<T>(path: T) -> tokio_rustls::rustls::Certificate
-where
-    T: AsRef<Path> + Copy,
-{
-    let r = load_rustls_certs(&path);
-    if r.len() != 1 {
-        error!("Path contains {} certs, expected 1", r.len());
-        panic!("Panic, due to improper input on load single cert");
-    }
-    r.get(0).unwrap().to_owned()
 }
 
 #[cfg(test)]

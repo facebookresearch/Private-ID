@@ -7,7 +7,6 @@ extern crate crypto;
 extern crate ctrlc;
 extern crate protocol;
 extern crate retry;
-extern crate tokio_rustls;
 extern crate tonic;
 
 use log::{error, info, warn};
