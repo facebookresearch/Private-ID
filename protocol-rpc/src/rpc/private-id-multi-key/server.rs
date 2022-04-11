@@ -8,8 +8,10 @@ extern crate ctrlc;
 extern crate tonic;
 
 use clap::{App, Arg, ArgGroup};
+use common::s3_path::S3Path;
 use log::info;
 use std::{
+    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -100,7 +102,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ])
         .get_matches();
 
-    let input_path = matches.value_of("input").unwrap_or("input.csv");
+    let input_path_str = matches.value_of("input").unwrap_or("input.csv");
+    let input_path = match S3Path::from_str(input_path_str) {
+        Ok(s3_path) => {
+            info!(
+                "Reading {} from S3 and copying to local path",
+                input_path_str
+            );
+            let local_path = s3_path
+                .copy_to_local()
+                .await
+                .expect("Failed to copy s3 path to local tempfile");
+            info!("Wrote {} to tempfile {}", input_path_str, local_path);
+            local_path
+        }
+        Err(_) => input_path_str.to_string(),
+    };
     let input_with_headers = matches.is_present("input-with-headers");
     let output_path = matches.value_of("output");
 
@@ -129,7 +146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let service =
-        rpc_server::PrivateIdMultiKeyService::new(input_path, output_path, input_with_headers);
+        rpc_server::PrivateIdMultiKeyService::new(&input_path, output_path, input_with_headers);
 
     let ks = service.killswitch.clone();
     let recv_thread = thread::spawn(move || {
