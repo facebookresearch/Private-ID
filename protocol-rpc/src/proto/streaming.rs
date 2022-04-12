@@ -4,7 +4,6 @@
 extern crate crypto;
 extern crate http;
 extern crate log;
-extern crate tokio_rustls;
 extern crate tonic;
 
 use crypto::prelude::*;
