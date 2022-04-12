@@ -15,7 +15,7 @@ use log::info;
 use std::convert::TryInto;
 use tonic::Request;
 
-use common::timer;
+use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
 use crypto::prelude::TPayload;
 use protocol::private_id_multi_key::{partner::PartnerPrivateIdMultiKey, traits::*};
 use rpc::{
@@ -25,6 +25,7 @@ use rpc::{
         RpcClient,
     },
 };
+use std::str::FromStr;
 
 mod rpc_client;
 
@@ -112,7 +113,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_matches();
 
     let global_timer = timer::Timer::new_silent("global");
-    let input_path = matches.value_of("input").unwrap_or("input.csv");
+    let input_path_str = matches.value_of("input").unwrap_or("input.csv");
+    let mut input_path = input_path_str.to_string();
+    if let Ok(s3_path) = S3Path::from_str(input_path_str) {
+        info!(
+            "Reading {} from S3 and copying to local path",
+            input_path_str
+        );
+        let local_path = s3_path
+            .copy_to_local()
+            .await
+            .expect("Failed to copy s3 path to local tempfile");
+        info!("Wrote {} to tempfile {}", input_path_str, local_path);
+        input_path = local_path;
+    } else if let Ok(gcs_path) = GCSPath::from_str(input_path_str) {
+        info!(
+            "Reading {} from GCS and copying to local path",
+            input_path_str
+        );
+        let local_path = gcs_path
+            .copy_to_local()
+            .await
+            .expect("Failed to copy GCS path to local tempfile");
+        info!("Wrote {} to tempfile {}", input_path_str, local_path);
+        input_path = local_path;
+    }
     let input_with_headers = matches.is_present("input-with-headers");
     let output_path = matches.value_of("output");
 
@@ -329,7 +354,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 16. Create partner's ID spine and print
     partner_protocol.create_id_map(v_partner, s_prime_company);
     match output_path {
-        Some(p) => partner_protocol.save_id_map(&String::from(p)).unwrap(),
+        Some(p) => {
+            if let Ok(output_path_s3) = S3Path::from_str(p) {
+                let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
+                let (_file, path) = s3_tempfile.keep().unwrap();
+                let path = path.to_str().expect("Failed to convert path to str");
+                partner_protocol
+                    .save_id_map(&String::from(path))
+                    .expect("Failed to save id map to tempfile");
+                output_path_s3
+                    .copy_from_local(&path)
+                    .await
+                    .expect("Failed to write to S3");
+            } else if let Ok(output_path_gcp) = GCSPath::from_str(p) {
+                let gcs_tempfile = tempfile::NamedTempFile::new().unwrap();
+                let (_file, path) = gcs_tempfile.keep().unwrap();
+                let path = path.to_str().expect("Failed to convert path to str");
+                partner_protocol
+                    .save_id_map(&String::from(path))
+                    .expect("Failed to save id map to tempfile");
+                output_path_gcp
+                    .copy_from_local(&path)
+                    .await
+                    .expect("Failed to write to GCS");
+            } else {
+                partner_protocol
+                    .save_id_map(&String::from(p))
+                    .expect("Failed to save id map to output file");
+            }
+        }
         None => partner_protocol.print_id_map(),
     }
 

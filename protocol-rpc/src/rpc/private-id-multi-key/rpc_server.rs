@@ -9,6 +9,7 @@ extern crate tokio;
 extern crate tonic;
 
 use std::{
+    str::FromStr,
     borrow::BorrowMut,
     convert::TryInto,
     sync::{
@@ -18,7 +19,7 @@ use std::{
 };
 use tonic::{Code, Request, Response, Status, Streaming};
 
-use common::timer;
+use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
 use protocol::private_id_multi_key::{
     company::CompanyPrivateIdMultiKey, traits::CompanyPrivateIdMultiKeyProtocol,
 };
@@ -278,7 +279,39 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
             .build();
         self.protocol.write_company_to_id_map();
         match &self.output_path {
-            Some(p) => self.protocol.save_id_map(p).unwrap(),
+            Some(p) => {
+                if let Ok(output_path_s3) = S3Path::from_str(p) {
+                    let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
+                    let (_file, path) = s3_tempfile.keep().unwrap();
+                    let path = path.to_str().expect("Failed to convert path to str");
+                    self.protocol
+                        .save_id_map(
+                            &String::from(path),
+                        )
+                        .expect("Failed to save id map to tempfile");
+                    output_path_s3
+                        .copy_from_local(&path)
+                        .await
+                        .expect("Failed to write to S3");
+                } else if let Ok(output_path_gcp) = GCSPath::from_str(p) {
+                    let gcs_tempfile = tempfile::NamedTempFile::new().unwrap();
+                    let (_file, path) = gcs_tempfile.keep().unwrap();
+                    let path = path.to_str().expect("Failed to convert path to str");
+                    self.protocol
+                        .save_id_map(
+                            &String::from(path),
+                        )
+                        .expect("Failed to save id map to tempfile");
+                    output_path_gcp
+                        .copy_from_local(&path)
+                        .await
+                        .expect("Failed to write to GCS");
+                } else {
+                    self.protocol
+                        .save_id_map(p)
+                        .unwrap();
+                }
+            }
             None => self.protocol.print_id_map(),
         }
         {
