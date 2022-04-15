@@ -3,7 +3,7 @@
 
 extern crate common;
 
-use common::files::{read_csv_as_keyed_nums, transpose_keyed_nums, KeyedNums};
+use common::files::{read_csv_as_keyed_nums, read_csv_as_strings, transpose_keyed_nums, KeyedNums};
 
 #[test]
 fn test_read_csv_as_keyed_ints() {
@@ -30,4 +30,14 @@ fn test_transpose_keyed_ints() {
     assert_eq!(rows[0], [1, 2, 3, 4]);
     assert_eq!(rows[1].len(), 4);
     assert_eq!(rows[1], [10, 20, 30, 40]);
+}
+
+#[test]
+fn test_read_csv_as_strings() {
+    let r: Vec<Vec<String>> = read_csv_as_strings("./tests/keyed_ints.csv", false);
+    assert_eq!(r.len(), 4);
+    assert_eq!(r[0], ["a", "1", "10"]);
+    assert_eq!(r[1], ["b", "2", "20"]);
+    assert_eq!(r[2], ["c", "3", "30"]);
+    assert_eq!(r[3], ["d", "4", "40"]);
 }
