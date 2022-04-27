@@ -259,4 +259,70 @@ mod test {
         let id_map = vec![s1, s2, s3];
         sort_stringify_id_map(&id_map, true);
     }
+
+    #[test]
+    fn test_write_vec_to_csv() {
+        use tempfile::NamedTempFile;
+        use std::io::{ Read};
+        let s1 = vec![String::from("3"),String::from("a")];
+        let s2 = vec![String::from("2"),String::from("a")];
+        let s3 = vec![String::from("1"),String::from("a")];
+        let mut id_map =  vec![s1, s2, s3];
+        let file = NamedTempFile::new().unwrap();
+        let mut file1 = file.reopen().unwrap();
+        let _ = write_vec_to_csv(&mut id_map, file, false, false);
+        let mut buf = String::new();
+        file1.read_to_string(&mut buf).unwrap();
+        assert_eq!(buf, "1,a\n2,a\n3,a\n");
+    }
+
+    #[test]
+    fn test_write_vec_to_csv_with_header() {
+        use tempfile::NamedTempFile;
+        use std::io::{ Read};
+        let s0 = vec![String::from("ID"),String::from("NAME")];
+        let s1 = vec![String::from("3"),String::from("a")];
+        let s2 = vec![String::from("2"),String::from("a")];
+        let s3 = vec![String::from("1"),String::from("a")];
+        let mut id_map =  vec![s0,s1, s2, s3];
+        let file = NamedTempFile::new().unwrap();
+        let mut file1 = file.reopen().unwrap();
+        let _ = write_vec_to_csv(&mut id_map, file, true, false);
+        let mut buf = String::new();
+        file1.read_to_string(&mut buf).unwrap();
+        assert_eq!(buf, "ID,NAME\n1,a\n2,a\n3,a\n");
+    }
+
+    #[test]
+    fn test_write_vec_to_csv_rownumber() {
+        use tempfile::NamedTempFile;
+        use std::io::{ Read};
+        let s1 = vec![String::from("3"),String::from("a")];
+        let s2 = vec![String::from("2"),String::from("a")];
+        let s3 = vec![String::from("1"),String::from("a")];
+        let mut id_map =  vec![s1, s2, s3];
+        let file = NamedTempFile::new().unwrap();
+        let mut file1 = file.reopen().unwrap();
+        let _ = write_vec_to_csv(&mut id_map, file, false, true);
+        let mut buf = String::new();
+        file1.read_to_string(&mut buf).unwrap();
+        assert_eq!(buf, "0,a\n1,a\n2,a\n");
+    }
+
+
+    #[test]
+    fn test_write_u64cols_to_file() {
+        use tempfile::NamedTempFile;
+        use std::io::{ Read};
+        let s1 = vec![11,21];
+        let s2 = vec![12,22];
+        let s3 = vec![13,23];
+        let mut id_map =  vec![s1, s2, s3];
+        let file = NamedTempFile::new().unwrap();
+        let mut file1 = file.reopen().unwrap();
+        let _ = write_u64cols_to_file(&mut id_map, file);
+        let mut buf = String::new();
+        file1.read_to_string(&mut buf).unwrap();
+        assert_eq!(buf, "11,12,13\n21,22,23\n");
+    }
 }
