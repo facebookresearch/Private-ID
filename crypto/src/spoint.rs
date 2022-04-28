@@ -24,3 +24,15 @@ impl Display for ByteBuffer {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_bytebuffer_display() {
+        let b = ByteBuffer {
+            buffer: 0x12345678u32.to_le_bytes().to_vec(),
+        };
+        assert_eq!(format!("The ByteBuffer is: {}", b), "The ByteBuffer is: 78563412");
+    }
+}
