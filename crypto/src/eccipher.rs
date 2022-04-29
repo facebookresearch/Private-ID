@@ -426,4 +426,16 @@ mod tests {
             assert_eq!(vec_compare(&res_parr, &res_seq), true);
         }
     }
+
+    #[test]
+    fn test_ecristrettoparallel_debug() {
+            let parr = ECRistrettoParallel::new();
+            assert_eq!(format!("The ECRistrettoParallel is: {:?}", parr), "The ECRistrettoParallel is: Ristretto EC ops parallel implementation");
+    }
+
+    #[test]
+    fn test_ecristrettosequential_debug() {
+        let parr = ECRistrettoSequential::new();
+        assert_eq!(format!("The ECRistrettoSequential is: {:?}", parr), "The ECRistrettoSequential is: Ristretto EC ops sequential implementation");
+    }
 }
