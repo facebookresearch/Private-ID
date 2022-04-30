@@ -83,6 +83,9 @@ env RUST_LOG=info cargo run --bin cross-psi-xor-client -- \
 --output etc/example/cross_psi_xor/output_partner \
 --no-tls
 ```
+The `--output` option provides prefix for the output files that contain the shares. In this case, Company generates two files; `output_company_company_feature.csv` and `output_company_partner_feature.csv`. They contain Company's share of company and parter features respectively. Similarly Partner generates two files; `output_partner_company_feature.csv` and `output_partner_company_feature.csv`. They contain Partner's share of company and partner features respectively.
+
+Thus `output_company_company_feature.csv` and `output_partner_company_feature.csv` are XOR shares of Company's features. Similarly `output_partner_company_feature.csv` and `output_partner_partner_feature.csv` are XOR shares of Partner's features.
 
 ### Private Join and Compute
 This is an implementation of Google's [Private Join and Compute](https://github.com/google/private-join-and-compute) protocol, that does a inner join based on email addresses and computes a sum of the corresponding feature for the Partner.
