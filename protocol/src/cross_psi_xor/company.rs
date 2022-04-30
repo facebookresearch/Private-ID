@@ -5,9 +5,9 @@ extern crate common;
 extern crate crypto;
 
 use log::info;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rand::{distributions::Uniform, Rng};
 use std::{
-    collections::HashMap,
     path::Path,
     sync::{Arc, RwLock},
 };
@@ -49,10 +49,9 @@ pub struct CompanyCrossPsiXOR {
     partner_intersection_mask: Arc<RwLock<Vec<bool>>>,
     self_intersection_indices: Arc<RwLock<Vec<usize>>>,
 
-    //TODO: WARN: this is single column only (yet)
-    additive_mask: Arc<RwLock<Vec<u64>>>,
-    partner_shares: Arc<RwLock<HashMap<usize, TPayload>>>,
-    self_shares: Arc<RwLock<HashMap<usize, Vec<u64>>>>,
+    additive_mask: Arc<RwLock<Vec<Vec<u64>>>>,
+    partner_shares: (Arc<RwLock<usize>>, Arc<RwLock<Vec<TPayload>>>),
+    self_shares: Arc<RwLock<Vec<Vec<u64>>>>,
 }
 
 impl CompanyCrossPsiXOR {
@@ -79,7 +78,7 @@ impl CompanyCrossPsiXOR {
             self_intersection_indices: Arc::new(RwLock::default()),
 
             additive_mask: Arc::new(RwLock::default()),
-            partner_shares: Arc::new(RwLock::default()),
+            partner_shares: (Arc::new(RwLock::default()), Arc::new(RwLock::default())),
             self_shares: Arc::new(RwLock::default()),
         }
     }
@@ -161,7 +160,7 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
         }
     }
 
-    fn get_permuted_features(&self, feature_id: usize) -> TPayload {
+    fn get_permuted_features(&self) -> TPayload {
         let t = timer::Builder::new()
             .silent(true)
             .label("u_company")
@@ -172,14 +171,36 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
             self.self_permutation.clone().read(),
             self.plaintext_features.clone().write(),
         ) {
-            let feature = &mut features[feature_id];
-            common::permutations::permute(perm.as_slice(), feature);
+            for i in 0..features.len() {
+                assert_eq!(perm.len(), features[i].len());
+                common::permutations::permute(perm.as_slice(), &mut features[i]);
+            }
 
-            let res = self.he_cipher.enc_serialise_u64(feature);
-            t.qps(format!("feature {} HE enc", feature_id).as_str(), res.len());
-            res
+            let (num_features, res) = self.he_cipher.enc_serialise_u64_vec(features.as_ref());
+            let num_ciphers = res.len();
+            assert_eq!(num_features, features.len());
+            let num_entries = res[0].len();
+
+            let mut r_flat = res.into_iter().flatten().collect::<Vec<_>>();
+            r_flat.push(
+                ByteBuffer {
+                    buffer: (num_entries as u64).to_le_bytes().to_vec(),
+                }
+            );
+            r_flat.push(
+                ByteBuffer {
+                    buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
+                }
+            );
+            r_flat.push(
+                ByteBuffer {
+                    buffer: (num_features as u64).to_le_bytes().to_vec(),
+                }
+            );
+            t.qps(format!("feature length HE enc").as_str(), num_entries);
+            r_flat
         } else {
-            panic!("Cannot HE encrypt column {} ", feature_id);
+            panic!("Cannot HE encrypt features");
         }
     }
 
@@ -192,63 +213,110 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
         }
     }
 
-    fn generate_additive_shares(&self, feature_id: usize, values: TPayload) {
+    fn generate_additive_shares(&self, features: Vec<TPayload>, num_features: usize) {
         let t = timer::Builder::new()
             .label("server")
             .silent(true)
             .extra_label("additive shares mask")
             .build();
-        let filtered_values: TPayload =
+        assert!(features.len() > 0);
+        assert!(num_features > 0);
+        // Check if all features have the same number of elements
+        {
+            let l = features.iter().map(|x| x.len()).collect::<Vec<_>>();
+            assert_eq!(l.iter().min(), l.iter().max());
+        }
+
+        let mut filtered_features = Vec::<TPayload>::new();
+
+        for feature in features.iter() {
             if let Ok(mask) = self.partner_intersection_mask.clone().read() {
-                values
+                assert_eq!(feature.len(), mask.len());
+                let t = feature
                     .iter()
                     .zip(mask.iter())
                     .filter(|(_, &b)| b)
                     .map(|(a, _)| a.clone())
-                    .collect::<TPayload>()
+                    .collect::<Vec<_>>();
+                filtered_features.push(t);
             } else {
                 panic!("unable to get masked vals")
             };
+        }
 
-        if let (Ok(mut mask), Ok(mut partner_shares)) = (
+        let num_entries = filtered_features[0].len();
+
+        if let (Ok(mut mask), Ok(mut num_features_partner_shares), Ok(mut partner_shares)) = (
             self.additive_mask.clone().write(),
-            self.partner_shares.clone().write(),
+            self.partner_shares.0.clone().write(),
+            self.partner_shares.1.clone().write(),
         ) {
             let mut rng = rand::thread_rng();
             let range = Uniform::new(0_u64, u64::MAX);
-            *mask = (0..filtered_values.len())
-                .map(|_| rng.sample(&range))
-                .collect();
 
-            let res = self.he_cipher.xor_plaintext(filtered_values, &mask);
-            t.qps("masking values in the intersection", res.len());
-            partner_shares.insert(feature_id, res);
+            let mut r = {
+                let mut r_l = Vec::<Vec<u64>>::new();
+                for _ in 0..num_features {
+                    let x = (0..num_entries).map(|_| rng.sample(&range)).collect();
+                    r_l.push(x);
+                }
+                r_l
+            };
+
+            mask.clear();
+            mask.extend(r.drain(..));
+
+            *num_features_partner_shares = num_features;
+            partner_shares.clear();
+            partner_shares.append(&mut self.he_cipher.xor_plaintext_vec(filtered_features, &mask));
+            t.qps("masking values in the intersection", partner_shares[0].len());
         } else {
             panic!("Unable to add additive shares with the intersection")
         }
     }
 
-    fn get_shares(&self, feature_index: usize) -> TPayload {
-        if let Ok(mut shares) = self.partner_shares.clone().write() {
-            assert!(
-                shares.contains_key(&feature_index),
-                "No feature_index {} for shares",
-                feature_index
+    fn get_shares(&self) -> TPayload {
+        if let (Ok(num_features), Ok(shares)) = (
+            self.partner_shares.0.clone().read(),
+            self.partner_shares.1.clone().read(),
+        ) {
+            let mut s_flat = shares.clone().into_iter().flatten().collect::<Vec<_>>();
+            let num_ciphers = shares.len();
+            let num_entries = shares[0].len();
+            s_flat.push(
+                ByteBuffer {
+                    buffer: (num_entries as u64).to_le_bytes().to_vec(),
+                }
             );
-            shares.remove(&feature_index).unwrap()
+            s_flat.push(
+                ByteBuffer {
+                    buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
+                }
+            );
+            s_flat.push(
+                ByteBuffer {
+                    buffer: (*num_features as u64).to_le_bytes().to_vec(),
+                }
+            );
+            s_flat
         } else {
             panic!("Unable to read shares");
         }
     }
 
-    fn set_self_shares(&self, feature_index: usize, data: TPayload) {
+    fn set_self_shares(&self, data: Vec<TPayload>, num_features: usize) {
         if let Ok(mut shares) = self.self_shares.clone().write() {
+            // Check if all features have the same number of elements
+            {
+                let l = data.iter().map(|x| x.len()).collect::<Vec<_>>();
+                assert_eq!(l.iter().min(), l.iter().max());
+            }
             info!(
-                "Saving self-shares for feature index {} len {}",
-                feature_index,
-                data.len()
+                "Saving self-shares for len {} num_features {}",
+                data[0].len(), num_features,
             );
-            shares.insert(feature_index, self.he_cipher.decrypt_vec_u64(data));
+            shares.clear();
+            shares.append(&mut self.he_cipher.decrypt_vec_u64_vec(data, num_features));
         } else {
             panic!("Unable to write shares");
         }
@@ -317,26 +385,37 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
 
 impl Reveal for CompanyCrossPsiXOR {
     fn reveal<T: AsRef<Path>>(&self, path: T) {
-        if let (Ok(indices), Ok(additive_mask), Ok(mut self_shares)) = (
+        if let (Ok(indices), Ok(mut additive_mask), Ok(mut self_shares)) = (
             self.self_intersection_indices.clone().read(),
-            self.additive_mask.clone().read(),
+            self.additive_mask.clone().write(),
             self.self_shares.clone().write(),
         ) {
-            let mut company_shares: Vec<u64> = Vec::with_capacity(indices.len());
+            let mut company_shares = Vec::<Vec<u64>>::new();
 
-            for index in indices.iter() {
-                company_shares.push(self_shares[&0][*index]);
+            for i in 0..self_shares.len() {
+                /*
+                let mut t: Vec<u64> = Vec::with_capacity(indices.len());
+
+                for index in indices.iter() {
+                    t.push(self_shares[i][*index]);
+                }*/
+
+                let t = indices.clone().into_par_iter().map(|idx| self_shares[i][idx]).collect();
+                company_shares.push(t);
             }
-            self_shares.remove(&0);
+            self_shares.clear();
 
-            let partner_shares = additive_mask.clone();
+            let c_filename = format!("{}{}", path.as_ref().display(), "_company_feature.csv");
+            info!("revealing company features to output file");
+            common::files::write_u64cols_to_file(&mut company_shares, Path::new(&c_filename)).unwrap();
 
-            let mut out: Vec<Vec<u64>> =
-                Vec::with_capacity(self.get_self_num_features() + self.get_partner_num_features());
-            out.push(partner_shares);
-            out.push(company_shares);
-            info!("revealing columns to output file");
-            common::files::write_u64cols_to_file(&mut out, path).unwrap();
+            // additive_mask are partner_shares
+            let p_filename = format!("{}{}", path.as_ref().display(), "_partner_feature.csv");
+            info!("revealing partner features to output file");
+            common::files::write_u64cols_to_file(&mut additive_mask, Path::new(&p_filename)).unwrap();
+
+            additive_mask.clear();
+
         } else {
             panic!("Unable to reveal");
         }

@@ -16,9 +16,7 @@ message InitAck {
     uint64 company_num_records= 3;
 }
 
-message FeatureQuery {
-    uint64 feature_index = 1;
-}
+message FeatureQuery {}
 
 message FeatureAck {
     FeatureQuery query_ack = 1;
@@ -57,19 +55,19 @@ service CrossPsiXOR {
 
     rpc RecvUCompanyKeys(ServiceResponse) returns(stream common.Payload) {}
 
-    rpc RecvUCompanyFeature(ServiceResponse) returns(stream common.Payload) {}
+    rpc RecvUCompanyFeatures(ServiceResponse) returns(stream common.Payload) {}
 
     rpc SendUPartnerKeys(stream common.Payload) returns(ServiceResponse) {}
 
-    rpc SendUPartnerFeature(stream common.Payload) returns(ServiceResponse) {}
+    rpc SendUPartnerFeatures(stream common.Payload) returns(ServiceResponse) {}
 
     rpc SendECompanyKeys(stream common.Payload) returns(ServiceResponse) {}
 
-    rpc SendECompanyFeature(stream common.Payload) returns(ServiceResponse) {}
+    rpc SendECompanyFeatures(stream common.Payload) returns(ServiceResponse) {}
 
     rpc RecvSharesCompanyIndices(ServiceResponse) returns(stream common.Payload){}
 
-    rpc RecvSharesFeature(ServiceResponse) returns(stream common.Payload) {}
+    rpc RecvSharesFeatures(ServiceResponse) returns(stream common.Payload) {}
 
     rpc Reveal(Commitment) returns (CommitmentAck) {}
 }
