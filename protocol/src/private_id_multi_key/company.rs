@@ -15,6 +15,7 @@ use crypto::{
 };
 
 use common::{
+    files,
     permutations::{gen_permute_pattern, permute, undo_permute},
     timer,
 };
@@ -260,7 +261,7 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
                         let match_idx = e
                             .iter()
                             .map(|key|
-                                // TODO: Replace with match 
+                                // TODO: Replace with match
                                 if e_c_map.contains_key(&key.compress().to_bytes().to_vec()) {
                                     let &m_idx = e_c_map.get(&key.compress().to_bytes().to_vec()).unwrap();
                                     (m_idx, e_c_valid[m_idx])

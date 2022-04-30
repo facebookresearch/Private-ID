@@ -28,7 +28,7 @@ pub async fn recv(
     let mut strm = match name.as_str() {
         "u_company" => rpc.recv_u_company(request).await?.into_inner(),
         "v_partner" => rpc.recv_v_partner(request).await?.into_inner(),
-        "s_prime_partner" => rpc.recv_s_prime_partner(request).await?.into_inner(),
+        "s_partner" => rpc.recv_s_partner(request).await?.into_inner(),
         "s_prime_company" => rpc.recv_s_prime_company(request).await?.into_inner(),
         _ => panic!("wrong data type"),
     };
@@ -49,7 +49,7 @@ pub async fn send(
         "u_partner" => rpc.send_u_partner(send_data(data)).await,
         "e_company" => rpc.send_e_company(send_data(data)).await,
         "v_company" => rpc.send_v_company(send_data(data)).await,
-        "s_double_prime_partner" => rpc.send_s_double_prime_partner(send_data(data)).await,
+        "s_prime_partner" => rpc.send_s_prime_partner(send_data(data)).await,
         _ => panic!("wrong data type"),
     }
 }

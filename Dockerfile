@@ -3,12 +3,12 @@ LABEL maintainer="Vlad Vlaskin <vladvlaskin@fb.com>"
 
 ENV BASE /usr/local
 
-RUN rustup install nightly && \
-rustup component add rustfmt --toolchain nightly-x86_64-unknown-linux-gnu
+RUN rustup install stable && \
+rustup component add rustfmt --toolchain stable-x86_64-unknown-linux-gnu
 
 ADD . /opt/private-id
 WORKDIR /opt/private-id
-RUN cargo +nightly build \
+RUN cargo +stable build \
     --release \
     --workspace \
     --target-dir /opt/private-id/bin
@@ -24,7 +24,9 @@ cp bin/release/cross-psi-xor-server exec && \
 cp bin/release/cross-psi-xor-client exec && \
 cp bin/release/pjc-client exec && \
 cp bin/release/pjc-server exec && \
-cp bin/release/datagen exec
+cp bin/release/datagen exec && \
+cp bin/release/private-id-multi-key-server exec && \
+cp bin/release/private-id-multi-key-client exec
 
 
 # thin container with binaries

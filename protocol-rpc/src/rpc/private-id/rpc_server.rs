@@ -17,13 +17,14 @@ use std::{
 };
 use tonic::{Code, Request, Response, Status, Streaming};
 
+mod metrics;
 use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
 use protocol::private_id::{company::CompanyPrivateId, traits::CompanyPrivateIdProtocol};
 use rpc::proto::{
     common::Payload,
     gen_private_id::{
         private_id_server::PrivateId, service_response::*, CalculateSetDiffAck, Commitment,
-        CommitmentAck, ECompanyAck, Init, InitAck, SDoublePrimePartnerAck, ServiceResponse,
+        CommitmentAck, ECompanyAck, Init, InitAck, SPrimePartnerAck, ServiceResponse,
         Step1Barrier, UPartnerAck, VCompanyAck,
     },
     streaming::{read_from_stream, write_to_stream, TPayloadStream},
@@ -36,6 +37,8 @@ pub struct PrivateIdService {
     input_with_headers: bool,
     na_val: Option<String>,
     use_row_numbers: bool,
+    metrics_path: Option<String>,
+    metrics_obj: metrics::Metrics,
     pub killswitch: Arc<AtomicBool>,
 }
 
@@ -46,6 +49,7 @@ impl PrivateIdService {
         input_with_headers: bool,
         na_val: Option<&str>,
         use_row_numbers: bool,
+        metrics_path: Option<String>,
     ) -> PrivateIdService {
         PrivateIdService {
             protocol: CompanyPrivateId::new(),
@@ -54,6 +58,10 @@ impl PrivateIdService {
             input_with_headers,
             na_val: na_val.map(String::from),
             use_row_numbers,
+            metrics_path,
+            metrics_obj: metrics::Metrics::new(
+                "private-id".to_string(),
+            ),
             killswitch: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -64,7 +72,7 @@ impl PrivateId for PrivateIdService {
     type RecvUCompanyStream = TPayloadStream;
     type RecvVPartnerStream = TPayloadStream;
     type RecvSPrimeCompanyStream = TPayloadStream;
-    type RecvSPrimePartnerStream = TPayloadStream;
+    type RecvSPartnerStream = TPayloadStream;
 
     async fn initialize(&self, _: Request<Init>) -> Result<Response<ServiceResponse>, Status> {
         let _ = timer::Builder::new()
@@ -124,16 +132,16 @@ impl PrivateId for PrivateIdService {
             .map_err(|_| Status::new(Code::Aborted, "cannot init the protocol for partner"))
     }
 
-    async fn recv_s_prime_partner(
+    async fn recv_s_partner(
         &self,
         _: Request<ServiceResponse>,
-    ) -> Result<Response<Self::RecvSPrimePartnerStream>, Status> {
+    ) -> Result<Response<Self::RecvSPartnerStream>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("recv_s_partner")
             .build();
         self.protocol
-            .get_set_diff_output("s_prime_partner".to_string())
+            .get_set_diff_output("s_partner".to_string())
             .map(write_to_stream)
             .map_err(|_| Status::new(Code::Aborted, "cannot init the protocol for partner"))
     }
@@ -209,7 +217,7 @@ impl PrivateId for PrivateIdService {
             .map_err(|_| Status::internal("unable to recv_company"))
     }
 
-    async fn send_s_double_prime_partner(
+    async fn send_s_prime_partner(
         &self,
         request: Request<Streaming<Payload>>,
     ) -> Result<Response<ServiceResponse>, Status> {
@@ -222,7 +230,7 @@ impl PrivateId for PrivateIdService {
             .write_partner_to_id_map(read_from_stream(&mut strm).await?, self.na_val.as_ref())
             .map(|_| {
                 Response::new(ServiceResponse {
-                    ack: Some(Ack::SDoublePrimePartnerAck(SDoublePrimePartnerAck {})),
+                    ack: Some(Ack::SPrimePartnerAck(SPrimePartnerAck {})),
                 })
             })
             .map_err(|_| Status::internal("error loading"))
@@ -234,6 +242,9 @@ impl PrivateId for PrivateIdService {
             .extra_label("reveal")
             .build();
         self.protocol.write_company_to_id_map();
+        self.metrics_obj.set_partner_input_size(self.protocol.get_e_partner_size());
+        self.metrics_obj.set_publisher_input_size(self.protocol.get_e_company_size());
+        self.metrics_obj.set_union_file_size(self.protocol.get_id_map_size());
         match &self.output_path {
             Some(p) => {
                 if let Ok(output_path_s3) = S3Path::from_str(p) {
@@ -275,6 +286,27 @@ impl PrivateId for PrivateIdService {
             None => self
                 .protocol
                 .print_id_map(10, self.input_with_headers, self.use_row_numbers),
+        }
+        match &self.metrics_path {
+            Some(p) => {
+                if let Ok(metrics_path_s3) = S3Path::from_str(p) {
+                    let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
+                    let (_file, path) = s3_tempfile.keep().unwrap();
+                    let path = path.to_str().expect("Failed to convert path to str");
+                    self.metrics_obj.save_metrics(&String::from(path))
+                        .expect("Failed to metrics to tempfile");
+                    metrics_path_s3
+                        .copy_from_local(&path)
+                        .await
+                        .expect("Failed to write to S3");
+                } else {
+                    self.metrics_obj.save_metrics(p)
+                        .expect("Failed to write to metrics path");
+                }
+            }
+            None => {
+                self.metrics_obj.print_metrics();
+            }
         }
         {
             debug!("Setting up flag for graceful down");

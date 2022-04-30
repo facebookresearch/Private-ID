@@ -128,3 +128,8 @@ The output will be ElGamal encrypted Universal IDs assigned to each entry in the
 
 ## License
 Private-ID is Apache 2.0 licensed, as found in the [LICENSE](/LICENSE) file
+	
+## Additional Resources on Private Computation at Meta
+* [The Value of Secure Multi-Party Computation](https://privacytech.fb.com/multi-party-computation/)
+* [Building the Next Era of Personalized Experiences](https://www.facebook.com/business/news/building-the-next-era-of-personalized-experiences)
+* [Privacy-Enhancing Technologies and Building for the Future](https://www.facebook.com/business/news/building-for-the-future)

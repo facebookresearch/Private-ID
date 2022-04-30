@@ -49,6 +49,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .short("o")
                 .takes_value(true)
                 .help("Path to output file, output format: private-id, option(key)"),
+            Arg::with_name("metric-path")
+                .long("metric-path")
+                .takes_value(true)
+                .help("Path to metric output file"),
             Arg::with_name("stdout")
                 .long("stdout")
                 .short("u")
@@ -125,6 +129,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let input_with_headers = matches.is_present("input-with-headers");
     let output_path = matches.value_of("output");
+    let metric_path = matches.value_of("metric-path");
     let na_val = matches.value_of("not-matched-value");
     let use_row_numbers = matches.is_present("use-row-numbers");
 
@@ -146,8 +151,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Input path: {}", input_path);
 
+    let mut metrics_output_path: Option<String> = None;
+    if metric_path.is_some() {
+        metrics_output_path = Some(metric_path.unwrap().to_string());
+    }
+
     if output_path.is_some() {
         info!("Output path: {}", output_path.unwrap());
+        if metrics_output_path.is_none() {
+            metrics_output_path = Some(format!("{}_metrics", output_path.unwrap()));
+        }
     } else {
         info!("Output view to stdout (first 10 items)");
     }
@@ -158,6 +171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         input_with_headers,
         na_val,
         use_row_numbers,
+        metrics_output_path,
     );
 
     let ks = service.killswitch.clone();

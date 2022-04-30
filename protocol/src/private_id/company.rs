@@ -39,8 +39,8 @@ pub struct CompanyPrivateId {
     e_company: Arc<RwLock<Vec<TPoint>>>,
     e_partner: Arc<RwLock<Vec<TPoint>>>,
 
+    s_partner: Arc<RwLock<Vec<ByteBuffer>>>,
     s_prime_company: Arc<RwLock<Vec<ByteBuffer>>>,
-    s_prime_partner: Arc<RwLock<Vec<ByteBuffer>>>,
 
     id_map: Arc<RwLock<Vec<Vec<String>>>>,
 }
@@ -55,8 +55,8 @@ impl CompanyPrivateId {
             v_company: Arc::new(RwLock::default()),
             e_company: Arc::new(RwLock::default()),
             e_partner: Arc::new(RwLock::default()),
+            s_partner: Arc::new(RwLock::default()),
             s_prime_company: Arc::new(RwLock::default()),
-            s_prime_partner: Arc::new(RwLock::default()),
             id_map: Arc::new(RwLock::default()),
         }
     }
@@ -78,6 +78,18 @@ impl CompanyPrivateId {
             );
         }
         status
+    }
+
+    pub fn get_e_company_size(&self) -> usize {
+        self.e_company.read().unwrap().len()
+    }
+
+    pub fn get_e_partner_size(&self) -> usize {
+        self.e_partner.read().unwrap().len()
+    }
+
+    pub fn get_id_map_size(&self) -> usize {
+        self.id_map.read().unwrap().len()
     }
 }
 
@@ -141,7 +153,7 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
 
     fn write_partner_to_id_map(
         &self,
-        s_prime_partner_payload: TPayload,
+        s_prime_partner: TPayload,
         na_val: Option<&String>,
     ) -> Result<(), ProtocolError> {
         self.id_map
@@ -150,12 +162,20 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
             .map(|mut data| {
                 let t = timer::Timer::new_silent("load_s_prime_partner");
                 if data.is_empty() {
-                    for k in &s_prime_partner_payload {
+                    for k in self
+                        .ec_cipher
+                        .to_bytes(
+                            &self
+                                .ec_cipher
+                                .to_points_encrypt(&s_prime_partner, &self.private_keys.1),
+                        )
+                        .iter()
+                    {
                         let record = (*self.plain_data.clone().read().unwrap())
                             .get_empty_record_with_key(k.to_string(), na_val);
                         data.push(record);
                     }
-                    t.qps("deserialize_exp", s_prime_partner_payload.len());
+                    t.qps("deserialize_exp", s_prime_partner.len());
                 }
             })
             .map_err(|err| {
@@ -218,28 +238,38 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
         match (
             self.e_partner.clone().read(),
             self.e_company.clone().read(),
+            self.s_partner.clone().write(),
             self.s_prime_company.clone().write(),
-            self.s_prime_partner.clone().write(),
         ) {
-            (Ok(e_partner), Ok(e_company), Ok(mut s_prime_company), Ok(mut s_prime_partner)) => {
-                let e_company_bytes = self
-                    .ec_cipher
-                    .encrypt_to_bytes(&e_company, &self.private_keys.1);
-                let e_partner_bytes = self
-                    .ec_cipher
-                    .encrypt_to_bytes(&e_partner, &self.private_keys.1);
+            (Ok(e_partner), Ok(e_company), Ok(mut s_partner), Ok(mut s_prime_company)) => {
+                let s_p_company = {
+                    let e_company_bytes = self
+                        .ec_cipher
+                        .to_bytes(&e_company);
+                    let e_partner_bytes = self
+                        .ec_cipher
+                        .to_bytes(&e_partner);
 
-                s_prime_partner.clear();
-                s_prime_partner.extend(common::vectors::subtract_set(
-                    &e_partner_bytes,
-                    &e_company_bytes,
-                ));
+                    s_partner.clear();
+                    s_partner.extend(common::vectors::subtract_set(
+                        &e_partner_bytes,
+                        &e_company_bytes,
+                    ));
+
+                    let mut s_company = Vec::<ByteBuffer>::new();
+                    s_company.extend(common::vectors::subtract_set(
+                        &e_company_bytes,
+                        &e_partner_bytes,
+                    ));
+
+                    self.ec_cipher.to_bytes(
+                        &self.ec_cipher.to_points_encrypt(&s_company, &self.private_keys.1)
+                    )
+                };
 
                 s_prime_company.clear();
-                s_prime_company.extend(common::vectors::subtract_set(
-                    &e_company_bytes,
-                    &e_partner_bytes,
-                ));
+                s_prime_company.extend(s_p_company);
+
                 Ok(())
             }
             _ => {
@@ -253,14 +283,14 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
 
     fn get_set_diff_output(&self, name: String) -> Result<TPayload, ProtocolError> {
         match name.as_str() {
-            "s_prime_partner" => self
-                .s_prime_partner
+            "s_partner" => self
+                .s_partner
                 .clone()
                 .read()
                 .map(|data| data.to_vec())
                 .map_err(|err| {
-                    error!("Unable to get s_prime_partner: {}", err);
-                    ProtocolError::ErrorDeserialization("cannot obtain s_prime_partner".to_string())
+                    error!("Unable to get s_partner: {}", err);
+                    ProtocolError::ErrorDeserialization("cannot obtain s_partner".to_string())
                 }),
             "s_prime_company" => self
                 .s_prime_company
