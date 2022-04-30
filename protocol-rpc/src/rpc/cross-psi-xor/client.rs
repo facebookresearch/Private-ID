@@ -10,12 +10,16 @@ extern crate rpc;
 extern crate tonic;
 
 use clap::{App, Arg, ArgGroup};
+use itertools::Itertools;
 use log::info;
-use std::convert::TryInto;
+use std::{
+    str::FromStr,
+    convert::TryInto
+};
 use tonic::Request;
 
-use common::timer;
-use crypto::prelude::{ByteBuffer, TPayload};
+use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
+use crypto::prelude::TPayload;
 mod rpc_client;
 use protocol::{
     cross_psi_xor::{partner::PartnerCrossPsiXOR, traits::*},
@@ -111,7 +115,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_matches();
 
     let global_timer = timer::Timer::new_silent("global");
-    let input_path = matches.value_of("input").unwrap_or("input.csv");
+    let input_path_str = matches.value_of("input").unwrap_or("input.csv");
+    let mut input_path = input_path_str.to_string();
+    if let Ok(s3_path) = S3Path::from_str(input_path_str) {
+        info!(
+            "Reading {} from S3 and copying to local path",
+            input_path_str
+        );
+        let local_path = s3_path
+            .copy_to_local()
+            .await
+            .expect("Failed to copy s3 path to local tempfile");
+        info!("Wrote {} to tempfile {}", input_path_str, local_path);
+        input_path = local_path;
+    } else if let Ok(gcs_path) = GCSPath::from_str(input_path_str) {
+        info!(
+            "Reading {} from GCS and copying to local path",
+            input_path_str
+        );
+        let local_path = gcs_path
+            .copy_to_local()
+            .await
+            .expect("Failed to copy GCS path to local tempfile");
+        info!("Wrote {} to tempfile {}", input_path_str, local_path);
+        input_path = local_path;
+    }
     let output_path = matches.value_of("output");
 
     let mut client_context = {
@@ -159,8 +187,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         partner_protocol.set_company_num_records(ack.company_num_records as usize);
 
         info!(
-            "Number of company features {}",
-            partner_protocol.get_company_num_features()
+            "Number of company features {} and records {}",
+            partner_protocol.get_company_num_features(),
+            partner_protocol.get_company_num_records(),
+        );
+
+        info!(
+            "Number of partner features {} and records {}",
+            partner_protocol.get_self_num_features(),
+            partner_protocol.get_self_num_records(),
         );
 
         res
@@ -199,54 +234,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .unwrap();
 
     // 8. Generate additive shares of company features
-    for feature_index in 0..partner_protocol.get_company_num_features() {
+    let (u_company_features, num_features_company) = {
         // 8a. Get feature from company
-        let mut u_company_feature = TPayload::new();
-        let _ = rpc_client::recv(
-            ServiceResponse {
-                ack: Some(Ack::FeatureQuery(FeatureQuery {
-                    feature_index: feature_index as u64,
-                })),
-            },
-            "u_company_feature".to_string(),
-            &mut u_company_feature,
-            &mut client_context,
-        )
-        .await?;
+        let (mut features, num_features) = {
+            let mut data = TPayload::new();
+            let _ = rpc_client::recv(
+                ServiceResponse {
+                    ack: Some(Ack::FeatureQuery(FeatureQuery {})),
+                },
+                "u_company_features".to_string(),
+                &mut data,
+                &mut client_context,
+            )
+            .await?;
 
-        // 8b. Permute with the same permutation as keys
-        partner_protocol.permute(u_company_feature.as_mut());
+            let num_features = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+            let num_ciphers = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+            let num_entries = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
 
-        // 8c. Generate additive shares of feature through additive
-        //     Homomorphic Encryption scheme - Paillier in this case
-        let mut feature_additive_share =
-            partner_protocol.generate_additive_shares(feature_index, u_company_feature);
-        feature_additive_share.push(ByteBuffer {
-            buffer: (feature_index as u64).to_le_bytes().to_vec(),
-        });
+            assert_eq!(num_ciphers * num_entries, data.len());
+            let features : Vec<TPayload> = data.into_iter().chunks(num_entries).into_iter().map(|x| x.collect_vec()).collect_vec();
+            assert_eq!(features.len(), num_ciphers);
 
-        // 8d. Send additive share to company
-        let ack = match rpc_client::send(
-            feature_additive_share,
-            "e_company_feature".to_string(),
-            &mut client_context,
-        )
-        .await?
-        .into_inner()
-        .ack
-        .unwrap()
-        {
-            Ack::FeatureAck(x) => x,
-            _ => panic!("wrong ack"),
+            (features, num_features)
         };
 
-        info!(
-            "e_company_ack feature index {}",
-            ack.query_ack.unwrap().feature_index
-        );
-    }
+        //8b. Permute with same permutation as company keys 
+        for i in 0..features.len() {
+            partner_protocol.permute(features[i].as_mut());
+        }
 
-    // 9. Send partner's keys to company
+        (features, num_features)
+    };
+
+    // 8c. Generate and send additive share to company
+    let _ = match rpc_client::send(
+        partner_protocol.get_additive_shares(u_company_features, num_features_company),
+        "e_company_features".to_string(),
+        &mut client_context,
+    )
+    .await?
+    .into_inner()
+    .ack
+    .unwrap()
+    {
+        Ack::FeatureAck(x) => x,
+        _ => panic!("wrong ack"),
+    };
+
     // 9a. Generate permutation pattern to permute keys
     partner_protocol.fill_permute_self();
     let u_partner_keys = partner_protocol.get_permuted_keys();
@@ -260,36 +295,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .ack
     .unwrap();
 
-    // 10. Send partner's feature to company
-    for feature_index in 0..partner_protocol.get_self_num_features() {
-        // 10a. Get partner's feature
-        let mut u_partner_feature = partner_protocol.get_permuted_features(feature_index);
-
-        // 10b. Append feature index
-        u_partner_feature.push(ByteBuffer {
-            buffer: (feature_index as u64).to_le_bytes().to_vec(),
-        });
-
-        // 10c. Send partner's feature to company
-        let ack = match rpc_client::send(
-            u_partner_feature,
-            "u_partner_feature".to_string(),
-            &mut client_context,
-        )
-        .await?
-        .into_inner()
-        .ack
-        .unwrap()
-        {
-            Ack::FeatureAck(x) => x,
-            _ => panic!("wrong ack"),
-        };
-
-        info!(
-            "e_company_ack feature_index {}",
-            ack.query_ack.unwrap().feature_index
-        );
-    }
+    // 10. Send partner's features to company
+    let _ = match rpc_client::send(
+        partner_protocol.get_permuted_features(),
+        "u_partner_features".to_string(),
+        &mut client_context,
+    )
+    .await?
+    .into_inner()
+    .ack
+    .unwrap()
+    {
+        Ack::FeatureAck(x) => x,
+        _ => panic!("wrong ack"),
+    };
 
     // TODO: Decide if we need the dummy barrier
     let dummy_barrier = Step1Barrier {
@@ -326,32 +345,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     partner_protocol.set_company_intersection_indices(company_indices);
 
     // 13. Receive and save additive shares for partner's features
-    for feature_index in 0..partner_protocol.get_self_num_features() {
+    {
         let query = SharesQuery {
-            query: Some(FeatureQuery {
-                feature_index: feature_index as u64,
-            }),
+            query: Some(FeatureQuery {}),
             barrier: Some(dummy_barrier.clone()),
         };
+
         // 13a. Receive additive shares for partner's features
-        let mut feature = TPayload::new();
+        let mut data = TPayload::new();
         let _ = rpc_client::recv(
             ServiceResponse {
                 ack: Some(Ack::SharesQuery(query)),
             },
-            "shares_feature".to_string(),
-            &mut feature,
+            "shares_features".to_string(),
+            &mut data,
             &mut client_context,
         )
         .await?;
-        let feature_len = feature.len();
+
+        let num_features = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+        let num_ciphers = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+        let num_entries = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+
+        assert_eq!(num_ciphers * num_entries, data.len());
+        let features : Vec<TPayload> = data.into_iter().chunks(num_entries).into_iter().map(|x| x.collect_vec()).collect_vec();
+        assert_eq!(features.len(), num_ciphers);
 
         // 13a. Save additive shares for
-        partner_protocol.set_self_shares(feature_index, feature);
+        partner_protocol.set_self_shares(features, num_features);
 
         t.qps(
-            format!("recv shares for feature {}", feature_index).as_str(),
-            feature_len,
+            format!("recv shares for features").as_str(),
+            num_entries,
         )
     }
 
@@ -359,7 +384,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = rpc_client::reveal(&mut client_context).await?;
 
     // 15. Request partner to output shares to file
-    partner_protocol.reveal(output_path.unwrap());
+    match output_path {
+        Some(p) => {
+            if let Ok(output_path_s3) = S3Path::from_str(p) {
+                let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
+                let (_file, tmp_path) = s3_tempfile.keep().unwrap();
+                let tmp_path = tmp_path.to_str().expect("Failed to convert path to str");
+                partner_protocol.reveal(tmp_path);
+                output_path_s3
+                    .copy_from_local(&tmp_path)
+                    .await
+                    .expect("Failed to write to S3");
+            } else if let Ok(output_path_gcp) = GCSPath::from_str(p) {
+                let gcs_tempfile = tempfile::NamedTempFile::new().unwrap();
+                let (_file, tmp_path) = gcs_tempfile.keep().unwrap();
+                let tmp_path = tmp_path.to_str().expect("Failed to convert path to str");
+                partner_protocol.reveal(tmp_path);
+                output_path_gcp
+                    .copy_from_local(&tmp_path)
+                    .await
+                    .expect("Failed to write to GCS");
+
+            } else {
+                partner_protocol.reveal(p);
+            }
+        }
+        None =>
+            partner_protocol.reveal(output_path.unwrap()),
+    }
 
     global_timer.qps(
         "total time",

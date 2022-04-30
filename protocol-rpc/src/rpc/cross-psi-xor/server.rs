@@ -12,6 +12,7 @@ extern crate tonic;
 use clap::{App, Arg, ArgGroup};
 use log::info;
 use std::{
+    str::FromStr,
     net::SocketAddr,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -19,6 +20,7 @@ use std::{
     },
     thread, time,
 };
+use common::{gcs_path::GCSPath, s3_path::S3Path};
 
 mod rpc_server;
 use rpc::connect::create_server::create_server;
@@ -96,7 +98,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ])
         .get_matches();
 
-    let input_path = matches.value_of("input").unwrap_or("input.csv");
+    let input_path_str = matches.value_of("input").unwrap_or("input.csv");
+    let mut input_path = input_path_str.to_string();
+    if let Ok(s3_path) = S3Path::from_str(input_path_str) {
+        info!(
+            "Reading {} from S3 and copying to local path",
+            input_path_str
+        );
+        let local_path = s3_path
+            .copy_to_local()
+            .await
+            .expect("Failed to copy s3 path to local tempfile");
+        info!("Wrote {} to tempfile {}", input_path_str, local_path);
+        input_path = local_path;
+    } else if let Ok(gcs_path) = GCSPath::from_str(input_path_str) {
+        info!(
+            "Reading {} from GCS and copying to local path",
+            input_path_str
+        );
+        let local_path = gcs_path
+            .copy_to_local()
+            .await
+            .expect("Failed to copy GCS path to local tempfile");
+        info!("Wrote {} to tempfile {}", input_path_str, local_path);
+        input_path = local_path;
+    }
     let output_path = matches.value_of("output");
 
     let host = matches.value_of("host");
@@ -123,7 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Output view to stdout (first 10 items)");
     }
 
-    let service = rpc_server::CrossPsiXorService::new(input_path, output_path);
+    let service = rpc_server::CrossPsiXorService::new(&input_path, output_path);
 
     let ks = service.killswitch.clone();
     let pull_thread = thread::spawn(move || {

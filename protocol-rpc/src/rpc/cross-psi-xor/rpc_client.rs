@@ -28,9 +28,9 @@ pub async fn recv(
     let request = Request::new(response);
     let mut strm = match name.as_str() {
         "u_company_keys" => rpc.recv_u_company_keys(request).await?.into_inner(),
-        "u_company_feature" => rpc.recv_u_company_feature(request).await?.into_inner(),
+        "u_company_features" => rpc.recv_u_company_features(request).await?.into_inner(),
         "shares_company_indices" => rpc.recv_shares_company_indices(request).await?.into_inner(),
-        "shares_feature" => rpc.recv_shares_feature(request).await?.into_inner(),
+        "shares_features" => rpc.recv_shares_features(request).await?.into_inner(),
         _ => panic!("wrong data type"),
     };
 
@@ -48,9 +48,9 @@ pub async fn send(
 ) -> Result<Response<ServiceResponse>, Status> {
     match name.as_str() {
         "e_company_keys" => rpc.send_e_company_keys(send_data(data)).await,
-        "e_company_feature" => rpc.send_e_company_feature(send_data(data)).await,
+        "e_company_features" => rpc.send_e_company_features(send_data(data)).await,
         "u_partner_keys" => rpc.send_u_partner_keys(send_data(data)).await,
-        "u_partner_feature" => rpc.send_u_partner_feature(send_data(data)).await,
+        "u_partner_features" => rpc.send_u_partner_features(send_data(data)).await,
         _ => panic!("wrong data type"),
     }
 }

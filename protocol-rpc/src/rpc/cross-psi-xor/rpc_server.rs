@@ -8,7 +8,9 @@ extern crate rpc;
 extern crate tokio;
 extern crate tonic;
 
+use itertools::Itertools;
 use std::{
+    str::FromStr,
     borrow::BorrowMut,
     convert::TryInto,
     sync::{
@@ -18,7 +20,8 @@ use std::{
 };
 use tonic::{Request, Response, Status, Streaming};
 
-use common::timer;
+use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
+use crypto::prelude::TPayload;
 use log::info;
 use protocol::{
     cross_psi_xor::{company::CompanyCrossPsiXOR, traits::CompanyCrossPsiXORProtocol},
@@ -86,17 +89,13 @@ impl CrossPsiXor for CrossPsiXorService {
         Ok(write_to_stream(self.protocol.get_permuted_keys()))
     }
 
-    type RecvUCompanyFeatureStream = rpc::proto::streaming::TPayloadStream;
+    type RecvUCompanyFeaturesStream = rpc::proto::streaming::TPayloadStream;
 
-    async fn recv_u_company_feature(
+    async fn recv_u_company_features(
         &self,
-        request: Request<ServiceResponse>,
-    ) -> Result<Response<Self::RecvUCompanyFeatureStream>, Status> {
-        let feature_index = match request.into_inner().ack.unwrap() {
-            Ack::FeatureQuery(x) => x.feature_index as usize,
-            _ => panic!("wrong ack"),
-        };
-        let res = self.protocol.get_permuted_features(feature_index);
+        _: Request<ServiceResponse>,
+    ) -> Result<Response<Self::RecvUCompanyFeaturesStream>, Status> {
+        let res = self.protocol.get_permuted_features();
         Ok(write_to_stream(res))
     }
 
@@ -115,7 +114,7 @@ impl CrossPsiXor for CrossPsiXorService {
         }))
     }
 
-    async fn send_u_partner_feature(
+    async fn send_u_partner_features(
         &self,
         request: Request<Streaming<Payload>>,
     ) -> Result<Response<ServiceResponse>, Status> {
@@ -124,20 +123,26 @@ impl CrossPsiXor for CrossPsiXorService {
         let mut data = read_from_stream(request.into_inner().borrow_mut()).await?;
 
         // The feature index is sent as the last element of the payload
-        let feature_index =
+        let num_features =
             u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-        let num_elements = data.len();
-        let _ = self.protocol.generate_additive_shares(feature_index, data);
+        let num_ciphers =
+            u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+        let num_entries =
+            u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+
+        assert_eq!(num_ciphers * num_entries, data.len());
+        let features : Vec<TPayload> = data.into_iter().chunks(num_entries).into_iter().map(|x| x.collect_vec()).collect_vec();
+        assert_eq!(features.len(), num_ciphers);
+
+        let _ = self.protocol.generate_additive_shares(features, num_features);
 
         t.qps(
-            format!("push e_partner_feature {}", feature_index).as_str(),
-            num_elements,
+            format!("push e_partner_feature").as_str(),
+            num_entries,
         );
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::FeatureAck(FeatureAck {
-                query_ack: Some(FeatureQuery {
-                    feature_index: feature_index as u64,
-                }),
+                query_ack: Some(FeatureQuery {}),
             })),
         }))
     }
@@ -157,42 +162,43 @@ impl CrossPsiXor for CrossPsiXorService {
         }))
     }
 
-    async fn send_e_company_feature(
+    async fn send_e_company_features(
         &self,
         request: Request<Streaming<Payload>>,
     ) -> Result<Response<ServiceResponse>, Status> {
         let t = timer::Builder::new().label("server").build();
 
         let mut data = read_from_stream(request.into_inner().borrow_mut()).await?;
-        let feature_index =
+        let num_features =
             u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-        let num_elements = data.len();
+        let num_ciphers =
+            u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+        let num_entries =
+            u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
 
-        self.protocol.set_self_shares(feature_index, data);
+        assert_eq!(num_ciphers * num_entries, data.len());
+        let features : Vec<TPayload> = data.into_iter().chunks(num_entries).into_iter().map(|x| x.collect_vec()).collect_vec();
+        assert_eq!(features.len(), num_ciphers);
+
+        self.protocol.set_self_shares(features, num_features);
         t.qps(
-            format!("push_e_company_feature {}", feature_index).as_str(),
-            num_elements,
+            format!("push_e_company_feature ").as_str(),
+            num_entries,
         );
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::FeatureAck(FeatureAck {
-                query_ack: Some(FeatureQuery {
-                    feature_index: feature_index as u64,
-                }),
+                query_ack: Some(FeatureQuery {}),
             })),
         }))
     }
 
-    type RecvSharesFeatureStream = rpc::proto::streaming::TPayloadStream;
+    type RecvSharesFeaturesStream = rpc::proto::streaming::TPayloadStream;
 
-    async fn recv_shares_feature(
+    async fn recv_shares_features(
         &self,
-        request: Request<ServiceResponse>,
-    ) -> Result<Response<Self::RecvSharesFeatureStream>, Status> {
-        let feature_index = match request.into_inner().ack.unwrap() {
-            Ack::SharesQuery(x) => x.query.unwrap().feature_index as usize,
-            _ => panic!("wrong ack"),
-        };
-        let res = self.protocol.get_shares(feature_index);
+        _: Request<ServiceResponse>,
+    ) -> Result<Response<Self::RecvSharesFeaturesStream>, Status> {
+        let res = self.protocol.get_shares();
         Ok(write_to_stream(res))
     }
 
@@ -203,8 +209,33 @@ impl CrossPsiXor for CrossPsiXorService {
             .extra_label("reveal")
             .build();
 
-        self.protocol.reveal(self.output_path.clone().unwrap());
+        match &self.output_path {
+            Some(p) => {
+                if let Ok(output_path_s3) = S3Path::from_str(p) {
+                    let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
+                    let (_file, tmp_path) = s3_tempfile.keep().unwrap();
+                    let tmp_path = tmp_path.to_str().expect("Failed to convert path to str");
+                    self.protocol.reveal(tmp_path);
+                    output_path_s3
+                        .copy_from_local(&tmp_path)
+                        .await
+                        .expect("Failed to write to S3");
+                } else if let Ok(output_path_gcp) = GCSPath::from_str(p) {
+                    let gcs_tempfile = tempfile::NamedTempFile::new().unwrap();
+                    let (_file, tmp_path) = gcs_tempfile.keep().unwrap();
+                    let tmp_path = tmp_path.to_str().expect("Failed to convert path to str");
+                    self.protocol.reveal(tmp_path);
+                    output_path_gcp
+                        .copy_from_local(&tmp_path)
+                        .await
+                        .expect("Failed to write to GCS");
 
+                } else {
+                    self.protocol.reveal(p);
+                }
+            }
+            None => self.protocol.reveal(self.output_path.clone().unwrap()),
+        }
         {
             debug!("Setting up flag for graceful down");
             self.killswitch.store(true, Ordering::SeqCst);
