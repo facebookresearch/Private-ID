@@ -69,6 +69,18 @@ impl CompanyPrivateIdMultiKey {
     pub fn load_data(&self, path: &str, input_with_headers: bool) {
         load_data(self.plaintext.clone(), path, input_with_headers);
     }
+
+    pub fn get_e_company_size(&self) -> usize {
+        self.e_company.read().unwrap().len()
+    }
+
+    pub fn get_e_partner_size(&self) -> usize {
+        self.e_partner.read().unwrap().len()
+    }
+
+    pub fn get_id_map_size(&self) -> usize {
+        self.id_map.read().unwrap().len()
+    }
 }
 
 impl Default for CompanyPrivateIdMultiKey {
@@ -491,5 +503,27 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
                 "Unable to write partner view to file".to_string(),
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_get_e_company_size() {
+        let b = CompanyPrivateIdMultiKey::new();
+        assert_eq!(b.get_e_company_size(), 0);
+    }
+
+    #[test]
+    fn test_get_e_partner_size() {
+        let b = CompanyPrivateIdMultiKey::new();
+        assert_eq!(b.get_e_partner_size(), 0);
+    }
+
+    #[test]
+    fn test_get_id_map_size() {
+        let b = CompanyPrivateIdMultiKey::new();
+        assert_eq!(b.get_id_map_size(), 0);
     }
 }
