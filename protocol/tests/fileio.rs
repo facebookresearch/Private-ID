@@ -39,6 +39,6 @@ fn test_load_data() {
         v1.sort();
         let mut v2 = t.records.get(&k).unwrap().clone();
         v2.sort();
-        assert_eq!( (*r1).records.get(&k).unwrap().to_vec(), v2);
+        assert_eq!( v1, v2);
     }
 }
