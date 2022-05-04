@@ -92,7 +92,7 @@ impl KeyedCSV {
         }
         record
     }
-    /// Returns a writable CSV record extended with non-key values from the input CSV  
+    /// Returns a writable CSV record extended with non-key values from the input CSV
     /// If there is no other column but key, it adds the plain key for debugging purposes
     pub fn get_record_with_keys(&self, enc_key: String, raw_key: &str) -> Vec<String> {
         let mut record = vec![enc_key];
@@ -175,4 +175,69 @@ pub fn load_json(data: Arc<RwLock<KeyedCSV>>, json_table: &str, has_headers: boo
         }
     }
     ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_keyedcsv_get_plain_keys() {
+        let t = KeyedCSV {
+            headers : vec![String::from("ID"),String::from("NAME")],
+            records : HashMap::from([
+                (String::from("25"), vec![String::from("Norway"), String::from("Sunnyvale")]),
+                (String::from("24"), vec![String::from("Denmark")]),
+                (String::from("12"), vec![String::from("Iceland")]),
+            ]),
+        };
+        let mut v = t.get_plain_keys();
+        v.sort();
+        assert_eq!(v, vec![String::from("12"),String::from("24"),String::from("25")]);
+    }
+
+    #[test]
+    fn test_keyedcsv_get_empty_record_with_key_emptyval_none() {
+        let t = KeyedCSV {
+            headers : vec![String::from("ID"), String::from("NAME")],
+            records : HashMap::from([
+                (String::from("25"), vec![String::from("Norway"), String::from("Sunnyvale")]),
+                (String::from("24"), vec![String::from("Denmark")]),
+                (String::from("12"), vec![String::from("Iceland")]),
+            ]),
+        };
+        let v = t.get_empty_record_with_key(String::from("pid"), None);
+
+        assert_eq!(v, vec![String::from("pid"), String::from("")]);
+    }
+
+    #[test]
+    fn test_keyedcsv_get_empty_record_with_key() {
+        let t = KeyedCSV {
+            headers : vec![String::from("ID"),String::from("NAME")],
+            records : HashMap::from([
+                (String::from("25"), vec![String::from("Norway"), String::from("Sunnyvale")]),
+                (String::from("24"), vec![String::from("Denmark")]),
+                (String::from("12"), vec![String::from("Iceland")]),
+            ]),
+        };
+        let v = t.get_empty_record_with_key(String::from("pid"), Some(&String::from("fb")));
+
+        assert_eq!(v, vec![String::from("pid"), String::from("fb")]);
+    }
+
+    #[test]
+    fn test_keyedcsv_get_record_with_keys() {
+        let t = KeyedCSV {
+            headers : vec![String::from("ID"), String::from("NAME")],
+            records : HashMap::from([
+                (String::from("25"), vec![String::from("Norway"), String::from("Sunnyvale")]),
+                (String::from("24"), vec![String::from("Denmark")]),
+                (String::from("12"), vec![String::from("Iceland")]),
+            ]),
+        };
+        let v_has_cols = t.get_record_with_keys(String::from("e"), "25");
+        let v_empty_cols = t.get_record_with_keys(String::from("e"), "26");
+        assert_eq!(v_has_cols, vec![String::from("e"), String::from("Norway"), String::from("Sunnyvale")]);
+        assert_eq!(v_empty_cols, vec![String::from("e")]);
+    }
 }
