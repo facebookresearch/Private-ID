@@ -17,8 +17,7 @@ use std::{
 };
 use tonic::{Code, Request, Response, Status, Streaming};
 
-mod metrics;
-use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
+use common::{gcs_path::GCSPath, s3_path::S3Path, timer, metrics};
 use protocol::private_id::{company::CompanyPrivateId, traits::CompanyPrivateIdProtocol};
 use rpc::proto::{
     common::Payload,
