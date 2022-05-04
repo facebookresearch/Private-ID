@@ -25,3 +25,6 @@ pub mod s3_path;
 
 /// GCS path parsing
 pub mod gcs_path;
+
+/// Generate metrics
+pub mod metrics;
