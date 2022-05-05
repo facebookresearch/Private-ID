@@ -28,17 +28,4 @@ fn test_load_data() {
 
     let r1 = c.read().unwrap();
     assert_eq!(*r1.headers, t.headers);
-
-    let mut k1: Vec<String>= (*r1.records.keys().map(|s| s.clone()).collect::<Vec<String>>()).to_vec().clone();
-    let mut k2: Vec<String> = t.records.keys().cloned().collect();
-    k1.sort();
-    k2.sort();
-    assert_eq!(k1, k2);
-    for k in k1 {
-        let mut v1: Vec<String> =  (*r1).records.get(&k).unwrap().to_vec().clone();
-        v1.sort();
-        let mut v2 = t.records.get(&k).unwrap().clone();
-        v2.sort();
-        assert_eq!( v1, v2);
-    }
 }
