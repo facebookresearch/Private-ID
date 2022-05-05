@@ -96,3 +96,84 @@ impl Metrics {
         raw.print_metrics();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_metrics_set_parameters() {
+        let partner_sz = Some(4);
+        let publisher_sz = Some(5);
+        let union_sz = Some(6);
+        let partner_new_sz = 14;
+        let publisher_new_sz = 15;
+        let union_new_sz = 16;
+        let m = Metrics {
+            protocol_name: "private-id".to_string(),
+            partner_input_size: Arc::new(RwLock::new(partner_sz)),
+            publisher_input_size: Arc::new(RwLock::new(publisher_sz)),
+            union_file_size: Arc::new(RwLock::new(union_sz)),
+        };
+
+        assert_eq!(m.partner_input_size.read().unwrap().unwrap(), partner_sz.unwrap());
+        m.set_partner_input_size(partner_new_sz);
+        assert_eq!(m.partner_input_size.read().unwrap().unwrap(), partner_new_sz);
+
+        assert_eq!(m.publisher_input_size.read().unwrap().unwrap(), publisher_sz.unwrap());
+        m.set_publisher_input_size(publisher_new_sz);
+        assert_eq!(m.publisher_input_size.read().unwrap().unwrap(), publisher_new_sz);
+
+        assert_eq!(m.union_file_size.read().unwrap().unwrap(), union_sz.unwrap());
+        m.set_union_file_size(union_new_sz);
+        assert_eq!(m.union_file_size.read().unwrap().unwrap(), union_new_sz);
+    }
+
+    #[test]
+    fn test_metrics_cp_to_raw() {
+        let partner_sz = Some(4);
+        let publisher_sz = Some(5);
+        let union_sz = Some(6);
+        let m = Metrics {
+            protocol_name: "private-id".to_string(),
+            partner_input_size: Arc::new(RwLock::new(partner_sz)),
+            publisher_input_size: Arc::new(RwLock::new(publisher_sz)),
+            union_file_size: Arc::new(RwLock::new(union_sz)),
+        };
+
+        let r = m.cp_to_raw();
+        let t = RawMetrics {
+            protocol_name: "private-id".to_string(),
+            partner_input_size: partner_sz,
+            publisher_input_size: publisher_sz,
+            union_file_size: union_sz,
+        };
+        assert_eq!(r.protocol_name, t.protocol_name);
+        assert_eq!(r.partner_input_size, t.partner_input_size);
+        assert_eq!(r.publisher_input_size, t.publisher_input_size);
+        assert_eq!(r.union_file_size, t.union_file_size);
+    }
+
+    #[test]
+    fn test_metrics_save() {
+        use tempfile::NamedTempFile;
+        use std::io::{ Read};
+
+        let partner_sz = Some(4);
+        let publisher_sz = Some(5);
+        let union_sz = Some(6);
+        let m = Metrics {
+            protocol_name: "private-id".to_string(),
+            partner_input_size: Arc::new(RwLock::new(partner_sz)),
+            publisher_input_size: Arc::new(RwLock::new(publisher_sz)),
+            union_file_size: Arc::new(RwLock::new(union_sz)),
+        };
+
+        let mut file = NamedTempFile::new().unwrap();
+        m.save_metrics(file.path().to_str().unwrap()).unwrap();
+        let mut buf = String::new();
+        file.read_to_string(&mut buf).unwrap();
+        assert_eq!(buf, "{\"protocol_name\":\"private-id\",\"partner_input_size\":4,\"publisher_input_size\":5,\"union_file_size\":6}");
+        drop(file);
+    }
+
+}
