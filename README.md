@@ -36,6 +36,28 @@ env RUST_LOG=info cargo run --bin private-id-client -- \
 --tls-dir etc/example/dummy_certs
 ```
 
+### Private-ID MultiKey
+
+Start server
+
+```bash
+env RUST_LOG=info cargo run --bin private-id-multi-key-server -- \
+    --host 0.0.0.0:10009 \
+    --input etc/example/private_id_multi_key/Ex1_company.csv \
+    --stdout \
+    --tls-dir etc/example/dummy_certs
+```
+
+Start client
+
+```bash
+env RUST_LOG=info cargo run --bin private-id-multi-key-client -- \
+     --company localhost:10009 \
+     --input etc/example/private_id_multi_key/Ex1_partner.csv \
+     --stdout \
+     --tls-dir etc/example/dummy_certs
+```
+
 ### PS3I 
 
 This protocol does an inner join based on email addresses as keys and then generates additive share of a feature associated with that email address. The shares are generated in the designated output files as 64 bit numbers
