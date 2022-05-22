@@ -18,8 +18,7 @@ use std::{
     },
 };
 use tonic::{Code, Request, Response, Status, Streaming};
-
-use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
+use common::{gcs_path::GCSPath, s3_path::S3Path, timer, metrics};
 use protocol::private_id_multi_key::{
     company::CompanyPrivateIdMultiKey, traits::CompanyPrivateIdMultiKeyProtocol,
 };
@@ -38,6 +37,8 @@ pub struct PrivateIdMultiKeyService {
     input_path: String,
     output_path: Option<String>,
     input_with_headers: bool,
+    metrics_path: Option<String>,
+    metrics_obj: metrics::Metrics,
     pub killswitch: Arc<AtomicBool>,
 }
 
@@ -46,12 +47,17 @@ impl PrivateIdMultiKeyService {
         input_path: &str,
         output_path: Option<&str>,
         input_with_headers: bool,
+        metrics_path: Option<String>,
     ) -> PrivateIdMultiKeyService {
         PrivateIdMultiKeyService {
             protocol: CompanyPrivateIdMultiKey::new(),
             input_path: String::from(input_path),
             output_path: output_path.map(String::from),
             input_with_headers,
+            metrics_path,
+            metrics_obj: metrics::Metrics::new(
+                "private-id-multi-key".to_string(),
+            ),
             killswitch: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -278,6 +284,9 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
             .extra_label("reveal")
             .build();
         self.protocol.write_company_to_id_map();
+        self.metrics_obj.set_partner_input_size(self.protocol.get_e_partner_size());
+        self.metrics_obj.set_publisher_input_size(self.protocol.get_e_company_size());
+        self.metrics_obj.set_union_file_size(self.protocol.get_id_map_size());
         match &self.output_path {
             Some(p) => {
                 if let Ok(output_path_s3) = S3Path::from_str(p) {
@@ -313,6 +322,27 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
                 }
             }
             None => self.protocol.print_id_map(),
+        }
+        match &self.metrics_path {
+            Some(p) => {
+                if let Ok(metrics_path_s3) = S3Path::from_str(p) {
+                    let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
+                    let (_file, path) = s3_tempfile.keep().unwrap();
+                    let path = path.to_str().expect("Failed to convert path to str");
+                    self.metrics_obj.save_metrics(&String::from(path))
+                        .expect("Failed to metrics to tempfile");
+                    metrics_path_s3
+                        .copy_from_local(&path)
+                        .await
+                        .expect("Failed to write to S3");
+                } else {
+                    self.metrics_obj.save_metrics(p)
+                        .expect("Failed to write to metrics path");
+                }
+            }
+            None => {
+                self.metrics_obj.print_metrics();
+            }
         }
         {
             debug!("Setting up flag for graceful down");

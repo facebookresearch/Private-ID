@@ -52,6 +52,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .short("o")
                 .takes_value(true)
                 .help("Path to output file, output format: private-id, option(key)"),
+            Arg::with_name("metric-path")
+                .long("metric-path")
+                .takes_value(true)
+                .help("Path to metric output file"),
             Arg::with_name("stdout")
                 .long("stdout")
                 .short("u")
@@ -120,6 +124,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let input_with_headers = matches.is_present("input-with-headers");
     let output_path = matches.value_of("output");
+    let metric_path = matches.value_of("metric-path");
 
     let no_tls = matches.is_present("no-tls");
     let host = matches.value_of("host");
@@ -139,6 +144,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Input path: {}", input_path);
 
+    let mut metrics_output_path: Option<String> = None;
+    if metric_path.is_some() {
+        metrics_output_path = Some(metric_path.unwrap().to_string());
+        if metrics_output_path.is_none() {
+            metrics_output_path = Some(format!("{}_metrics", output_path.unwrap()));
+        }
+    }
+
     if output_path.is_some() {
         info!("Output path: {}", output_path.unwrap());
     } else {
@@ -146,7 +159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let service =
-        rpc_server::PrivateIdMultiKeyService::new(&input_path, output_path, input_with_headers);
+        rpc_server::PrivateIdMultiKeyService::new(&input_path, output_path, input_with_headers, metrics_output_path);
 
     let ks = service.killswitch.clone();
     let recv_thread = thread::spawn(move || {
