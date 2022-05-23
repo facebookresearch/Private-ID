@@ -143,10 +143,6 @@ impl PartnerPrivateIdMultiKeyProtocol for PartnerPrivateIdMultiKey {
                 // Permute each record - outer
                 permute(permutation.as_slice(), &mut d);
 
-                // Permute each record - inner
-                // d.iter_mut()
-                    // .for_each(|v| permute(gen_permute_pattern(v.len()).as_slice(), v));
-
                 // Create prefix-postfix array before flatten. This encodes the
                 // ragged array structure
                 let (mut d_flat, offset) = {
