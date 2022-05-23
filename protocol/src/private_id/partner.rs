@@ -11,6 +11,7 @@ use crypto::{
     eccipher::{gen_scalar, ECCipher},
     prelude::*,
 };
+use zeroize::Zeroizing;
 
 use crate::{
     fileio::{load_data, load_json, KeyedCSV},
@@ -28,7 +29,7 @@ use std::sync::{Arc, RwLock};
 use super::{fill_permute, ProtocolError};
 
 pub struct PartnerPrivateId {
-    private_keys: (Scalar, Scalar),
+    private_keys: Zeroizing<(Scalar, Scalar)>,
     ec_cipher: ECRistretto,
     plain_data: Arc<RwLock<KeyedCSV>>,
     permutation: Arc<RwLock<Vec<usize>>>,
@@ -38,7 +39,7 @@ pub struct PartnerPrivateId {
 impl PartnerPrivateId {
     pub fn new() -> PartnerPrivateId {
         PartnerPrivateId {
-            private_keys: (gen_scalar(), gen_scalar()),
+            private_keys: Zeroizing::new((gen_scalar(), gen_scalar())),
             ec_cipher: ECRistretto::default(),
             plain_data: Arc::new(RwLock::default()),
             permutation: Arc::new(RwLock::default()),

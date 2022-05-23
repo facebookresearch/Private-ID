@@ -8,6 +8,7 @@ use crypto::{
     prelude::*,
 };
 use itertools::Itertools;
+use zeroize::Zeroizing;
 
 use crate::private_id_multi_key::traits::PartnerPrivateIdMultiKeyProtocol;
 
@@ -21,7 +22,7 @@ use std::sync::{Arc, RwLock};
 use super::{load_data, serialize_helper, writer_helper, ProtocolError};
 
 pub struct PartnerPrivateIdMultiKey {
-    private_keys: (Scalar, Scalar),
+    private_keys: Zeroizing<(Scalar, Scalar)>,
     ec_cipher: ECRistrettoParallel,
     plaintext: Arc<RwLock<Vec<Vec<String>>>>,
     self_permutation: Arc<RwLock<Vec<usize>>>,
@@ -32,7 +33,7 @@ pub struct PartnerPrivateIdMultiKey {
 impl PartnerPrivateIdMultiKey {
     pub fn new() -> PartnerPrivateIdMultiKey {
         PartnerPrivateIdMultiKey {
-            private_keys: (gen_scalar(), gen_scalar()),
+            private_keys: Zeroizing::new((gen_scalar(), gen_scalar())),
             ec_cipher: ECRistrettoParallel::default(),
             plaintext: Arc::new(RwLock::default()),
             self_permutation: Arc::new(RwLock::default()),

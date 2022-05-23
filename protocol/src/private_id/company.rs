@@ -13,6 +13,7 @@ use crypto::{
     eccipher::{gen_scalar, ECCipher},
     prelude::*,
 };
+use zeroize::Zeroizing;
 
 use common::{
     files,
@@ -29,7 +30,7 @@ use super::{fill_permute, ProtocolError};
 
 #[derive(Debug)]
 pub struct CompanyPrivateId {
-    private_keys: (Scalar, Scalar),
+    private_keys: Zeroizing<(Scalar, Scalar)>,
     ec_cipher: ECRistretto,
     // TODO: consider using dyn pid::crypto::ECCipher trait?
     plain_data: Arc<RwLock<KeyedCSV>>,
@@ -48,7 +49,7 @@ pub struct CompanyPrivateId {
 impl CompanyPrivateId {
     pub fn new() -> CompanyPrivateId {
         CompanyPrivateId {
-            private_keys: (gen_scalar(), gen_scalar()),
+            private_keys: Zeroizing::new((gen_scalar(), gen_scalar())),
             ec_cipher: ECRistretto::default(),
             plain_data: Arc::new(RwLock::default()),
             permutation: Arc::new(RwLock::default()),
