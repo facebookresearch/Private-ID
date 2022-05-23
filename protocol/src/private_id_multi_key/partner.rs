@@ -71,9 +71,13 @@ impl PartnerPrivateIdMultiKeyProtocol for PartnerPrivateIdMultiKey {
                 permutation.clear();
                 permutation.extend(gen_permute_pattern(pdata.len()));
 
-                // Permute
+                // Outer permute
                 let mut d = pdata.clone();
                 permute(permutation.as_slice(), &mut d);
+
+                // Inner permute each record
+                d.iter_mut()
+                    .for_each(|v| permute(gen_permute_pattern(v.len()).as_slice(), v));
 
                 let (mut d_flat, offset) = {
                     let (d_flat, mut offset, metadata) = serialize_helper(d);
@@ -140,12 +144,8 @@ impl PartnerPrivateIdMultiKeyProtocol for PartnerPrivateIdMultiKey {
                 permute(permutation.as_slice(), &mut d);
 
                 // Permute each record - inner
-                d.iter_mut()
-                    .for_each(|v| permute(gen_permute_pattern(v.len()).as_slice(), v));
-
-                // {
-                // d.iter().for_each(|t| println!("SHUBHO d len {}", t.len()));
-                // }
+                // d.iter_mut()
+                    // .for_each(|v| permute(gen_permute_pattern(v.len()).as_slice(), v));
 
                 // Create prefix-postfix array before flatten. This encodes the
                 // ragged array structure
