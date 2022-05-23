@@ -20,13 +20,15 @@ use common::{
     timer,
 };
 
+use zeroize::Zeroizing;
+
 use crate::private_id_multi_key::traits::CompanyPrivateIdMultiKeyProtocol;
 
 use super::{load_data, serialize_helper, writer_helper, ProtocolError};
 
 #[derive(Debug)]
 pub struct CompanyPrivateIdMultiKey {
-    private_keys: (Scalar, Scalar, Scalar),
+    private_keys: Zeroizing<(Scalar, Scalar, Scalar)>,
     ec_cipher: ECRistrettoParallel,
     // TODO: consider using dyn pid::crypto::ECCipher trait?
     plaintext: Arc<RwLock<Vec<Vec<String>>>>,
@@ -50,7 +52,7 @@ pub struct CompanyPrivateIdMultiKey {
 impl CompanyPrivateIdMultiKey {
     pub fn new() -> CompanyPrivateIdMultiKey {
         CompanyPrivateIdMultiKey {
-            private_keys: (gen_scalar(), gen_scalar(), gen_scalar()),
+            private_keys: Zeroizing::new((gen_scalar(), gen_scalar(), gen_scalar())),
             ec_cipher: ECRistrettoParallel::default(),
             plaintext: Arc::new(RwLock::default()),
             permutation: Arc::new(RwLock::default()),

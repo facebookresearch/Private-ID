@@ -3,17 +3,17 @@
 
 extern crate csv;
 
+use itertools::Itertools;
+use std::sync::{Arc, RwLock};
+
 use crypto::{
     eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
     prelude::*,
 };
-use itertools::Itertools;
-
-use crate::suid_create::traits::SUIDCreateSharerProtocol;
 
 use common::permutations::{gen_permute_pattern, permute, undo_permute};
 
-use std::sync::{Arc, RwLock};
+use crate::suid_create::traits::SUIDCreateSharerProtocol;
 
 use super::{
     compute_prefix_sum, elgamal_encrypt, gen_elgamal_keypair, load_data, serialize_helper,

@@ -11,6 +11,7 @@ use std::{
     path::Path,
     sync::{Arc, RwLock},
 };
+use zeroize::Zeroizing;
 
 use crate::{
     cross_psi_xor::traits::*,
@@ -31,7 +32,7 @@ pub struct CompanyCrossPsiXOR {
     ec_cipher: eccipher::ECRistrettoParallel,
     he_cipher: CupcakeParallel,
 
-    ec_key: Scalar,
+    ec_key: Zeroizing<Scalar>,
 
     self_num_records: Arc<RwLock<usize>>,
     self_num_features: Arc<RwLock<usize>>,
@@ -60,7 +61,7 @@ impl CompanyCrossPsiXOR {
             ec_cipher: ECRistrettoParallel::new(),
             he_cipher: CupcakeParallel::new(),
 
-            ec_key: gen_scalar(),
+            ec_key: Zeroizing::new(gen_scalar()),
 
             self_num_records: Arc::new(RwLock::default()),
             self_num_features: Arc::new(RwLock::default()),

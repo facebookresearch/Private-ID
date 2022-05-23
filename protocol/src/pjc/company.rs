@@ -13,6 +13,7 @@ use std::{
     path::Path,
     sync::{Arc, RwLock},
 };
+use zeroize::Zeroizing;
 
 use crate::{
     fileio::load_data_with_features,
@@ -29,7 +30,7 @@ use crypto::{
 #[derive(Debug)]
 pub struct CompanyPjc {
     ec_cipher: eccipher::ECRistrettoParallel,
-    ec_key: Scalar,
+    ec_key: Zeroizing<Scalar>,
     partner_he_public_key: Arc<RwLock<TypeHeEncKey>>,
     self_num_features: Arc<RwLock<usize>>,
     self_num_records: Arc<RwLock<usize>>,
@@ -45,7 +46,7 @@ impl CompanyPjc {
     pub fn new() -> CompanyPjc {
         CompanyPjc {
             ec_cipher: ECRistrettoParallel::new(),
-            ec_key: gen_scalar(),
+            ec_key: Zeroizing::new(gen_scalar()),
             partner_he_public_key: Arc::new(RwLock::new(EncryptionKey {
                 n: BigUint::zero(),
                 nn: BigUint::zero(),
