@@ -149,7 +149,7 @@ impl PartnerPrivateIdMultiKeyProtocol for PartnerPrivateIdMultiKey {
                     let (d_flat, mut offset, metadata) = serialize_helper(d);
                     offset.extend(metadata);
 
-                    // Encrypt
+                    // Serialize to bytes
                     (self.ec_cipher.to_bytes(&d_flat), offset)
                 };
 
