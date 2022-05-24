@@ -294,15 +294,13 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
                             // Create a single element vector since that is what encrypt
                             // expects
                             let matched = vec![e_company[m_idx][idx]];
-                            let c = self.ec_cipher.encrypt(
-                                &self
-                                    .ec_cipher
-                                    .encrypt(matched.as_slice(), &self.private_keys.1),
-                                &self.private_keys.2,
-                            );
                             let p = self
                                 .ec_cipher
                                 .encrypt(matched.as_slice(), &self.private_keys.1);
+                            let c = self.ec_cipher.encrypt(
+                                p.as_slice(),
+                                &self.private_keys.2,
+                            );
 
                             e_c_valid[m_idx] = false;
                             v_c[m_idx] = c[0];

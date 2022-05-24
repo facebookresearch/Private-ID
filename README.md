@@ -38,6 +38,8 @@ env RUST_LOG=info cargo run --bin private-id-client -- \
 
 ### Private-ID MultiKey
 
+We extend the Private-ID protocol to match multiple records. Please refer to our [paper](https://eprint.iacr.org/2021/770) for more details.
+
 Start server
 
 ```bash
