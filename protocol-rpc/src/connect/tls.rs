@@ -1,9 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate log;
-extern crate tonic;
-
 use log::{debug, error, info};
 
 use futures::executor::block_on;

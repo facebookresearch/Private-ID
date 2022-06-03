@@ -1,10 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate paillier;
-extern crate rayon;
-extern crate serde;
-
 use paillier::{
     Add, Decrypt, DecryptionKey, Encrypt, KeyGeneration, Paillier, RawCiphertext, RawPlaintext,
     Rerandomize,

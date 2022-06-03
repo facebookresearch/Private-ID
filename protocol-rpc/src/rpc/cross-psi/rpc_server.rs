@@ -1,13 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate common;
-extern crate crypto;
-extern crate protocol;
-extern crate rpc;
-extern crate tokio;
-extern crate tonic;
-
 use std::{
     borrow::BorrowMut,
     convert::TryInto,

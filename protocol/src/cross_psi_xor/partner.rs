@@ -1,9 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate common;
-extern crate crypto;
-
 use log::info;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rand::{distributions::Uniform, Rng};
@@ -251,7 +248,7 @@ impl PartnerCrossPsiXORProtocol for PartnerCrossPsiXOR {
 
             mask.clear();
             mask.extend(r.drain(..));
- 
+
             let res = self.he_cipher.xor_plaintext_vec(features, &mask);
             let num_ciphers = res.len();
             assert_eq!(num_entries, res[0].len());
@@ -326,7 +323,7 @@ impl Reveal for PartnerCrossPsiXOR {
             let p_filename = format!("{}{}", path.as_ref().display(), "_partner_feature.csv");
             info!("revealing partner features to output file");
             common::files::write_u64cols_to_file(&mut self_shares, Path::new(&p_filename)).unwrap();
-            
+
             self_shares.clear();
         }
     }

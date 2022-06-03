@@ -1,9 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate common;
-extern crate crypto;
-
 use log::info;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rand::{distributions::Uniform, Rng};

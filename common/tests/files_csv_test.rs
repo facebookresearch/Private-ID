@@ -1,8 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate common;
-
 use common::files::{read_csv_as_keyed_nums, read_csv_as_strings, transpose_keyed_nums, KeyedNums};
 
 #[test]

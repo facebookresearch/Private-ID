@@ -1,8 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate crypto;
-
 use crate::suid_create::ProtocolError;
 use crypto::prelude::{TPayload, TPoint};
 

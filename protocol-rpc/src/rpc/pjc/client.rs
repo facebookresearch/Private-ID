@@ -1,14 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate clap;
-extern crate common;
-extern crate ctrlc;
-extern crate protocol;
-extern crate retry;
-extern crate rpc;
-extern crate tonic;
-
 use clap::{App, Arg, ArgGroup};
 use tonic::Request;
 
