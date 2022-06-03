@@ -2,7 +2,6 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
-#![crate_name = "crypto"]
 
 pub mod cupcake;
 pub mod eccipher;
