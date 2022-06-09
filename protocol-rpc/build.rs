@@ -2,19 +2,27 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tonic_build::compile_protos("proto/common.proto")
-        .unwrap_or_else(|e| panic!("Failed to compile protos {:?}", e));
-    tonic_build::compile_protos("proto/privateid.proto")
-        .unwrap_or_else(|e| panic!("Failed to compile protos {:?}", e));
-    tonic_build::compile_protos("proto/privateidmultikey.proto")
-        .unwrap_or_else(|e| panic!("Failed to compile protos {:?}", e));
-    tonic_build::compile_protos("proto/crosspsi.proto")
-        .unwrap_or_else(|e| panic!("Failed to compile protos {:?}", e));
-    tonic_build::compile_protos("proto/crosspsixor.proto")
-        .unwrap_or_else(|e| panic!("Failed to compile protos {:?}", e));
-    tonic_build::compile_protos("proto/pjc.proto")
-        .unwrap_or_else(|e| panic!("Failed to compile protos {:?}", e));
-    tonic_build::compile_protos("proto/suidcreate.proto")
-        .unwrap_or_else(|e| panic!("Failed to compile protos {:?}", e));
+    let grpc_path = "proto";
+    let proto_files = &[
+        "common.proto",
+        "privateid.proto",
+        "privateidmultikey.proto",
+        "crosspsi.proto",
+        "crosspsixor.proto",
+        "pjc.proto",
+        "suidcreate.proto",
+    ];
+
+    tonic_build::configure()
+        //rustfmt is not available in Sandcastle, so we cannot format output files.
+        // use true on your local to debug
+        .format(false)
+        .compile(
+            proto_files,
+            // HACK: we need '.' directory for build with Buck
+            &[".", grpc_path],
+        )
+        .unwrap();
+
     Ok(())
 }
