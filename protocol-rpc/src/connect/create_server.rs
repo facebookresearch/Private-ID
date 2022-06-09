@@ -1,10 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate clap;
-extern crate ctrlc;
-extern crate tonic;
-
 use log::{info, warn};
 use tonic::transport::{Server, ServerTlsConfig};
 

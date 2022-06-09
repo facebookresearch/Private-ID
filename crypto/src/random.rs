@@ -3,9 +3,6 @@
 
 // Web-capable implementation of RngCore to replace the one in rand_core::OsRng
 
-extern crate rand_core;
-extern crate rand;
-
 use rand_core::{CryptoRng, RngCore};
 use self::rand_core::Error;
 use self::rand::prelude::ThreadRng;

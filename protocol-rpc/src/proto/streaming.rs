@@ -1,11 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate crypto;
-extern crate http;
-extern crate log;
-extern crate tonic;
-
 use crypto::prelude::*;
 
 use crate::proto::common::Payload;

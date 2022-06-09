@@ -1,9 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate csv;
-extern crate rand_core;
-
 use common::{files, timer};
 use crypto::{eccipher::gen_scalar, prelude::*};
 

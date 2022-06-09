@@ -1,9 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate common;
-extern crate crypto;
-
 use log::info;
 use num_bigint::{BigUint, RandBigInt, ToBigInt};
 use num_traits::{One, Signed, Zero};

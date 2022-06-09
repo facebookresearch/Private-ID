@@ -1,11 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate curve25519_dalek;
-extern crate rand_core;
-extern crate rayon;
-extern crate sha2;
-
 use rand::{rngs::OsRng, RngCore};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sha2::Sha512;

@@ -1,8 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate csv;
-
 use common::{permutations::gen_permute_pattern, timer};
 
 use std::sync::{Arc, RwLock};

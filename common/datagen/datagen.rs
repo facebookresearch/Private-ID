@@ -1,12 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate clap;
-extern crate csv;
-extern crate log;
-extern crate rand;
-extern crate rayon;
-
 use clap::{App, Arg};
 use log::info;
 use rand::{distributions, thread_rng, Rng};
