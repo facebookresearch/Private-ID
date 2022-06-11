@@ -1,17 +1,7 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    str::FromStr,
-    borrow::BorrowMut,
-    convert::TryInto,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
-use tonic::{Code, Request, Response, Status, Streaming};
-use common::{gcs_path::GCSPath, s3_path::S3Path, timer, metrics};
+use common::{gcs_path::GCSPath, metrics, s3_path::S3Path, timer};
 use protocol::private_id_multi_key::{
     company::CompanyPrivateIdMultiKey, traits::CompanyPrivateIdMultiKeyProtocol,
 };
@@ -24,6 +14,16 @@ use rpc::proto::{
     },
     streaming::{read_from_stream, write_to_stream, TPayloadStream},
 };
+use std::{
+    borrow::BorrowMut,
+    convert::TryInto,
+    str::FromStr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
+use tonic::{Code, Request, Response, Status, Streaming};
 
 pub struct PrivateIdMultiKeyService {
     protocol: CompanyPrivateIdMultiKey,
@@ -48,9 +48,7 @@ impl PrivateIdMultiKeyService {
             output_path: output_path.map(String::from),
             input_with_headers,
             metrics_path,
-            metrics_obj: metrics::Metrics::new(
-                "private-id-multi-key".to_string(),
-            ),
+            metrics_obj: metrics::Metrics::new("private-id-multi-key".to_string()),
             killswitch: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -277,9 +275,12 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
             .extra_label("reveal")
             .build();
         self.protocol.write_company_to_id_map();
-        self.metrics_obj.set_partner_input_size(self.protocol.get_e_partner_size());
-        self.metrics_obj.set_publisher_input_size(self.protocol.get_e_company_size());
-        self.metrics_obj.set_union_file_size(self.protocol.get_id_map_size());
+        self.metrics_obj
+            .set_partner_input_size(self.protocol.get_e_partner_size());
+        self.metrics_obj
+            .set_publisher_input_size(self.protocol.get_e_company_size());
+        self.metrics_obj
+            .set_union_file_size(self.protocol.get_id_map_size());
         match &self.output_path {
             Some(p) => {
                 if let Ok(output_path_s3) = S3Path::from_str(p) {
@@ -287,9 +288,7 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
                     let (_file, path) = s3_tempfile.keep().unwrap();
                     let path = path.to_str().expect("Failed to convert path to str");
                     self.protocol
-                        .save_id_map(
-                            &String::from(path),
-                        )
+                        .save_id_map(&String::from(path))
                         .expect("Failed to save id map to tempfile");
                     output_path_s3
                         .copy_from_local(&path)
@@ -300,18 +299,14 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
                     let (_file, path) = gcs_tempfile.keep().unwrap();
                     let path = path.to_str().expect("Failed to convert path to str");
                     self.protocol
-                        .save_id_map(
-                            &String::from(path),
-                        )
+                        .save_id_map(&String::from(path))
                         .expect("Failed to save id map to tempfile");
                     output_path_gcp
                         .copy_from_local(&path)
                         .await
                         .expect("Failed to write to GCS");
                 } else {
-                    self.protocol
-                        .save_id_map(p)
-                        .unwrap();
+                    self.protocol.save_id_map(p).unwrap();
                 }
             }
             None => self.protocol.print_id_map(),
@@ -322,14 +317,16 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
                     let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
                     let (_file, path) = s3_tempfile.keep().unwrap();
                     let path = path.to_str().expect("Failed to convert path to str");
-                    self.metrics_obj.save_metrics(&String::from(path))
+                    self.metrics_obj
+                        .save_metrics(&String::from(path))
                         .expect("Failed to metrics to tempfile");
                     metrics_path_s3
                         .copy_from_local(&path)
                         .await
                         .expect("Failed to write to S3");
                 } else {
-                    self.metrics_obj.save_metrics(p)
+                    self.metrics_obj
+                        .save_metrics(p)
                         .expect("Failed to write to metrics path");
                 }
             }

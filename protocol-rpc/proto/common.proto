@@ -5,5 +5,5 @@ syntax = "proto3";
 package common;
 
 message Payload {
-    repeated bytes payload = 1;
+  repeated bytes payload = 1;
 }

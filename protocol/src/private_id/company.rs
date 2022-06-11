@@ -242,12 +242,8 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
         ) {
             (Ok(e_partner), Ok(e_company), Ok(mut s_partner), Ok(mut s_prime_company)) => {
                 let s_p_company = {
-                    let e_company_bytes = self
-                        .ec_cipher
-                        .to_bytes(&e_company);
-                    let e_partner_bytes = self
-                        .ec_cipher
-                        .to_bytes(&e_partner);
+                    let e_company_bytes = self.ec_cipher.to_bytes(&e_company);
+                    let e_partner_bytes = self.ec_cipher.to_bytes(&e_partner);
 
                     s_partner.clear();
                     s_partner.extend(common::vectors::subtract_set(
@@ -262,7 +258,9 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                     ));
 
                     self.ec_cipher.to_bytes(
-                        &self.ec_cipher.to_points_encrypt(&s_company, &self.private_keys.1)
+                        &self
+                            .ec_cipher
+                            .to_points_encrypt(&s_company, &self.private_keys.1),
                     )
                 };
 

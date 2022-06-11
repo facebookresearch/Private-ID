@@ -158,8 +158,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Output view to stdout (first 10 items)");
     }
 
-    let service =
-        rpc_server::PrivateIdMultiKeyService::new(&input_path, output_path, input_with_headers, metrics_output_path);
+    let service = rpc_server::PrivateIdMultiKeyService::new(
+        &input_path,
+        output_path,
+        input_with_headers,
+        metrics_output_path,
+    );
 
     let ks = service.killswitch.clone();
     let recv_thread = thread::spawn(move || {

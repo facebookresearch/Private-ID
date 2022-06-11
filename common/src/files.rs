@@ -230,43 +230,49 @@ mod test {
 
     #[test]
     fn test_sort_stringify_id_map_use_row_number() {
-        let s1 = vec![String::from("3"),String::from("a")];
-        let s2 = vec![String::from("2"),String::from("a")];
-        let s3 = vec![String::from("1"),String::from("a")];
+        let s1 = vec![String::from("3"), String::from("a")];
+        let s2 = vec![String::from("2"), String::from("a")];
+        let s3 = vec![String::from("1"), String::from("a")];
         let id_map = vec![s1, s2, s3];
         let res = sort_stringify_id_map(&id_map, false);
-        assert_eq!(res, "-----BEGIN FULL VIEW-----\n1\ta\n2\ta\n3\ta\n-----END FULL VIEW-----\n");
+        assert_eq!(
+            res,
+            "-----BEGIN FULL VIEW-----\n1\ta\n2\ta\n3\ta\n-----END FULL VIEW-----\n"
+        );
     }
 
     #[test]
     fn test_sort_stringify_id_map_no_row_number() {
-        let s1 = vec![String::from("3"),String::from("a")];
-        let s2 = vec![String::from("2"),String::from("a")];
-        let s3 = vec![String::from("1"),String::from("a")];
+        let s1 = vec![String::from("3"), String::from("a")];
+        let s2 = vec![String::from("2"), String::from("a")];
+        let s3 = vec![String::from("1"), String::from("a")];
         let id_map = vec![s1, s2, s3];
         let res = sort_stringify_id_map(&id_map, true);
-        assert_eq!(res, "-----BEGIN FULL VIEW-----\n0\ta\n1\ta\n2\ta\n-----END FULL VIEW-----\n");
+        assert_eq!(
+            res,
+            "-----BEGIN FULL VIEW-----\n0\ta\n1\ta\n2\ta\n-----END FULL VIEW-----\n"
+        );
     }
 
     #[test]
     #[should_panic(expected = "Got empty rows to print out")]
     fn test_sort_stringify_id_map_empty_row() {
-        let s1 = vec![String::from("3"),String::from("a")];
+        let s1 = vec![String::from("3"), String::from("a")];
         let s2 = vec![];
-        let s3 = vec![String::from("1"),String::from("a")];
+        let s3 = vec![String::from("1"), String::from("a")];
         let id_map = vec![s1, s2, s3];
         sort_stringify_id_map(&id_map, true);
     }
 
     #[test]
     fn test_write_vec_to_csv() {
+        use std::io::Read;
         use tempfile::NamedTempFile;
-        use std::io::{ Read};
-        let s1 = vec![String::from("3"),String::from("a")];
-        let s2 = vec![String::from("2"),String::from("a")];
-        let s3 = vec![String::from("1"),String::from("a")];
+        let s1 = vec![String::from("3"), String::from("a")];
+        let s2 = vec![String::from("2"), String::from("a")];
+        let s3 = vec![String::from("1"), String::from("a")];
 
-        let mut id_map =  vec![s1, s2, s3];
+        let mut id_map = vec![s1, s2, s3];
         let file = NamedTempFile::new().unwrap();
         let mut file1 = file.reopen().unwrap();
         let _ = write_vec_to_csv(&mut id_map, file, false, false);
@@ -278,14 +284,14 @@ mod test {
 
     #[test]
     fn test_write_vec_to_csv_with_header() {
+        use std::io::Read;
         use tempfile::NamedTempFile;
-        use std::io::{ Read};
-        let s0 = vec![String::from("ID"),String::from("NAME")];
-        let s1 = vec![String::from("3"),String::from("a")];
-        let s2 = vec![String::from("2"),String::from("a")];
-        let s3 = vec![String::from("1"),String::from("a")];
+        let s0 = vec![String::from("ID"), String::from("NAME")];
+        let s1 = vec![String::from("3"), String::from("a")];
+        let s2 = vec![String::from("2"), String::from("a")];
+        let s3 = vec![String::from("1"), String::from("a")];
 
-        let mut id_map =  vec![s0, s1, s2, s3];
+        let mut id_map = vec![s0, s1, s2, s3];
         let file = NamedTempFile::new().unwrap();
         let mut file1 = file.reopen().unwrap();
         let _ = write_vec_to_csv(&mut id_map, file, true, false);
@@ -297,13 +303,13 @@ mod test {
 
     #[test]
     fn test_write_vec_to_csv_rownumber() {
+        use std::io::Read;
         use tempfile::NamedTempFile;
-        use std::io::{ Read};
-        let s1 = vec![String::from("3"),String::from("a")];
-        let s2 = vec![String::from("2"),String::from("a")];
-        let s3 = vec![String::from("1"),String::from("a")];
+        let s1 = vec![String::from("3"), String::from("a")];
+        let s2 = vec![String::from("2"), String::from("a")];
+        let s3 = vec![String::from("1"), String::from("a")];
 
-        let mut id_map =  vec![s1, s2, s3];
+        let mut id_map = vec![s1, s2, s3];
         let file = NamedTempFile::new().unwrap();
         let mut file1 = file.reopen().unwrap();
         let _ = write_vec_to_csv(&mut id_map, file, false, true);
@@ -313,16 +319,15 @@ mod test {
         assert_eq!(buf, "0,a\n1,a\n2,a\n");
     }
 
-
     #[test]
     fn test_write_u64cols_to_file() {
+        use std::io::Read;
         use tempfile::NamedTempFile;
-        use std::io::{ Read};
-        let s1 = vec![11,21];
-        let s2 = vec![12,22];
-        let s3 = vec![13,23];
+        let s1 = vec![11, 21];
+        let s2 = vec![12, 22];
+        let s3 = vec![13, 23];
 
-        let mut id_map =  vec![s1, s2, s3];
+        let mut id_map = vec![s1, s2, s3];
         let file = NamedTempFile::new().unwrap();
         let mut file1 = file.reopen().unwrap();
         let _ = write_u64cols_to_file(&mut id_map, file);

@@ -11,15 +11,26 @@ use std::{
 #[test]
 fn test_load_data() {
     let t = KeyedCSV {
-        headers : vec![],
-        records : HashMap::from([
-            (String::from("a"), vec![String::from("1"), String::from("10")]),
-            (String::from("b"), vec![String::from("2"), String::from("20")]),
-            (String::from("c"), vec![String::from("3"), String::from("30")]),
-            (String::from("d"), vec![String::from("4"), String::from("40")]),
+        headers: vec![],
+        records: HashMap::from([
+            (
+                String::from("a"),
+                vec![String::from("1"), String::from("10")],
+            ),
+            (
+                String::from("b"),
+                vec![String::from("2"), String::from("20")],
+            ),
+            (
+                String::from("c"),
+                vec![String::from("3"), String::from("30")],
+            ),
+            (
+                String::from("d"),
+                vec![String::from("4"), String::from("40")],
+            ),
         ]),
     };
-
 
     let plain_data = Arc::new(RwLock::new(KeyedCSV::default()));
     load_data(plain_data.clone(), "./tests/keyed_ints.csv", false);

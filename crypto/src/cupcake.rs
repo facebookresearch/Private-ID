@@ -51,7 +51,7 @@ fn vec_scalar_to_vec_u64(v: &[Scalar], n: usize) -> Vec<u64> {
 
     let mut output = vec![0_u64; n];
     for i in 0..n {
-        output[i] = vec_scalar_to_u64(&v[i*U64_LEN..(i+1)*U64_LEN]);
+        output[i] = vec_scalar_to_u64(&v[i * U64_LEN..(i + 1) * U64_LEN]);
     }
     return output;
 }
@@ -105,7 +105,8 @@ impl CupcakeParallel {
         }
 
         // Calculate number of Cupcake ciphertexts needed
-        let n_cipher = ((U64_LEN as f32) * (num_features as f32) / (self.scheme.n as f32)).ceil() as usize;
+        let n_cipher =
+            ((U64_LEN as f32) * (num_features as f32) / (self.scheme.n as f32)).ceil() as usize;
         assert!(n_cipher >= 1);
         assert!(n_cipher * self.scheme.n >= U64_LEN * num_features);
 
@@ -115,24 +116,23 @@ impl CupcakeParallel {
 
         let mut v: Vec<Vec<ByteBuffer>> = Vec::new();
         for i in 0..n_cipher {
-            let t =
-                indices
-                    .clone()
-                    .into_par_iter()
-                    .map(|idx| {
-                        let mut x: Vec::<Scalar> = Vec::new();
-                        let start = i * stride;
-                        let end = cmp::min(num_features, (i+1) * stride);
-                        for j in start..end {
-                            let mut t = u64_to_vec_scalar(&(raw_text[j][idx]));
-                            x.append(&mut t);
-                        }
-                        let t = &self.scheme.encrypt(&x, &self.pk);
-                        ByteBuffer {
-                            buffer: t.to_bytes(),
-                        }
-                    })
-                    .collect::<Vec<ByteBuffer>>();
+            let t = indices
+                .clone()
+                .into_par_iter()
+                .map(|idx| {
+                    let mut x: Vec<Scalar> = Vec::new();
+                    let start = i * stride;
+                    let end = cmp::min(num_features, (i + 1) * stride);
+                    for j in start..end {
+                        let mut t = u64_to_vec_scalar(&(raw_text[j][idx]));
+                        x.append(&mut t);
+                    }
+                    let t = &self.scheme.encrypt(&x, &self.pk);
+                    ByteBuffer {
+                        buffer: t.to_bytes(),
+                    }
+                })
+                .collect::<Vec<ByteBuffer>>();
             v.push(t);
         }
 
@@ -154,7 +154,11 @@ impl CupcakeParallel {
     // Vector of ciphertexts. All ciphertexts are of same length
     // payload[0] is first vector of ciphertexts
     // payload[1] is second vector of ciphertexts
-    pub fn decrypt_vec_u64_vec(&self, payload: Vec<Vec<ByteBuffer>>, num_features: usize) -> Vec<Vec<u64>> {
+    pub fn decrypt_vec_u64_vec(
+        &self,
+        payload: Vec<Vec<ByteBuffer>>,
+        num_features: usize,
+    ) -> Vec<Vec<u64>> {
         assert!(payload.len() > 0);
         assert!(payload[0].len() > 0);
         assert!(num_features > 0);
@@ -166,7 +170,8 @@ impl CupcakeParallel {
         }
 
         // Calculate number of Cupcake ciphertexts needed
-        let n_cipher = ((U64_LEN as f32) * (num_features as f32) / (self.scheme.n as f32)).ceil() as usize;
+        let n_cipher =
+            ((U64_LEN as f32) * (num_features as f32) / (self.scheme.n as f32)).ceil() as usize;
         assert!(payload.len() >= n_cipher);
 
         let stride = self.scheme.n / U64_LEN;
@@ -176,27 +181,33 @@ impl CupcakeParallel {
         let mut output: Vec<Vec<u64>> = Vec::new();
 
         for i in 0..std::cmp::min(n_cipher, payload.len()) {
-             let start = i * stride;
-             let end = std::cmp::min(num_features, (i+1)*stride);
+            let start = i * stride;
+            let end = std::cmp::min(num_features, (i + 1) * stride);
 
-             let t =
-                indices.clone()
+            let t = indices
+                .clone()
+                .into_par_iter()
+                .map(|idx| {
+                    let t: Vec<Scalar> = self.scheme.decrypt(
+                        &(self.scheme.from_bytes(&(payload[i][idx].buffer))),
+                        &self.sk,
+                    );
+
+                    vec_scalar_to_vec_u64(&t, end - start)
+                })
+                .collect::<Vec<_>>();
+
+            assert!(t.len() >= 1);
+            assert_eq!(t[0].len(), end - start);
+
+            for j in 0..t[0].len() {
+                let x = indices
+                    .clone()
                     .into_par_iter()
-                    .map(|idx| {
-                        let t: Vec<Scalar> = self
-                            .scheme
-                            .decrypt(&(self.scheme.from_bytes(&(payload[i][idx].buffer))), &self.sk);
-
-                        vec_scalar_to_vec_u64(&t, end-start)
-                    }).collect::<Vec<_>>();
-
-             assert!(t.len() >= 1);
-             assert_eq!(t[0].len(), end-start);
-
-             for j in 0..t[0].len() {
-                let x = indices.clone().into_par_iter().map(|idx| t[idx][j]).collect::<Vec<_>>();
+                    .map(|idx| t[idx][j])
+                    .collect::<Vec<_>>();
                 output.push(x);
-             }
+            }
         }
         assert_eq!(output.len(), num_features);
 
@@ -220,7 +231,11 @@ impl CupcakeParallel {
             .collect::<Vec<ByteBuffer>>()
     }
 
-    pub fn xor_plaintext_vec(&self, lhs: Vec<Vec<ByteBuffer>>, rhs: &Vec<Vec<u64>>) -> Vec<Vec<ByteBuffer>> {
+    pub fn xor_plaintext_vec(
+        &self,
+        lhs: Vec<Vec<ByteBuffer>>,
+        rhs: &Vec<Vec<u64>>,
+    ) -> Vec<Vec<ByteBuffer>> {
         assert!(rhs.len() > 0);
         assert!(rhs[0].len() > 0);
         let num_features = rhs.len();
@@ -232,7 +247,8 @@ impl CupcakeParallel {
         }
 
         // Calculate number of Cupcake ciphertexts needed
-        let n_cipher = ((U64_LEN as f32) * (num_features as f32) / (self.scheme.n as f32)).ceil() as usize;
+        let n_cipher =
+            ((U64_LEN as f32) * (num_features as f32) / (self.scheme.n as f32)).ceil() as usize;
         assert!(n_cipher > 0);
         assert!(n_cipher * self.scheme.n >= U64_LEN * num_features);
 
@@ -254,25 +270,24 @@ impl CupcakeParallel {
 
         let mut v: Vec<Vec<ByteBuffer>> = Vec::new();
         for i in 0..n_cipher {
-            let t =
-                indices
-                    .clone()
-                    .into_par_iter()
-                    .map(|idx| {
-                        let mut x: Vec::<Scalar> = Vec::new();
-                        let start = i * stride;
-                        let end = cmp::min(num_features, (i+1) * stride);
-                        for j in start..end {
-                            let mut t = u64_to_vec_scalar(&(rhs[j][idx]));
-                            x.append(&mut t);
-                        }
-                        let mut ct = self.scheme.from_bytes(&lhs[i][idx].buffer);
-                        self.scheme.add_plain_inplace(&mut ct, &x);
-                        ByteBuffer {
-                            buffer: ct.to_bytes(),
-                        }
-                    })
-                    .collect::<Vec<ByteBuffer>>();
+            let t = indices
+                .clone()
+                .into_par_iter()
+                .map(|idx| {
+                    let mut x: Vec<Scalar> = Vec::new();
+                    let start = i * stride;
+                    let end = cmp::min(num_features, (i + 1) * stride);
+                    for j in start..end {
+                        let mut t = u64_to_vec_scalar(&(rhs[j][idx]));
+                        x.append(&mut t);
+                    }
+                    let mut ct = self.scheme.from_bytes(&lhs[i][idx].buffer);
+                    self.scheme.add_plain_inplace(&mut ct, &x);
+                    ByteBuffer {
+                        buffer: ct.to_bytes(),
+                    }
+                })
+                .collect::<Vec<ByteBuffer>>();
             v.push(t);
         }
 
@@ -425,9 +440,10 @@ mod tests {
 
         for n_feature in n_features {
             let indices = (0..n_feature).map(|x| x).collect::<Vec<_>>();
-            let vals: Vec<Vec<u64>> = indices.iter().map(|_|
-                (0..1000).map(|_| rng.sample(&range)).collect()
-            ).collect();
+            let vals: Vec<Vec<u64>> = indices
+                .iter()
+                .map(|_| (0..1000).map(|_| rng.sample(&range)).collect())
+                .collect();
 
             let cipher = CupcakeParallel::new();
 
@@ -551,21 +567,22 @@ mod tests {
         let n_features = vec![1, 2, 4, 64, 97, 225];
 
         for n_feature in n_features {
-
             let num_entries = 1000;
             let indices = (0..n_feature).map(|x| x).collect::<Vec<_>>();
-            let features: Vec<Vec<u64>> = indices.iter().map(|_|
-                (0..num_entries).map(|_| rng.sample(&range)).collect()
-            ).collect();
+            let features: Vec<Vec<u64>> = indices
+                .iter()
+                .map(|_| (0..num_entries).map(|_| rng.sample(&range)).collect())
+                .collect();
 
             let cipher = CupcakeParallel::new();
 
             let (n_f, enc_x) = cipher.enc_serialise_u64_vec(features.as_ref());
 
             // mask is share1
-            let mask: Vec<Vec<u64>> = indices.iter().map(|_|
-                (0..num_entries).map(|_| rng.sample(&range)).collect()
-            ).collect();
+            let mask: Vec<Vec<u64>> = indices
+                .iter()
+                .map(|_| (0..num_entries).map(|_| rng.sample(&range)).collect())
+                .collect();
 
             let z = cipher.xor_plaintext_vec(enc_x, &mask);
 

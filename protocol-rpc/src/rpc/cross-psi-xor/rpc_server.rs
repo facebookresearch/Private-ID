@@ -3,9 +3,9 @@
 
 use itertools::Itertools;
 use std::{
-    str::FromStr,
     borrow::BorrowMut,
     convert::TryInto,
+    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -124,15 +124,19 @@ impl CrossPsiXor for CrossPsiXorService {
             u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
 
         assert_eq!(num_ciphers * num_entries, data.len());
-        let features : Vec<TPayload> = data.into_iter().chunks(num_entries).into_iter().map(|x| x.collect_vec()).collect_vec();
+        let features: Vec<TPayload> = data
+            .into_iter()
+            .chunks(num_entries)
+            .into_iter()
+            .map(|x| x.collect_vec())
+            .collect_vec();
         assert_eq!(features.len(), num_ciphers);
 
-        let _ = self.protocol.generate_additive_shares(features, num_features);
+        let _ = self
+            .protocol
+            .generate_additive_shares(features, num_features);
 
-        t.qps(
-            format!("push e_partner_feature").as_str(),
-            num_entries,
-        );
+        t.qps(format!("push e_partner_feature").as_str(), num_entries);
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::FeatureAck(FeatureAck {
                 query_ack: Some(FeatureQuery {}),
@@ -170,14 +174,16 @@ impl CrossPsiXor for CrossPsiXorService {
             u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
 
         assert_eq!(num_ciphers * num_entries, data.len());
-        let features : Vec<TPayload> = data.into_iter().chunks(num_entries).into_iter().map(|x| x.collect_vec()).collect_vec();
+        let features: Vec<TPayload> = data
+            .into_iter()
+            .chunks(num_entries)
+            .into_iter()
+            .map(|x| x.collect_vec())
+            .collect_vec();
         assert_eq!(features.len(), num_ciphers);
 
         self.protocol.set_self_shares(features, num_features);
-        t.qps(
-            format!("push_e_company_feature ").as_str(),
-            num_entries,
-        );
+        t.qps(format!("push_e_company_feature ").as_str(), num_entries);
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::FeatureAck(FeatureAck {
                 query_ack: Some(FeatureQuery {}),
@@ -222,7 +228,6 @@ impl CrossPsiXor for CrossPsiXorService {
                         .copy_from_local(&tmp_path)
                         .await
                         .expect("Failed to write to GCS");
-
                 } else {
                     self.protocol.reveal(p);
                 }

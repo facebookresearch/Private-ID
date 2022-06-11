@@ -16,36 +16,37 @@ message Commitment {}
 message CommitmentAck {}
 
 message Step1Barrier {
-    SharerPublicKeyReuseAck sharer_public_key_reuse_ack = 3;
-    EncryptedKeysToMergeAck encrypted_keys_to_merge_ack = 4;
+  SharerPublicKeyReuseAck sharer_public_key_reuse_ack = 3;
+  EncryptedKeysToMergeAck encrypted_keys_to_merge_ack = 4;
 }
 
 message ServiceResponse {
-    oneof Ack {
-        Init init = 1;
-        InitAck init_ack = 2;
-        SharerPublicKeyReuseAck sharer_public_key_reuse_ack = 3;
-        EncryptedKeysToMergeAck encrypted_keys_to_merge_ack = 4;
-        CalculateSuidsAck calculate_suids_ack = 5;
-        SuidsPartyMergerAck suids_party_merger_ack = 6;
-        Commitment commitment = 7;
-        Step1Barrier step1_barrier = 8;
-    }
+  oneof Ack {
+    Init init = 1;
+    InitAck init_ack = 2;
+    SharerPublicKeyReuseAck sharer_public_key_reuse_ack = 3;
+    EncryptedKeysToMergeAck encrypted_keys_to_merge_ack = 4;
+    CalculateSuidsAck calculate_suids_ack = 5;
+    SuidsPartyMergerAck suids_party_merger_ack = 6;
+    Commitment commitment = 7;
+    Step1Barrier step1_barrier = 8;
+  }
 }
 
 service SuidCreate {
+  rpc Initialize(Init) returns (ServiceResponse) {}
+  rpc RecvPublicKeyM(ServiceResponse) returns (stream common.Payload) {}
 
-    rpc Initialize(Init) returns(ServiceResponse){}
-    rpc RecvPublicKeyM(ServiceResponse) returns(stream common.Payload) {}
+  rpc SendSharerPublicKeyReuse(stream common.Payload)
+      returns (ServiceResponse) {}
+  rpc RecvPartyMerger(ServiceResponse) returns (stream common.Payload) {}
+  rpc SendEncryptedKeysToMerge(stream common.Payload)
+      returns (ServiceResponse) {}
 
-    rpc SendSharerPublicKeyReuse(stream common.Payload) returns(ServiceResponse) {}
-    rpc RecvPartyMerger(ServiceResponse) returns(stream common.Payload) {}
-    rpc SendEncryptedKeysToMerge(stream common.Payload) returns(ServiceResponse) {}
+  rpc CalculateSuids(Step1Barrier) returns (ServiceResponse) {}
 
-    rpc CalculateSuids(Step1Barrier) returns(ServiceResponse) {}
+  rpc RecvSuids(ServiceResponse) returns (stream common.Payload) {}
+  rpc SendSuidsPartyMerger(stream common.Payload) returns (ServiceResponse) {}
 
-    rpc RecvSuids(ServiceResponse) returns(stream common.Payload) {}
-    rpc SendSuidsPartyMerger(stream common.Payload) returns(ServiceResponse) {}
-
-    rpc Reveal(Commitment) returns (CommitmentAck) {}
+  rpc Reveal(Commitment) returns (CommitmentAck) {}
 }

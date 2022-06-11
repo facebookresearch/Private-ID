@@ -12,10 +12,7 @@ extern crate tonic;
 use clap::{App, Arg, ArgGroup};
 use itertools::Itertools;
 use log::info;
-use std::{
-    str::FromStr,
-    convert::TryInto
-};
+use std::{convert::TryInto, str::FromStr};
 use tonic::Request;
 
 use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
@@ -248,18 +245,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             )
             .await?;
 
-            let num_features = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-            let num_ciphers = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-            let num_entries = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+            let num_features =
+                u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap())
+                    as usize;
+            let num_ciphers =
+                u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap())
+                    as usize;
+            let num_entries =
+                u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap())
+                    as usize;
 
             assert_eq!(num_ciphers * num_entries, data.len());
-            let features : Vec<TPayload> = data.into_iter().chunks(num_entries).into_iter().map(|x| x.collect_vec()).collect_vec();
+            let features: Vec<TPayload> = data
+                .into_iter()
+                .chunks(num_entries)
+                .into_iter()
+                .map(|x| x.collect_vec())
+                .collect_vec();
             assert_eq!(features.len(), num_ciphers);
 
             (features, num_features)
         };
 
-        //8b. Permute with same permutation as company keys 
+        //8b. Permute with same permutation as company keys
         for i in 0..features.len() {
             partner_protocol.permute(features[i].as_mut());
         }
@@ -363,21 +371,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await?;
 
-        let num_features = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-        let num_ciphers = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-        let num_entries = u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+        let num_features =
+            u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+        let num_ciphers =
+            u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+        let num_entries =
+            u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
 
         assert_eq!(num_ciphers * num_entries, data.len());
-        let features : Vec<TPayload> = data.into_iter().chunks(num_entries).into_iter().map(|x| x.collect_vec()).collect_vec();
+        let features: Vec<TPayload> = data
+            .into_iter()
+            .chunks(num_entries)
+            .into_iter()
+            .map(|x| x.collect_vec())
+            .collect_vec();
         assert_eq!(features.len(), num_ciphers);
 
         // 13a. Save additive shares for
         partner_protocol.set_self_shares(features, num_features);
 
-        t.qps(
-            format!("recv shares for features").as_str(),
-            num_entries,
-        )
+        t.qps(format!("recv shares for features").as_str(), num_entries)
     }
 
     // 14. Request company to output shares to file
@@ -404,13 +417,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .copy_from_local(&tmp_path)
                     .await
                     .expect("Failed to write to GCS");
-
             } else {
                 partner_protocol.reveal(p);
             }
         }
-        None =>
-            partner_protocol.reveal(output_path.unwrap()),
+        None => partner_protocol.reveal(output_path.unwrap()),
     }
 
     global_timer.qps(

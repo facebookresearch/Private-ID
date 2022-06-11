@@ -10,17 +10,17 @@ extern crate rpc;
 extern crate tonic;
 
 use clap::{App, Arg, ArgGroup};
+use common::{gcs_path::GCSPath, s3_path::S3Path};
 use log::info;
 use std::{
-    str::FromStr,
     net::SocketAddr,
+    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
     thread, time,
 };
-use common::{gcs_path::GCSPath, s3_path::S3Path};
 
 mod rpc_server;
 use rpc::connect::create_server::create_server;

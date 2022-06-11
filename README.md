@@ -12,7 +12,7 @@ The following should build and run the unit tests for the building blocks used b
 
 Each protocol involves two parties and they have to be run in its own shell environment. We call one party Company and another party Partner.
 
-### Private-ID 
+### Private-ID
 
 This protocol maps the email addresses from both parties to a single ID spine, so that same e-mail addresses map to the same key.
 
@@ -60,7 +60,7 @@ env RUST_LOG=info cargo run --bin private-id-multi-key-client -- \
      --tls-dir etc/example/dummy_certs
 ```
 
-### PS3I 
+### PS3I
 
 This protocol does an inner join based on email addresses as keys and then generates additive share of a feature associated with that email address. The shares are generated in the designated output files as 64 bit numbers
 
@@ -155,7 +155,7 @@ The output will be ElGamal encrypted Universal IDs assigned to each entry in the
 
 ## License
 Private-ID is Apache 2.0 licensed, as found in the [LICENSE](/LICENSE) file
-	
+
 ## Additional Resources on Private Computation at Meta
 * [The Value of Secure Multi-Party Computation](https://privacytech.fb.com/multi-party-computation/)
 * [Building the Next Era of Personalized Experiences](https://www.facebook.com/business/news/building-the-next-era-of-personalized-experiences)

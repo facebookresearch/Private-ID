@@ -295,10 +295,7 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
                             let p = self
                                 .ec_cipher
                                 .encrypt(matched.as_slice(), &self.private_keys.1);
-                            let c = self.ec_cipher.encrypt(
-                                p.as_slice(),
-                                &self.private_keys.2,
-                            );
+                            let c = self.ec_cipher.encrypt(p.as_slice(), &self.private_keys.2);
 
                             e_c_valid[m_idx] = false;
                             v_c[m_idx] = c[0];

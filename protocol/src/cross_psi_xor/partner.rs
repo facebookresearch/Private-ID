@@ -2,8 +2,8 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use log::info;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rand::{distributions::Uniform, Rng};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::{
     path::Path,
     sync::{Arc, RwLock},
@@ -182,23 +182,17 @@ impl PartnerCrossPsiXORProtocol for PartnerCrossPsiXOR {
             let num_ciphers = res.len();
 
             let mut r_flat = res.into_iter().flatten().collect::<Vec<_>>();
-            r_flat.push(
-                ByteBuffer {
-                    buffer: (num_entries as u64).to_le_bytes().to_vec(),
+            r_flat.push(ByteBuffer {
+                buffer: (num_entries as u64).to_le_bytes().to_vec(),
             });
-            r_flat.push(
-                ByteBuffer {
-                    buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
+            r_flat.push(ByteBuffer {
+                buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
             });
-            r_flat.push(
-                ByteBuffer {
-                    buffer: (num_features as u64).to_le_bytes().to_vec(),
+            r_flat.push(ByteBuffer {
+                buffer: (num_features as u64).to_le_bytes().to_vec(),
             });
 
-            t.qps(
-                format!("features HE enc").as_str(),
-                num_entries,
-            );
+            t.qps(format!("features HE enc").as_str(), num_entries);
             r_flat
         } else {
             panic!("Cannot HE encrypt features");
@@ -255,23 +249,21 @@ impl PartnerCrossPsiXORProtocol for PartnerCrossPsiXOR {
 
             let mut r_flat = res.into_iter().flatten().collect::<Vec<_>>();
 
-            r_flat.push(
-                ByteBuffer {
-                    buffer: (num_entries as u64).to_le_bytes().to_vec(),
-                }
-            );
-            r_flat.push(
-                ByteBuffer {
-                    buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
-                }
-            );
-            r_flat.push(
-                ByteBuffer {
-                    buffer: (num_features as u64).to_le_bytes().to_vec(),
-                }
-            );
+            r_flat.push(ByteBuffer {
+                buffer: (num_entries as u64).to_le_bytes().to_vec(),
+            });
+            r_flat.push(ByteBuffer {
+                buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
+            });
+            r_flat.push(ByteBuffer {
+                buffer: (num_features as u64).to_le_bytes().to_vec(),
+            });
             t.qps(
-                format!("num_features {}, num_records {}, num_ciphers {}", num_features, num_entries, num_ciphers).as_str(),
+                format!(
+                    "num_features {}, num_records {}, num_ciphers {}",
+                    num_features, num_entries, num_ciphers
+                )
+                .as_str(),
                 num_entries,
             );
             r_flat
@@ -304,21 +296,26 @@ impl Reveal for PartnerCrossPsiXOR {
             let mut company_shares = Vec::<Vec<u64>>::new();
 
             for i in 0..additive_mask.len() {
-               /*
-               let mut t: Vec<u64> = Vec::with_capacity(indices.len());
+                /*
+                let mut t: Vec<u64> = Vec::with_capacity(indices.len());
 
-               for index in indices.iter() {
-                   t.push(additive_mask[i][*index]);
-               }*/
+                for index in indices.iter() {
+                    t.push(additive_mask[i][*index]);
+                }*/
 
-               let t = indices.clone().into_par_iter().map(|idx| additive_mask[i][idx]).collect();
-               company_shares.push(t);
+                let t = indices
+                    .clone()
+                    .into_par_iter()
+                    .map(|idx| additive_mask[i][idx])
+                    .collect();
+                company_shares.push(t);
             }
             additive_mask.clear();
 
             let c_filename = format!("{}{}", path.as_ref().display(), "_company_feature.csv");
             info!("revealing company features to output file");
-            common::files::write_u64cols_to_file(&mut company_shares, Path::new(&c_filename)).unwrap();
+            common::files::write_u64cols_to_file(&mut company_shares, Path::new(&c_filename))
+                .unwrap();
 
             let p_filename = format!("{}{}", path.as_ref().display(), "_partner_feature.csv");
             info!("revealing partner features to output file");
