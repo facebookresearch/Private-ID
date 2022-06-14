@@ -12,6 +12,8 @@ The following should build and run the unit tests for the building blocks used b
 
 Each protocol involves two parties and they have to be run in its own shell environment. We call one party Company and another party Partner.
 
+Run the script to etc/example/generate_cert.sh to generate dummy_certs directroy if you want to test protocol with tls on local.
+
 ### Private-ID
 
 This protocol maps the email addresses from both parties to a single ID spine, so that same e-mail addresses map to the same key.
