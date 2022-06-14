@@ -1,9 +1,9 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, RwLock};
 use serde_json;
 use std::fs::File;
+use std::sync::{Arc, RwLock};
 
 #[derive(Serialize, Deserialize)]
 struct RawMetrics {
@@ -28,7 +28,7 @@ impl RawMetrics {
         }
     }
 
-    fn save_metrics(&self, path: &str) ->  Result<(), serde_json::Error> {
+    fn save_metrics(&self, path: &str) -> Result<(), serde_json::Error> {
         let f = &File::create(path).unwrap();
         serde_json::to_writer(f, &self)
     }
@@ -57,7 +57,7 @@ impl Metrics {
         }
     }
 
-    fn cp_to_raw(&self) -> RawMetrics{
+    fn cp_to_raw(&self) -> RawMetrics {
         RawMetrics::new(
             self.protocol_name.clone(),
             *self.partner_input_size.read().unwrap(),
@@ -66,27 +66,21 @@ impl Metrics {
         )
     }
     pub fn set_partner_input_size(&self, partner_input_size: usize) {
-        let mut d = self.partner_input_size
-            .write()
-            .unwrap();
+        let mut d = self.partner_input_size.write().unwrap();
         *d = Some(partner_input_size);
     }
 
     pub fn set_publisher_input_size(&self, publisher_input_size: usize) {
-        let mut d = self.publisher_input_size
-            .write()
-            .unwrap();
+        let mut d = self.publisher_input_size.write().unwrap();
         *d = Some(publisher_input_size);
     }
 
     pub fn set_union_file_size(&self, union_file_size: usize) {
-        let mut d = self.union_file_size
-            .write()
-            .unwrap();
+        let mut d = self.union_file_size.write().unwrap();
         *d = Some(union_file_size);
     }
 
-    pub fn save_metrics(&self, path: &str) ->  Result<(), serde_json::Error> {
+    pub fn save_metrics(&self, path: &str) -> Result<(), serde_json::Error> {
         let raw = self.cp_to_raw();
         raw.save_metrics(path)
     }
@@ -115,15 +109,30 @@ mod tests {
             union_file_size: Arc::new(RwLock::new(union_sz)),
         };
 
-        assert_eq!(m.partner_input_size.read().unwrap().unwrap(), partner_sz.unwrap());
+        assert_eq!(
+            m.partner_input_size.read().unwrap().unwrap(),
+            partner_sz.unwrap()
+        );
         m.set_partner_input_size(partner_new_sz);
-        assert_eq!(m.partner_input_size.read().unwrap().unwrap(), partner_new_sz);
+        assert_eq!(
+            m.partner_input_size.read().unwrap().unwrap(),
+            partner_new_sz
+        );
 
-        assert_eq!(m.publisher_input_size.read().unwrap().unwrap(), publisher_sz.unwrap());
+        assert_eq!(
+            m.publisher_input_size.read().unwrap().unwrap(),
+            publisher_sz.unwrap()
+        );
         m.set_publisher_input_size(publisher_new_sz);
-        assert_eq!(m.publisher_input_size.read().unwrap().unwrap(), publisher_new_sz);
+        assert_eq!(
+            m.publisher_input_size.read().unwrap().unwrap(),
+            publisher_new_sz
+        );
 
-        assert_eq!(m.union_file_size.read().unwrap().unwrap(), union_sz.unwrap());
+        assert_eq!(
+            m.union_file_size.read().unwrap().unwrap(),
+            union_sz.unwrap()
+        );
         m.set_union_file_size(union_new_sz);
         assert_eq!(m.union_file_size.read().unwrap().unwrap(), union_new_sz);
     }
@@ -155,8 +164,8 @@ mod tests {
 
     #[test]
     fn test_metrics_save() {
+        use std::io::Read;
         use tempfile::NamedTempFile;
-        use std::io::{ Read};
 
         let partner_sz = Some(4);
         let publisher_sz = Some(5);
@@ -172,8 +181,10 @@ mod tests {
         m.save_metrics(file.path().to_str().unwrap()).unwrap();
         let mut buf = String::new();
         file.read_to_string(&mut buf).unwrap();
-        assert_eq!(buf, "{\"protocol_name\":\"private-id\",\"partner_input_size\":4,\"publisher_input_size\":5,\"union_file_size\":6}");
+        assert_eq!(
+            buf,
+            "{\"protocol_name\":\"private-id\",\"partner_input_size\":4,\"publisher_input_size\":5,\"union_file_size\":6}"
+        );
         drop(file);
     }
-
 }

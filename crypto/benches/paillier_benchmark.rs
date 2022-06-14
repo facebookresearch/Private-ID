@@ -1,8 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-
-
 use criterion::*;
 use num_bigint::{BigUint, RandBigInt, ToBigInt};
 use num_traits::{identities::One, Signed};

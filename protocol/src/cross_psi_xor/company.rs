@@ -2,8 +2,8 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use log::info;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rand::{distributions::Uniform, Rng};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::{
     path::Path,
     sync::{Arc, RwLock},
@@ -180,21 +180,15 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
             let num_entries = res[0].len();
 
             let mut r_flat = res.into_iter().flatten().collect::<Vec<_>>();
-            r_flat.push(
-                ByteBuffer {
-                    buffer: (num_entries as u64).to_le_bytes().to_vec(),
-                }
-            );
-            r_flat.push(
-                ByteBuffer {
-                    buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
-                }
-            );
-            r_flat.push(
-                ByteBuffer {
-                    buffer: (num_features as u64).to_le_bytes().to_vec(),
-                }
-            );
+            r_flat.push(ByteBuffer {
+                buffer: (num_entries as u64).to_le_bytes().to_vec(),
+            });
+            r_flat.push(ByteBuffer {
+                buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
+            });
+            r_flat.push(ByteBuffer {
+                buffer: (num_features as u64).to_le_bytes().to_vec(),
+            });
             t.qps(format!("feature length HE enc").as_str(), num_entries);
             r_flat
         } else {
@@ -267,7 +261,10 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
             *num_features_partner_shares = num_features;
             partner_shares.clear();
             partner_shares.append(&mut self.he_cipher.xor_plaintext_vec(filtered_features, &mask));
-            t.qps("masking values in the intersection", partner_shares[0].len());
+            t.qps(
+                "masking values in the intersection",
+                partner_shares[0].len(),
+            );
         } else {
             panic!("Unable to add additive shares with the intersection")
         }
@@ -281,21 +278,15 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
             let mut s_flat = shares.clone().into_iter().flatten().collect::<Vec<_>>();
             let num_ciphers = shares.len();
             let num_entries = shares[0].len();
-            s_flat.push(
-                ByteBuffer {
-                    buffer: (num_entries as u64).to_le_bytes().to_vec(),
-                }
-            );
-            s_flat.push(
-                ByteBuffer {
-                    buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
-                }
-            );
-            s_flat.push(
-                ByteBuffer {
-                    buffer: (*num_features as u64).to_le_bytes().to_vec(),
-                }
-            );
+            s_flat.push(ByteBuffer {
+                buffer: (num_entries as u64).to_le_bytes().to_vec(),
+            });
+            s_flat.push(ByteBuffer {
+                buffer: (num_ciphers as u64).to_le_bytes().to_vec(),
+            });
+            s_flat.push(ByteBuffer {
+                buffer: (*num_features as u64).to_le_bytes().to_vec(),
+            });
             s_flat
         } else {
             panic!("Unable to read shares");
@@ -311,7 +302,8 @@ impl CompanyCrossPsiXORProtocol for CompanyCrossPsiXOR {
             }
             info!(
                 "Saving self-shares for len {} num_features {}",
-                data[0].len(), num_features,
+                data[0].len(),
+                num_features,
             );
             shares.clear();
             shares.append(&mut self.he_cipher.decrypt_vec_u64_vec(data, num_features));
@@ -398,22 +390,27 @@ impl Reveal for CompanyCrossPsiXOR {
                     t.push(self_shares[i][*index]);
                 }*/
 
-                let t = indices.clone().into_par_iter().map(|idx| self_shares[i][idx]).collect();
+                let t = indices
+                    .clone()
+                    .into_par_iter()
+                    .map(|idx| self_shares[i][idx])
+                    .collect();
                 company_shares.push(t);
             }
             self_shares.clear();
 
             let c_filename = format!("{}{}", path.as_ref().display(), "_company_feature.csv");
             info!("revealing company features to output file");
-            common::files::write_u64cols_to_file(&mut company_shares, Path::new(&c_filename)).unwrap();
+            common::files::write_u64cols_to_file(&mut company_shares, Path::new(&c_filename))
+                .unwrap();
 
             // additive_mask are partner_shares
             let p_filename = format!("{}{}", path.as_ref().display(), "_partner_feature.csv");
             info!("revealing partner features to output file");
-            common::files::write_u64cols_to_file(&mut additive_mask, Path::new(&p_filename)).unwrap();
+            common::files::write_u64cols_to_file(&mut additive_mask, Path::new(&p_filename))
+                .unwrap();
 
             additive_mask.clear();
-
         } else {
             panic!("Unable to reveal");
         }

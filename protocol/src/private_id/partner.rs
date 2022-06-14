@@ -1,7 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-
 #[cfg(not(target_arch = "wasm32"))]
 use crypto::eccipher::ECRistrettoParallel as ECRistretto;
 #[cfg(target_arch = "wasm32")]

@@ -353,7 +353,9 @@ impl SUIDCreateSharerProtocol for SUIDCreateSharer {
         ) {
             (Ok(data), Ok(suids_for_parties)) => {
                 for (suids_for_party, d) in suids_for_parties.iter().zip_eq(data.iter()) {
-                    println!("==========================================================================================");
+                    println!(
+                        "=========================================================================================="
+                    );
                     let s = suids_for_party
                         .0
                         .iter()

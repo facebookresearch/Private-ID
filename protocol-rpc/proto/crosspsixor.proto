@@ -7,67 +7,67 @@ package crosspsixor;
 import "common.proto";
 
 message Init {
-    uint64 partner_num_features = 3;
-    uint64 partner_num_records = 2;
+  uint64 partner_num_features = 3;
+  uint64 partner_num_records = 2;
 }
 
 message InitAck {
-    uint64 company_num_features = 2;
-    uint64 company_num_records= 3;
+  uint64 company_num_features = 2;
+  uint64 company_num_records = 3;
 }
 
 message FeatureQuery {}
 
 message FeatureAck {
-    FeatureQuery query_ack = 1;
+  FeatureQuery query_ack = 1;
 }
 
 message KeysAck {}
 
 message Step1Barrier {
-    KeysAck u_partner_keys_ack = 1;
-    FeatureAck u_partner_ack = 2;
-    FeatureAck e_partner_ack = 3;
+  KeysAck u_partner_keys_ack = 1;
+  FeatureAck u_partner_ack = 2;
+  FeatureAck e_partner_ack = 3;
 }
 
 message SharesQuery {
-    FeatureQuery query = 1;
-    Step1Barrier barrier = 2;
+  FeatureQuery query = 1;
+  Step1Barrier barrier = 2;
 }
 message Commitment {}
 
 message CommitmentAck {}
 
 message ServiceResponse {
-    oneof Ack {
-        KeysAck keys_ack = 1;
-        FeatureAck feature_ack = 2;
-        InitAck init_ack = 3;
-        FeatureQuery feature_query = 4;
-        Step1Barrier step1_barrier = 5;
-        SharesQuery shares_query = 6;
-    }
+  oneof Ack {
+    KeysAck keys_ack = 1;
+    FeatureAck feature_ack = 2;
+    InitAck init_ack = 3;
+    FeatureQuery feature_query = 4;
+    Step1Barrier step1_barrier = 5;
+    SharesQuery shares_query = 6;
+  }
 }
 
 service CrossPsiXOR {
+  rpc KeyExchange(Init) returns (InitAck) {}
 
-    rpc KeyExchange(Init) returns(InitAck){}
+  rpc RecvUCompanyKeys(ServiceResponse) returns (stream common.Payload) {}
 
-    rpc RecvUCompanyKeys(ServiceResponse) returns(stream common.Payload) {}
+  rpc RecvUCompanyFeatures(ServiceResponse) returns (stream common.Payload) {}
 
-    rpc RecvUCompanyFeatures(ServiceResponse) returns(stream common.Payload) {}
+  rpc SendUPartnerKeys(stream common.Payload) returns (ServiceResponse) {}
 
-    rpc SendUPartnerKeys(stream common.Payload) returns(ServiceResponse) {}
+  rpc SendUPartnerFeatures(stream common.Payload) returns (ServiceResponse) {}
 
-    rpc SendUPartnerFeatures(stream common.Payload) returns(ServiceResponse) {}
+  rpc SendECompanyKeys(stream common.Payload) returns (ServiceResponse) {}
 
-    rpc SendECompanyKeys(stream common.Payload) returns(ServiceResponse) {}
+  rpc SendECompanyFeatures(stream common.Payload) returns (ServiceResponse) {}
 
-    rpc SendECompanyFeatures(stream common.Payload) returns(ServiceResponse) {}
+  rpc RecvSharesCompanyIndices(ServiceResponse)
+      returns (stream common.Payload) {}
 
-    rpc RecvSharesCompanyIndices(ServiceResponse) returns(stream common.Payload){}
+  rpc RecvSharesFeatures(ServiceResponse) returns (stream common.Payload) {}
 
-    rpc RecvSharesFeatures(ServiceResponse) returns(stream common.Payload) {}
-
-    rpc Reveal(Commitment) returns (CommitmentAck) {}
+  rpc Reveal(Commitment) returns (CommitmentAck) {}
 }
