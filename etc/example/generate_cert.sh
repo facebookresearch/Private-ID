@@ -3,8 +3,8 @@
 set -e
 
 directory="$( dirname -- "$0";)/dummy_certs";
-mkdir $directory || exit
-cd $directory || exit
+mkdir "$directory" || exit
+cd "$directory" || exit
 
 # Create cnf file. DNS name is VERY important
 tee ssl-extensions-x509.cnf << EOF
