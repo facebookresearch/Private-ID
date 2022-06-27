@@ -12,7 +12,7 @@ The following should build and run the unit tests for the building blocks used b
 
 Each protocol involves two parties and they have to be run in its own shell environment. We call one party Company and another party Partner.
 
-Run the script to etc/example/generate_cert.sh to generate dummy_certs directroy if you want to test protocol with tls on local.
+Run the script at etc/example/generate_cert.sh to generate dummy_certs directroy if you want to test protocol with tls on local.
 
 ### Private-ID
 
@@ -40,9 +40,9 @@ env RUST_LOG=info cargo run --bin private-id-client -- \
 
 ### Private-ID MultiKey
 
-We extend the Private-ID protocol to match multiple records. Please refer to our [paper](https://eprint.iacr.org/2021/770) for more details.
+We extend the Private-ID protocol to match multiple identifiers. Please refer to our [paper](https://eprint.iacr.org/2021/770) for more details.
 
-Start server
+To run Company
 
 ```bash
 env RUST_LOG=info cargo run --bin private-id-multi-key-server -- \
@@ -52,7 +52,7 @@ env RUST_LOG=info cargo run --bin private-id-multi-key-server -- \
     --tls-dir etc/example/dummy_certs
 ```
 
-Start client
+To run Partner
 
 ```bash
 env RUST_LOG=info cargo run --bin private-id-multi-key-client -- \
