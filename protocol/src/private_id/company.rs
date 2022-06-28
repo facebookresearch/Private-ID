@@ -20,7 +20,7 @@ use common::{
 };
 
 use crate::{
-    fileio::{load_data, load_json, KeyedCSV},
+    fileio::{load_data, KeyedCSV},
     private_id::traits::CompanyPrivateIdProtocol,
 };
 
@@ -66,17 +66,6 @@ impl CompanyPrivateId {
             self.permutation.clone(),
             (*self.plain_data.clone().read().unwrap()).records.len(),
         );
-    }
-
-    pub fn load_json(&self, path: &str, input_with_headers: bool) -> bool {
-        let status = load_json(self.plain_data.clone(), path, input_with_headers);
-        if status {
-            fill_permute(
-                self.permutation.clone(),
-                (*self.plain_data.clone().read().unwrap()).records.len(),
-            );
-        }
-        status
     }
 
     pub fn get_e_company_size(&self) -> usize {
