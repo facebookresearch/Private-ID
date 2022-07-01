@@ -5,17 +5,19 @@ extern crate common;
 extern crate crypto;
 extern crate protocol;
 
-use tonic::{transport::Channel, Request, Response, Status};
+use tonic::transport::Channel;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
 
 use common::timer;
 use crypto::prelude::TPayload;
-use rpc::proto::{
-    gen_private_id_multi_key::{
-        private_id_multi_key_client::PrivateIdMultiKeyClient, Commitment, ServiceResponse,
-        Step1Barrier,
-    },
-    streaming::{read_from_stream, send_data},
-};
+use rpc::proto::gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClient;
+use rpc::proto::gen_private_id_multi_key::Commitment;
+use rpc::proto::gen_private_id_multi_key::ServiceResponse;
+use rpc::proto::gen_private_id_multi_key::Step1Barrier;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::send_data;
 
 pub async fn recv(
     response: ServiceResponse,

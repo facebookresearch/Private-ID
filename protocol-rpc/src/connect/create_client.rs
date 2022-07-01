@@ -1,25 +1,25 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use log::{error, info, warn};
+use log::error;
+use log::info;
+use log::warn;
 
 use futures::executor::block_on;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-use tonic::transport::{ClientTlsConfig, Endpoint};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use tonic::transport::ClientTlsConfig;
+use tonic::transport::Endpoint;
 
-use crate::{
-    connect::tls,
-    proto::{
-        gen_crosspsi::cross_psi_client::CrossPsiClient,
-        gen_crosspsi_xor::cross_psi_xor_client::CrossPsiXorClient, gen_pjc::pjc_client::PjcClient,
-        gen_private_id::private_id_client::PrivateIdClient,
-        gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClient,
-        gen_suid_create::suid_create_client::SuidCreateClient, RpcClient,
-    },
-};
+use crate::connect::tls;
+use crate::proto::gen_crosspsi::cross_psi_client::CrossPsiClient;
+use crate::proto::gen_crosspsi_xor::cross_psi_xor_client::CrossPsiXorClient;
+use crate::proto::gen_pjc::pjc_client::PjcClient;
+use crate::proto::gen_private_id::private_id_client::PrivateIdClient;
+use crate::proto::gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClient;
+use crate::proto::gen_suid_create::suid_create_client::SuidCreateClient;
+use crate::proto::RpcClient;
 
 pub fn create_client(
     no_tls: bool,

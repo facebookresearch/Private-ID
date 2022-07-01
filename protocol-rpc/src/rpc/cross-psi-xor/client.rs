@@ -9,28 +9,31 @@ extern crate retry;
 extern crate rpc;
 extern crate tonic;
 
-use clap::{App, Arg, ArgGroup};
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
 use itertools::Itertools;
 use log::info;
-use std::{convert::TryInto, str::FromStr};
+use std::convert::TryInto;
+use std::str::FromStr;
 use tonic::Request;
 
-use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
+use common::gcs_path::GCSPath;
+use common::s3_path::S3Path;
+use common::timer;
 use crypto::prelude::TPayload;
 mod rpc_client;
-use protocol::{
-    cross_psi_xor::{partner::PartnerCrossPsiXOR, traits::*},
-    shared::*,
-};
-use rpc::{
-    connect::create_client::create_client,
-    proto::{
-        gen_crosspsi_xor::{
-            service_response::*, FeatureQuery, Init, ServiceResponse, SharesQuery, Step1Barrier,
-        },
-        RpcClient,
-    },
-};
+use protocol::cross_psi_xor::partner::PartnerCrossPsiXOR;
+use protocol::cross_psi_xor::traits::*;
+use protocol::shared::*;
+use rpc::connect::create_client::create_client;
+use rpc::proto::gen_crosspsi_xor::service_response::*;
+use rpc::proto::gen_crosspsi_xor::FeatureQuery;
+use rpc::proto::gen_crosspsi_xor::Init;
+use rpc::proto::gen_crosspsi_xor::ServiceResponse;
+use rpc::proto::gen_crosspsi_xor::SharesQuery;
+use rpc::proto::gen_crosspsi_xor::Step1Barrier;
+use rpc::proto::RpcClient;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

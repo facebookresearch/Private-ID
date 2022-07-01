@@ -2,11 +2,10 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use protocol::fileio::*;
-use std::{
-    collections::HashMap,
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 #[test]
 fn test_load_data() {

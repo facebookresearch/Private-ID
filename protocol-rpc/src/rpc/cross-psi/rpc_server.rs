@@ -1,31 +1,37 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    borrow::BorrowMut,
-    convert::TryInto,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
-use tonic::{Request, Response, Status, Streaming};
+use std::borrow::BorrowMut;
+use std::convert::TryInto;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 use common::timer;
 use crypto::prelude::TypeHeEncKey;
 use log::info;
-use protocol::{
-    cross_psi::{company::CompanyCrossPsi, traits::CompanyCrossPsiProtocol},
-    shared::{LoadData, Reveal, ShareableEncKey},
-};
-use rpc::proto::{
-    common::Payload,
-    gen_crosspsi::{
-        cross_psi_server::CrossPsi, service_response::*, Commitment, CommitmentAck, FeatureAck,
-        FeatureQuery, Init, InitAck, KeysAck, ServiceResponse,
-    },
-    streaming::{read_from_stream, write_to_stream},
-};
+use protocol::cross_psi::company::CompanyCrossPsi;
+use protocol::cross_psi::traits::CompanyCrossPsiProtocol;
+use protocol::shared::LoadData;
+use protocol::shared::Reveal;
+use protocol::shared::ShareableEncKey;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_crosspsi::cross_psi_server::CrossPsi;
+use rpc::proto::gen_crosspsi::service_response::*;
+use rpc::proto::gen_crosspsi::Commitment;
+use rpc::proto::gen_crosspsi::CommitmentAck;
+use rpc::proto::gen_crosspsi::FeatureAck;
+use rpc::proto::gen_crosspsi::FeatureQuery;
+use rpc::proto::gen_crosspsi::Init;
+use rpc::proto::gen_crosspsi::InitAck;
+use rpc::proto::gen_crosspsi::KeysAck;
+use rpc::proto::gen_crosspsi::ServiceResponse;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::write_to_stream;
 
 pub struct CrossPsiService {
     pub killswitch: Arc<AtomicBool>,

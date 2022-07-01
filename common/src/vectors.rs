@@ -2,11 +2,10 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use rayon::prelude::ParallelSliceMut;
-use std::{
-    cmp::{Eq, Ord},
-    collections::HashSet,
-    hash::Hash,
-};
+use std::cmp::Eq;
+use std::cmp::Ord;
+use std::collections::HashSet;
+use std::hash::Hash;
 
 /// set subtract a - b. Returns all elements of a that are not in b
 /// returned elements of a may not be unique

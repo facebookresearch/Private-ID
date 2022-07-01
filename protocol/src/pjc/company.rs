@@ -6,23 +6,24 @@ use common::timer;
 use num_bigint::BigUint;
 use num_traits::Zero;
 
-use std::{
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
 use zeroize::Zeroizing;
 
-use crate::{
-    fileio::load_data_with_features,
-    pjc::traits::CompanyPJCProtocol,
-    shared::{LoadData, TFeatures},
-};
-use crypto::{
-    eccipher,
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    paillier::sum_reduce_with_key,
-    prelude::{EncryptionKey, Scalar, TPayload, TypeHeEncKey},
-};
+use crate::fileio::load_data_with_features;
+use crate::pjc::traits::CompanyPJCProtocol;
+use crate::shared::LoadData;
+use crate::shared::TFeatures;
+use crypto::eccipher;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::paillier::sum_reduce_with_key;
+use crypto::prelude::EncryptionKey;
+use crypto::prelude::Scalar;
+use crypto::prelude::TPayload;
+use crypto::prelude::TypeHeEncKey;
 
 #[derive(Debug)]
 pub struct CompanyPjc {

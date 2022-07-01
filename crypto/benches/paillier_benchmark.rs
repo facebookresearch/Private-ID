@@ -2,13 +2,20 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use criterion::*;
-use num_bigint::{BigUint, RandBigInt, ToBigInt};
-use num_traits::{identities::One, Signed};
-use rand::{distributions::Uniform, Rng};
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use num_bigint::BigUint;
+use num_bigint::RandBigInt;
+use num_bigint::ToBigInt;
+use num_traits::identities::One;
+use num_traits::Signed;
+use rand::distributions::Uniform;
+use rand::Rng;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 use std::num::Wrapping;
 
-use crypto::paillier::{sum_reduce_with_key, PaillierParallel};
+use crypto::paillier::sum_reduce_with_key;
+use crypto::paillier::PaillierParallel;
 
 fn parallel_enc(n: usize, c: &mut Criterion) {
     let mut rng = rand::thread_rng();

@@ -1,9 +1,13 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use num_bigint::{BigUint, RandBigInt, ToBigInt, ToBigUint};
+use num_bigint::BigUint;
+use num_bigint::RandBigInt;
+use num_bigint::ToBigInt;
+use num_bigint::ToBigUint;
 use num_integer::Integer;
-use num_traits::{identities::Zero, One};
+use num_traits::identities::Zero;
+use num_traits::One;
 
 // BoringSSL's table.
 // https://boringssl.googlesource.com/boringssl/+/master/crypto/bn/prime.c
@@ -338,9 +342,11 @@ pub fn sample_prime(bitsize: u64) -> BigUint {
 #[cfg(test)]
 mod tests {
     use num_bigint::ToBigUint;
-    use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+    use rayon::iter::IntoParallelRefIterator;
+    use rayon::iter::ParallelIterator;
 
-    use crate::prime::{is_prime, sample_prime};
+    use crate::prime::is_prime;
+    use crate::prime::sample_prime;
 
     #[test]
     fn check_primality() {

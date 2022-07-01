@@ -50,7 +50,8 @@ pub enum RpcClient {
 use crypto::prelude::*;
 
 pub mod from {
-    use super::{common::*, *};
+    use super::common::*;
+    use super::*;
     use num_bigint::BigUint;
 
     impl From<&EncryptionKey> for common::Payload {
@@ -93,7 +94,8 @@ pub mod from {
 
 #[cfg(test)]
 mod tests {
-    use super::{common::*, *};
+    use super::common::*;
+    use super::*;
     use num_bigint::BigUint;
     use num_traits::identities::Zero;
 

@@ -1,18 +1,24 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
-use std::{
-    cmp,
-    fmt::{Debug, Error, Formatter},
-};
+use std::cmp;
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 
-use cupcake::{
-    integer_arith::scalar::Scalar,
-    traits::{AddAndSubtract, KeyGeneration, PKEncryption, SKEncryption, Serializable},
-    DefaultSchemeType, FVCiphertext, SecretKey,
-};
+use cupcake::integer_arith::scalar::Scalar;
+use cupcake::traits::AddAndSubtract;
+use cupcake::traits::KeyGeneration;
+use cupcake::traits::PKEncryption;
+use cupcake::traits::SKEncryption;
+use cupcake::traits::Serializable;
+use cupcake::DefaultSchemeType;
+use cupcake::FVCiphertext;
+use cupcake::SecretKey;
 
 use crate::prelude::ByteBuffer;
 
@@ -310,16 +316,21 @@ impl Default for CupcakeParallel {
 #[cfg(test)]
 mod tests {
 
-    use cupcake::{
-        integer_arith::scalar::Scalar,
-        traits::{
-            AddAndSubtract, AdditiveHomomorphicScheme, KeyGeneration, PKEncryption, SKEncryption,
-        },
-    };
-    use rand::{distributions::Uniform, Rng};
-    use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+    use cupcake::integer_arith::scalar::Scalar;
+    use cupcake::traits::AddAndSubtract;
+    use cupcake::traits::AdditiveHomomorphicScheme;
+    use cupcake::traits::KeyGeneration;
+    use cupcake::traits::PKEncryption;
+    use cupcake::traits::SKEncryption;
+    use rand::distributions::Uniform;
+    use rand::Rng;
+    use rayon::iter::IndexedParallelIterator;
+    use rayon::iter::IntoParallelIterator;
+    use rayon::iter::ParallelIterator;
 
-    use crate::cupcake::{u64_to_vec_scalar, vec_scalar_to_u64, CupcakeParallel};
+    use crate::cupcake::u64_to_vec_scalar;
+    use crate::cupcake::vec_scalar_to_u64;
+    use crate::cupcake::CupcakeParallel;
 
     #[test]
     fn check_enc_dec() {

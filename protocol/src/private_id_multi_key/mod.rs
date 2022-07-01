@@ -1,15 +1,16 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use common::{files, timer};
+use common::files;
+use common::timer;
 use crypto::prelude::*;
 
-use std::{
-    collections::HashSet,
-    sync::{Arc, RwLock},
-};
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::sync::RwLock;
 
-use std::{error::Error, fmt};
+use std::error::Error;
+use std::fmt;
 
 #[derive(Debug)]
 pub enum ProtocolError {

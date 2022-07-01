@@ -1,27 +1,36 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    borrow::BorrowMut,
-    convert::TryInto,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
-use tonic::{Code, Request, Response, Status, Streaming};
+use std::borrow::BorrowMut;
+use std::convert::TryInto;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use tonic::Code;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 use common::timer;
-use protocol::suid_create::{merger::SUIDCreateMerger, traits::SUIDCreateMergerProtocol};
-use rpc::proto::{
-    common::Payload,
-    gen_suid_create::{
-        service_response::*, suid_create_server::SuidCreate, CalculateSuidsAck, Commitment,
-        CommitmentAck, EncryptedKeysToMergeAck, Init, InitAck, ServiceResponse,
-        SharerPublicKeyReuseAck, Step1Barrier, SuidsPartyMergerAck,
-    },
-    streaming::{read_from_stream, write_to_stream, TPayloadStream},
-};
+use protocol::suid_create::merger::SUIDCreateMerger;
+use protocol::suid_create::traits::SUIDCreateMergerProtocol;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_suid_create::service_response::*;
+use rpc::proto::gen_suid_create::suid_create_server::SuidCreate;
+use rpc::proto::gen_suid_create::CalculateSuidsAck;
+use rpc::proto::gen_suid_create::Commitment;
+use rpc::proto::gen_suid_create::CommitmentAck;
+use rpc::proto::gen_suid_create::EncryptedKeysToMergeAck;
+use rpc::proto::gen_suid_create::Init;
+use rpc::proto::gen_suid_create::InitAck;
+use rpc::proto::gen_suid_create::ServiceResponse;
+use rpc::proto::gen_suid_create::SharerPublicKeyReuseAck;
+use rpc::proto::gen_suid_create::Step1Barrier;
+use rpc::proto::gen_suid_create::SuidsPartyMergerAck;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::write_to_stream;
+use rpc::proto::streaming::TPayloadStream;
 
 pub struct SUIDCreateService {
     protocol: SUIDCreateMerger,

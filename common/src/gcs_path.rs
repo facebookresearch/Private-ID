@@ -1,9 +1,12 @@
 //! This module is similar as s3_path where the only difference is that it
 //! calls the Google Cloud Storage SDK for read and write file in GCS.
 
-use std::{io::Write, path::Path, str::FromStr};
+use std::io::Write;
+use std::path::Path;
+use std::str::FromStr;
 use tokio::fs::File;
-use tokio_util::codec::{BytesCodec, FramedRead};
+use tokio_util::codec::BytesCodec;
+use tokio_util::codec::FramedRead;
 
 use regex::Regex;
 

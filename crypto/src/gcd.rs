@@ -3,9 +3,13 @@
 
 use std::cmp;
 
-use num_bigint::{BigInt, BigUint, ToBigInt};
+use num_bigint::BigInt;
+use num_bigint::BigUint;
+use num_bigint::ToBigInt;
 use num_integer::Integer;
-use num_traits::{identities::Zero, One, Signed};
+use num_traits::identities::Zero;
+use num_traits::One;
+use num_traits::Signed;
 
 fn extended_binary_gcd(m: &BigUint, n: &BigUint) -> (BigInt, BigInt, BigUint) {
     #[inline]
@@ -99,12 +103,15 @@ pub fn mod_inverse(m: &BigUint, n: &BigUint) -> Option<BigInt> {
 
 #[cfg(test)]
 mod tests {
-    use num_bigint::{RandBigInt, ToBigInt, ToBigUint};
+    use num_bigint::RandBigInt;
+    use num_bigint::ToBigInt;
+    use num_bigint::ToBigUint;
     use num_integer::Integer;
     use num_traits::One;
     use std::mem;
 
-    use crate::gcd::{extended_binary_gcd, mod_inverse};
+    use crate::gcd::extended_binary_gcd;
+    use crate::gcd::mod_inverse;
 
     #[test]
     fn check_mod_inv() {

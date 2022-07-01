@@ -2,27 +2,29 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use log::info;
-use rand::{distributions::Uniform, Rng};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use std::{
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use rand::distributions::Uniform;
+use rand::Rng;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
 use zeroize::Zeroizing;
 
-use crate::{
-    cross_psi_xor::traits::*,
-    fileio::load_data_with_features,
-    shared::{LoadData, Reveal, TFeatures},
-};
+use crate::cross_psi_xor::traits::*;
+use crate::fileio::load_data_with_features;
+use crate::shared::LoadData;
+use crate::shared::Reveal;
+use crate::shared::TFeatures;
 use common::timer;
 
-use crypto::{
-    cupcake::CupcakeParallel,
-    eccipher,
-    eccipher::{gen_scalar, ECCipher},
-    prelude::{ByteBuffer, Scalar, TPayload},
-};
+use crypto::cupcake::CupcakeParallel;
+use crypto::eccipher;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::prelude::ByteBuffer;
+use crypto::prelude::Scalar;
+use crypto::prelude::TPayload;
 
 #[derive(Debug)]
 pub struct PartnerCrossPsiXOR {

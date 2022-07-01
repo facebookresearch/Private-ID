@@ -2,28 +2,35 @@
 //  SPDX-License-Identifier: Apache-2.0ss
 
 use log::info;
-use num_bigint::{BigUint, RandBigInt};
-use num_traits::{identities::Zero, One};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use std::{
-    collections::HashMap,
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use num_bigint::BigUint;
+use num_bigint::RandBigInt;
+use num_traits::identities::Zero;
+use num_traits::One;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
 
-use crate::{
-    cross_psi::traits::*,
-    fileio::load_data_with_features,
-    shared::{LoadData, Reveal, ShareableEncKey, TFeatures},
-};
+use crate::cross_psi::traits::*;
+use crate::fileio::load_data_with_features;
+use crate::shared::LoadData;
+use crate::shared::Reveal;
+use crate::shared::ShareableEncKey;
+use crate::shared::TFeatures;
 use common::timer;
 
-use crypto::{
-    eccipher,
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    paillier::{subtract_plaintext, PaillierParallel},
-    prelude::{ByteBuffer, EncryptionKey, Scalar, TPayload},
-};
+use crypto::eccipher;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::paillier::subtract_plaintext;
+use crypto::paillier::PaillierParallel;
+use crypto::prelude::ByteBuffer;
+use crypto::prelude::EncryptionKey;
+use crypto::prelude::Scalar;
+use crypto::prelude::TPayload;
 
 #[derive(Debug)]
 pub struct CompanyCrossPsi {

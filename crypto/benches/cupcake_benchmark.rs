@@ -2,8 +2,11 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use criterion::*;
-use rand::{distributions::Uniform, Rng};
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rand::distributions::Uniform;
+use rand::Rng;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 use crypto::cupcake::CupcakeParallel;
 

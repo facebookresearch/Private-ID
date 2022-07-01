@@ -1,30 +1,30 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use std::sync::RwLock;
 
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
 #[cfg(not(target_arch = "wasm32"))]
 use crypto::eccipher::ECRistrettoParallel as ECRistretto;
 #[cfg(target_arch = "wasm32")]
 use crypto::eccipher::ECRistrettoSequential as ECRistretto;
-use crypto::{
-    eccipher::{gen_scalar, ECCipher},
-    prelude::*,
-};
+use crypto::prelude::*;
 use zeroize::Zeroizing;
 
-use common::{
-    files,
-    permutations::{permute, undo_permute},
-    timer,
-};
+use common::files;
+use common::permutations::permute;
+use common::permutations::undo_permute;
+use common::timer;
 
-use crate::{
-    fileio::{load_data, load_json, KeyedCSV},
-    private_id::traits::CompanyPrivateIdProtocol,
-};
+use crate::fileio::load_data;
+use crate::fileio::load_json;
+use crate::fileio::KeyedCSV;
+use crate::private_id::traits::CompanyPrivateIdProtocol;
 
-use super::{fill_permute, ProtocolError};
+use super::fill_permute;
+use super::ProtocolError;
 
 #[derive(Debug)]
 pub struct CompanyPrivateId {

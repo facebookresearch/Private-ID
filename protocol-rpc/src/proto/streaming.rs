@@ -8,7 +8,10 @@ use async_stream::stream;
 use futures::Stream;
 use std::cmp;
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::{Request, Response, Status, Streaming};
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 fn chunks_count<T>(data: &[T]) -> usize {
     cmp::max(32_usize, data.len() / 2000_usize)

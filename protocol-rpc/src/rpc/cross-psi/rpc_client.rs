@@ -1,14 +1,19 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use tonic::{transport::Channel, Request, Response, Status};
+use tonic::transport::Channel;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
 
 use common::timer;
 use crypto::prelude::TPayload;
-use rpc::proto::{
-    gen_crosspsi::{cross_psi_client::CrossPsiClient, Commitment, CommitmentAck, ServiceResponse},
-    streaming::{read_from_stream, send_data},
-};
+use rpc::proto::gen_crosspsi::cross_psi_client::CrossPsiClient;
+use rpc::proto::gen_crosspsi::Commitment;
+use rpc::proto::gen_crosspsi::CommitmentAck;
+use rpc::proto::gen_crosspsi::ServiceResponse;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::send_data;
 
 pub async fn recv(
     response: ServiceResponse,

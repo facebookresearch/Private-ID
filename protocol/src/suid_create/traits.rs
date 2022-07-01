@@ -2,7 +2,8 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use crate::suid_create::ProtocolError;
-use crypto::prelude::{TPayload, TPoint};
+use crypto::prelude::TPayload;
+use crypto::prelude::TPoint;
 
 pub trait SUIDCreateSharerProtocol {
     fn get_public_key_reuse(&self) -> TPayload;

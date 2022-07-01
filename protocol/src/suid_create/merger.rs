@@ -2,24 +2,26 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use itertools::Itertools;
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::RwLock;
 
-use crypto::{
-    eccipher::{ECCipher, ECRistrettoParallel},
-    prelude::*,
-};
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
 
 use common::timer;
 
 use crate::suid_create::traits::SUIDCreateMergerProtocol;
 
-use super::{
-    compute_prefix_sum, elgamal_decrypt, elgamal_encrypt, gen_elgamal_keypair, load_data,
-    unflatten_vec, writer_helper, ProtocolError,
-};
+use super::compute_prefix_sum;
+use super::elgamal_decrypt;
+use super::elgamal_encrypt;
+use super::gen_elgamal_keypair;
+use super::load_data;
+use super::unflatten_vec;
+use super::writer_helper;
+use super::ProtocolError;
 
 // A very specific union find implementation that will only work when elements
 // are in range [0, N) where N is a positive integer

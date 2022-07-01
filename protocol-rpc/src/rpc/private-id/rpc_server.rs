@@ -8,26 +8,39 @@ extern crate protocol;
 extern crate tokio;
 extern crate tonic;
 
-use std::{
-    str::FromStr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
-use tonic::{Code, Request, Response, Status, Streaming};
+use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use tonic::Code;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
-use common::{gcs_path::GCSPath, metrics, s3_path::S3Path, timer};
-use protocol::private_id::{company::CompanyPrivateId, traits::CompanyPrivateIdProtocol};
-use rpc::proto::{
-    common::Payload,
-    gen_private_id::{
-        private_id_server::PrivateId, service_response::*, CalculateSetDiffAck, Commitment,
-        CommitmentAck, ECompanyAck, Init, InitAck, SPrimePartnerAck, ServiceResponse, Step1Barrier,
-        UPartnerAck, VCompanyAck,
-    },
-    streaming::{read_from_stream, write_to_stream, TPayloadStream},
-};
+use common::gcs_path::GCSPath;
+use common::metrics;
+use common::s3_path::S3Path;
+use common::timer;
+use protocol::private_id::company::CompanyPrivateId;
+use protocol::private_id::traits::CompanyPrivateIdProtocol;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_private_id::private_id_server::PrivateId;
+use rpc::proto::gen_private_id::service_response::*;
+use rpc::proto::gen_private_id::CalculateSetDiffAck;
+use rpc::proto::gen_private_id::Commitment;
+use rpc::proto::gen_private_id::CommitmentAck;
+use rpc::proto::gen_private_id::ECompanyAck;
+use rpc::proto::gen_private_id::Init;
+use rpc::proto::gen_private_id::InitAck;
+use rpc::proto::gen_private_id::SPrimePartnerAck;
+use rpc::proto::gen_private_id::ServiceResponse;
+use rpc::proto::gen_private_id::Step1Barrier;
+use rpc::proto::gen_private_id::UPartnerAck;
+use rpc::proto::gen_private_id::VCompanyAck;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::write_to_stream;
+use rpc::proto::streaming::TPayloadStream;
 
 pub struct PrivateIdService {
     protocol: CompanyPrivateId,

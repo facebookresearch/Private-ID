@@ -2,7 +2,9 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use rayon::prelude::ParallelSliceMut;
-use std::{error::Error, path::Path, str::FromStr};
+use std::error::Error;
+use std::path::Path;
+use std::str::FromStr;
 
 pub struct KeyedNums<T> {
     pub key: String,

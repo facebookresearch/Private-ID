@@ -9,23 +9,23 @@ use common::timer;
 use num_bigint::BigUint;
 use num_traits::One;
 
-use std::{
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
 use zeroize::Zeroizing;
 
-use crate::{
-    fileio::load_data_with_features,
-    pjc::traits::PartnerPJCProtocol,
-    shared::{LoadData, ShareableEncKey, TFeatures},
-};
-use crypto::{
-    eccipher,
-    eccipher::{gen_scalar, ECCipher},
-    paillier::PaillierParallel,
-    prelude::{EncryptionKey, Scalar, TPayload},
-};
+use crate::fileio::load_data_with_features;
+use crate::pjc::traits::PartnerPJCProtocol;
+use crate::shared::LoadData;
+use crate::shared::ShareableEncKey;
+use crate::shared::TFeatures;
+use crypto::eccipher;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::paillier::PaillierParallel;
+use crypto::prelude::EncryptionKey;
+use crypto::prelude::Scalar;
+use crypto::prelude::TPayload;
 
 #[derive(Debug)]
 pub struct PartnerPjc {

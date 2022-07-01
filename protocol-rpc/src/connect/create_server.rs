@@ -1,8 +1,10 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use log::{info, warn};
-use tonic::transport::{Server, ServerTlsConfig};
+use log::info;
+use log::warn;
+use tonic::transport::Server;
+use tonic::transport::ServerTlsConfig;
 
 use crate::connect::tls;
 

@@ -1,29 +1,40 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use common::{gcs_path::GCSPath, metrics, s3_path::S3Path, timer};
-use protocol::private_id_multi_key::{
-    company::CompanyPrivateIdMultiKey, traits::CompanyPrivateIdMultiKeyProtocol,
-};
-use rpc::proto::{
-    common::Payload,
-    gen_private_id_multi_key::{
-        private_id_multi_key_server::PrivateIdMultiKey, service_response::*, CalculateSetDiffAck,
-        Commitment, CommitmentAck, ECompanyAck, Init, InitAck, SPrimePartnerAck, ServiceResponse,
-        Step1Barrier, UPartnerAck, WCompanyAck,
-    },
-    streaming::{read_from_stream, write_to_stream, TPayloadStream},
-};
-use std::{
-    borrow::BorrowMut,
-    convert::TryInto,
-    str::FromStr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
-use tonic::{Code, Request, Response, Status, Streaming};
+use common::gcs_path::GCSPath;
+use common::metrics;
+use common::s3_path::S3Path;
+use common::timer;
+use protocol::private_id_multi_key::company::CompanyPrivateIdMultiKey;
+use protocol::private_id_multi_key::traits::CompanyPrivateIdMultiKeyProtocol;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_private_id_multi_key::private_id_multi_key_server::PrivateIdMultiKey;
+use rpc::proto::gen_private_id_multi_key::service_response::*;
+use rpc::proto::gen_private_id_multi_key::CalculateSetDiffAck;
+use rpc::proto::gen_private_id_multi_key::Commitment;
+use rpc::proto::gen_private_id_multi_key::CommitmentAck;
+use rpc::proto::gen_private_id_multi_key::ECompanyAck;
+use rpc::proto::gen_private_id_multi_key::Init;
+use rpc::proto::gen_private_id_multi_key::InitAck;
+use rpc::proto::gen_private_id_multi_key::SPrimePartnerAck;
+use rpc::proto::gen_private_id_multi_key::ServiceResponse;
+use rpc::proto::gen_private_id_multi_key::Step1Barrier;
+use rpc::proto::gen_private_id_multi_key::UPartnerAck;
+use rpc::proto::gen_private_id_multi_key::WCompanyAck;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::write_to_stream;
+use rpc::proto::streaming::TPayloadStream;
+use std::borrow::BorrowMut;
+use std::convert::TryInto;
+use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use tonic::Code;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct PrivateIdMultiKeyService {
     protocol: CompanyPrivateIdMultiKey,

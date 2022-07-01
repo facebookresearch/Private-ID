@@ -1,14 +1,17 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use common::{files, timer};
-use crypto::{eccipher::gen_scalar, prelude::*};
+use common::files;
+use common::timer;
+use crypto::eccipher::gen_scalar;
+use crypto::prelude::*;
 
 use itertools::Itertools;
 use std::collections::HashSet;
 
 use rand_core::OsRng;
-use std::{error::Error, fmt};
+use std::error::Error;
+use std::fmt;
 
 #[derive(Debug)]
 pub enum ProtocolError {

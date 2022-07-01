@@ -7,20 +7,21 @@ extern crate clap;
 extern crate ctrlc;
 extern crate tonic;
 
-use clap::{App, Arg, ArgGroup};
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
 use common::s3_path::S3Path;
 use log::info;
-use std::{
-    str::FromStr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    thread, time,
-};
+use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::thread;
+use std::time;
 
 mod rpc_server;
-use rpc::{connect::create_server::create_server, proto::gen_private_id::private_id_server};
+use rpc::connect::create_server::create_server;
+use rpc::proto::gen_private_id::private_id_server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

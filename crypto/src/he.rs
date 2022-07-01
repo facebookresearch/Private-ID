@@ -1,21 +1,31 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use paillier::{
-    Add, Decrypt, DecryptionKey, Encrypt, KeyGeneration, Paillier, RawCiphertext, RawPlaintext,
-    Rerandomize,
-};
-use rayon::iter::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-};
-use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{Debug, Error, Formatter},
-    ops::Neg,
-    sync::Arc,
-};
+use paillier::Add;
+use paillier::Decrypt;
+use paillier::DecryptionKey;
+use paillier::Encrypt;
+use paillier::KeyGeneration;
+use paillier::Paillier;
+use paillier::RawCiphertext;
+use paillier::RawPlaintext;
+use paillier::Rerandomize;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::IntoParallelRefIterator;
+use rayon::iter::ParallelIterator;
+use serde::Deserialize;
+use serde::Serialize;
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
+use std::ops::Neg;
+use std::sync::Arc;
 
-use crate::prelude::{BigInt, ByteBuffer, EncryptionKey, PAILLIER_PUBLIC_KEY_SIZE};
+use crate::prelude::BigInt;
+use crate::prelude::ByteBuffer;
+use crate::prelude::EncryptionKey;
+use crate::prelude::PAILLIER_PUBLIC_KEY_SIZE;
 
 /// A wrapper struct to be used to convert bigints into byte arrays
 /// Serde Serialiser: paillier::serialize::bigint

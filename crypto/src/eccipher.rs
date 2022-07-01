@@ -1,12 +1,19 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use rand::{rngs::OsRng, RngCore};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rand::rngs::OsRng;
+use rand::RngCore;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 use sha2::Sha512;
-use std::fmt::{Debug, Error, Formatter};
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 
-use crate::prelude::{ByteBuffer, CompressedRistretto, RistrettoPoint, Scalar};
+use crate::prelude::ByteBuffer;
+use crate::prelude::CompressedRistretto;
+use crate::prelude::RistrettoPoint;
+use crate::prelude::Scalar;
 
 /// Two base crypt-operations that we need to have Private-Id happen
 ///
@@ -310,7 +317,9 @@ pub fn gen_scalar() -> Scalar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{distributions, thread_rng, Rng};
+    use rand::distributions;
+    use rand::thread_rng;
+    use rand::Rng;
 
     fn vec_compare<T: PartialEq>(va: &[T], vb: &[T]) -> bool {
         (va.len() == vb.len()) &&  // zip stops at the shortest

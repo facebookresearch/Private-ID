@@ -9,29 +9,34 @@ extern crate tokio;
 extern crate tonic;
 
 use log::info;
-use std::{
-    convert::TryInto,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
-use tonic::{Request, Response, Status, Streaming};
+use std::convert::TryInto;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 use common::timer;
 use crypto::prelude::TypeHeEncKey;
-use protocol::{
-    pjc::{company::CompanyPjc, traits::*},
-    shared::LoadData,
-};
-use rpc::proto::{
-    common::Payload,
-    gen_pjc::{
-        pjc_server::Pjc, service_response::*, Commitment, EncryptedSum, FeatureAck, FeatureQuery,
-        Init, InitAck, KeysAck, ServiceResponse, Stats,
-    },
-    streaming::{read_from_stream, write_to_stream},
-};
+use protocol::pjc::company::CompanyPjc;
+use protocol::pjc::traits::*;
+use protocol::shared::LoadData;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_pjc::pjc_server::Pjc;
+use rpc::proto::gen_pjc::service_response::*;
+use rpc::proto::gen_pjc::Commitment;
+use rpc::proto::gen_pjc::EncryptedSum;
+use rpc::proto::gen_pjc::FeatureAck;
+use rpc::proto::gen_pjc::FeatureQuery;
+use rpc::proto::gen_pjc::Init;
+use rpc::proto::gen_pjc::InitAck;
+use rpc::proto::gen_pjc::KeysAck;
+use rpc::proto::gen_pjc::ServiceResponse;
+use rpc::proto::gen_pjc::Stats;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::write_to_stream;
 
 pub struct PJCService {
     pub killswitch: Arc<AtomicBool>,

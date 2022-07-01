@@ -1,14 +1,24 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
-use std::fmt::{Debug, Error, Formatter};
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 
-use num_bigint::{BigUint, RandBigInt, ToBigInt};
-use num_traits::{identities::Zero, One, Signed};
+use num_bigint::BigUint;
+use num_bigint::RandBigInt;
+use num_bigint::ToBigInt;
+use num_traits::identities::Zero;
+use num_traits::One;
+use num_traits::Signed;
 
-use crate::{gcd::mod_inverse, prelude::ByteBuffer, prime::sample_prime};
+use crate::gcd::mod_inverse;
+use crate::prelude::ByteBuffer;
+use crate::prime::sample_prime;
 
 struct MinimalEncryptionKey {
     pub n: BigUint,
@@ -277,16 +287,26 @@ impl Default for PaillierParallel {
 #[cfg(test)]
 mod tests {
 
-    use num_bigint::{BigUint, RandBigInt, ToBigInt};
-    use num_traits::{One, Signed, Zero};
-    use rand::{distributions::Uniform, Rng};
-    use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+    use num_bigint::BigUint;
+    use num_bigint::RandBigInt;
+    use num_bigint::ToBigInt;
+    use num_traits::One;
+    use num_traits::Signed;
+    use num_traits::Zero;
+    use rand::distributions::Uniform;
+    use rand::Rng;
+    use rayon::iter::IndexedParallelIterator;
+    use rayon::iter::IntoParallelIterator;
+    use rayon::iter::ParallelIterator;
     use std::num::Wrapping;
 
-    use crate::paillier::{
-        decrypt_fast, encrypt, gen_decryption_key, gen_encryption_key, gen_keypair,
-        sum_reduce_with_key, PaillierParallel,
-    };
+    use crate::paillier::decrypt_fast;
+    use crate::paillier::encrypt;
+    use crate::paillier::gen_decryption_key;
+    use crate::paillier::gen_encryption_key;
+    use crate::paillier::gen_keypair;
+    use crate::paillier::sum_reduce_with_key;
+    use crate::paillier::PaillierParallel;
 
     #[test]
     fn check_enc_dec() {

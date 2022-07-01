@@ -1,21 +1,23 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use clap::{App, Arg, ArgGroup};
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
 use log::info;
 use std::convert::TryInto;
 use tonic::Request;
 
 use common::timer;
 use crypto::prelude::TPayload;
-use protocol::suid_create::{sharer::SUIDCreateSharer, traits::*};
-use rpc::{
-    connect::create_client::create_client,
-    proto::{
-        gen_suid_create::{service_response::*, Init, ServiceResponse, Step1Barrier},
-        RpcClient,
-    },
-};
+use protocol::suid_create::sharer::SUIDCreateSharer;
+use protocol::suid_create::traits::*;
+use rpc::connect::create_client::create_client;
+use rpc::proto::gen_suid_create::service_response::*;
+use rpc::proto::gen_suid_create::Init;
+use rpc::proto::gen_suid_create::ServiceResponse;
+use rpc::proto::gen_suid_create::Step1Barrier;
+use rpc::proto::RpcClient;
 
 mod rpc_client;
 

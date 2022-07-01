@@ -1,8 +1,12 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use serde::{Deserialize, Serialize};
-use std::fmt::{Debug, Display, Error, Formatter};
+use serde::Deserialize;
+use serde::Serialize;
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::Error;
+use std::fmt::Formatter;
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct ByteBuffer {

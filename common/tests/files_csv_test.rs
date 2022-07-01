@@ -1,7 +1,10 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use common::files::{read_csv_as_keyed_nums, read_csv_as_strings, transpose_keyed_nums, KeyedNums};
+use common::files::read_csv_as_keyed_nums;
+use common::files::read_csv_as_strings;
+use common::files::transpose_keyed_nums;
+use common::files::KeyedNums;
 
 #[test]
 fn test_read_csv_as_keyed_ints() {

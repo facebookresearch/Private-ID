@@ -2,27 +2,29 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use itertools::Itertools;
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::RwLock;
 
-use crypto::{
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    prelude::*,
-};
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
 
-use common::{
-    files,
-    permutations::{gen_permute_pattern, permute, undo_permute},
-    timer,
-};
+use common::files;
+use common::permutations::gen_permute_pattern;
+use common::permutations::permute;
+use common::permutations::undo_permute;
+use common::timer;
 
 use zeroize::Zeroizing;
 
 use crate::private_id_multi_key::traits::CompanyPrivateIdMultiKeyProtocol;
 
-use super::{load_data, serialize_helper, writer_helper, ProtocolError};
+use super::load_data;
+use super::serialize_helper;
+use super::writer_helper;
+use super::ProtocolError;
 
 #[derive(Debug)]
 pub struct CompanyPrivateIdMultiKey {

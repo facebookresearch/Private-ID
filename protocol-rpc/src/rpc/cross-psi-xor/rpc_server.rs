@@ -2,32 +2,39 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use itertools::Itertools;
-use std::{
-    borrow::BorrowMut,
-    convert::TryInto,
-    str::FromStr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
-use tonic::{Request, Response, Status, Streaming};
+use std::borrow::BorrowMut;
+use std::convert::TryInto;
+use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
-use common::{gcs_path::GCSPath, s3_path::S3Path, timer};
+use common::gcs_path::GCSPath;
+use common::s3_path::S3Path;
+use common::timer;
 use crypto::prelude::TPayload;
 use log::info;
-use protocol::{
-    cross_psi_xor::{company::CompanyCrossPsiXOR, traits::CompanyCrossPsiXORProtocol},
-    shared::{LoadData, Reveal},
-};
-use rpc::proto::{
-    common::Payload,
-    gen_crosspsi_xor::{
-        cross_psi_xor_server::CrossPsiXor, service_response::*, Commitment, CommitmentAck,
-        FeatureAck, FeatureQuery, Init, InitAck, KeysAck, ServiceResponse,
-    },
-    streaming::{read_from_stream, write_to_stream},
-};
+use protocol::cross_psi_xor::company::CompanyCrossPsiXOR;
+use protocol::cross_psi_xor::traits::CompanyCrossPsiXORProtocol;
+use protocol::shared::LoadData;
+use protocol::shared::Reveal;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_crosspsi_xor::cross_psi_xor_server::CrossPsiXor;
+use rpc::proto::gen_crosspsi_xor::service_response::*;
+use rpc::proto::gen_crosspsi_xor::Commitment;
+use rpc::proto::gen_crosspsi_xor::CommitmentAck;
+use rpc::proto::gen_crosspsi_xor::FeatureAck;
+use rpc::proto::gen_crosspsi_xor::FeatureQuery;
+use rpc::proto::gen_crosspsi_xor::Init;
+use rpc::proto::gen_crosspsi_xor::InitAck;
+use rpc::proto::gen_crosspsi_xor::KeysAck;
+use rpc::proto::gen_crosspsi_xor::ServiceResponse;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::write_to_stream;
 
 pub struct CrossPsiXorService {
     pub killswitch: Arc<AtomicBool>,

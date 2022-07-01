@@ -2,11 +2,11 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use log::info;
-use std::{
-    fmt::{Error, Formatter},
-    ops::SubAssign,
-    sync::{Arc, RwLock},
-};
+use std::fmt::Error;
+use std::fmt::Formatter;
+use std::ops::SubAssign;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 // Native
 #[cfg(not(target_arch = "wasm32"))]

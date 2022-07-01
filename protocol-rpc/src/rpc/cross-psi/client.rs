@@ -1,28 +1,30 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use clap::{App, Arg, ArgGroup};
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
 use log::info;
 use std::convert::TryInto;
 use tonic::Request;
 
 use common::timer;
-use crypto::prelude::{ByteBuffer, TPayload, TypeHeEncKey};
+use crypto::prelude::ByteBuffer;
+use crypto::prelude::TPayload;
+use crypto::prelude::TypeHeEncKey;
 mod rpc_client;
-use protocol::{
-    cross_psi::{partner::PartnerCrossPsi, traits::*},
-    shared::*,
-};
-use rpc::{
-    connect::create_client::create_client,
-    proto::{
-        common::Payload,
-        gen_crosspsi::{
-            service_response::*, FeatureQuery, Init, ServiceResponse, SharesQuery, Step1Barrier,
-        },
-        RpcClient,
-    },
-};
+use protocol::cross_psi::partner::PartnerCrossPsi;
+use protocol::cross_psi::traits::*;
+use protocol::shared::*;
+use rpc::connect::create_client::create_client;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_crosspsi::service_response::*;
+use rpc::proto::gen_crosspsi::FeatureQuery;
+use rpc::proto::gen_crosspsi::Init;
+use rpc::proto::gen_crosspsi::ServiceResponse;
+use rpc::proto::gen_crosspsi::SharesQuery;
+use rpc::proto::gen_crosspsi::Step1Barrier;
+use rpc::proto::RpcClient;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

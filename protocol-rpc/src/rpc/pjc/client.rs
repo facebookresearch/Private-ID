@@ -1,24 +1,25 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use clap::{App, Arg, ArgGroup};
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
 use tonic::Request;
 
 use common::timer;
 mod rpc_client;
-use crypto::prelude::{ByteBuffer, TPayload};
-use protocol::{
-    pjc::{partner::PartnerPjc, traits::*},
-    shared::{LoadData, ShareableEncKey},
-};
-use rpc::{
-    connect::create_client::create_client,
-    proto::{
-        common::Payload,
-        gen_pjc::{service_response::*, Init, ServiceResponse},
-        RpcClient,
-    },
-};
+use crypto::prelude::ByteBuffer;
+use crypto::prelude::TPayload;
+use protocol::pjc::partner::PartnerPjc;
+use protocol::pjc::traits::*;
+use protocol::shared::LoadData;
+use protocol::shared::ShareableEncKey;
+use rpc::connect::create_client::create_client;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_pjc::service_response::*;
+use rpc::proto::gen_pjc::Init;
+use rpc::proto::gen_pjc::ServiceResponse;
+use rpc::proto::RpcClient;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

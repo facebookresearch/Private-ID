@@ -1,14 +1,14 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //   SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::HashMap,
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 use crate::shared::TFeatures;
-use common::{files, timer};
+use common::files;
+use common::timer;
 use serde_json::Value;
 
 /// load text and update the protocol

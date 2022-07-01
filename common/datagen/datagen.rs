@@ -1,14 +1,18 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use clap::{App, Arg};
+use clap::App;
+use clap::Arg;
 use log::info;
-use rand::{distributions, thread_rng, Rng};
+use rand::distributions;
+use rand::thread_rng;
+use rand::Rng;
 
 pub mod gen {
     use super::*;
     use rand::prelude::SliceRandom;
-    use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+    use rayon::iter::IntoParallelRefIterator;
+    use rayon::iter::ParallelIterator;
 
     pub struct Data {
         pub player_a: Vec<String>,
