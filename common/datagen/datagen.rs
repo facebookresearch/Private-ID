@@ -65,6 +65,7 @@ pub mod gen {
         thread_rng()
             .sample_iter(&distributions::Alphanumeric)
             .take(size)
+            .map(char::from)
             .collect()
     }
 
