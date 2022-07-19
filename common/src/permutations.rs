@@ -15,7 +15,7 @@ pub fn gen_permute_pattern(n: usize) -> Vec<usize> {
 
     // To shuffle an array a of n elements (indices 0..n-1):
     for i in 0..n - 1 {
-        let j = rng_.gen_range(i, n);
+        let j = rng_.gen_range(i..n);
         res_.swap(i, j);
     }
     res_
