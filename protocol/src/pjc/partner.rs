@@ -8,6 +8,7 @@ use common::timer;
 
 use num_bigint::BigUint;
 use num_traits::One;
+use num_traits::Zero;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -173,9 +174,13 @@ impl PartnerPJCProtocol for PartnerPjc {
                 assert_eq!(encrypted_sum.len(), 1);
                 let z = ((self.he_cipher.decrypt_vec(encrypted_sum))[0]).clone();
                 let sum = {
-                    let v = (z % &max_val).to_u64_digits();
-                    assert_eq!(v.len(), 1);
-                    v[0]
+                    if z.is_zero() {
+                        0
+                    } else {   
+                        let v = (z % &max_val).to_u64_digits();
+                        assert_eq!(v.len(), 1);
+                        v[0]
+                    }
                 };
                 info!("Feature: {},  Sum {}", feature_index, sum);
 
