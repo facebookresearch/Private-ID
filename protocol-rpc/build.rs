@@ -14,9 +14,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     tonic_build::configure()
-        //rustfmt is not available in Sandcastle, so we cannot format output files.
-        // use true on your local to debug
-        .format(false)
         .compile(
             proto_files,
             // HACK: we need '.' directory for build with Buck

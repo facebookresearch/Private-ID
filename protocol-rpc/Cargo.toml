@@ -71,11 +71,11 @@ protocol = {path = "../protocol", version = "0.1.0"}
 
 log = "0.4"
 env_logger = "0.7.1"
-tonic = {version="0.5.2", features=["tls", "tls-roots", "prost"]}
+tonic = { version = "0.7.2", features = ["tls", "tls-roots", "prost"]}
 tokio = { version = "1.18.2", features = ["rt-multi-thread", "time", "fs", "macros", "net"] }
 tokio-stream = { version =  "0.1.8", features = ["net"] }
 tower = { version = "0.4.12" }
-prost = "0.8"
+prost = "0.10"
 futures =  { version = "0.3", features = ["thread-pool", "alloc"]}
 http = "0.2"
 url = "2.1.0"
@@ -95,4 +95,4 @@ num-traits = "0.2"
 
 
 [build-dependencies]
-tonic-build = { version = "0.5.2" }
+tonic-build = { version = "0.7.2" }
