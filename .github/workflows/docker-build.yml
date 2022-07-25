@@ -1,0 +1,39 @@
+name: Build private-id Docker Image
+
+on:
+  pull_request:
+    branches: [ main ]
+env:
+  DISTRO: ubuntu
+  REGISTRY: ghcr.io
+  LOCAL_IMAGE_NAME: private-id
+  LOCAL_IMAGE_TAG: latest
+  REGISTRY_IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  push:
+   runs-on: ubuntu-latest
+   name: Build image
+   permissions:
+    contents: read
+    packages: write
+
+   steps:
+
+     - name: Lowercase REGISTRY_IMAGE_NAME
+       id: string
+       uses: ASzc/change-string-case-action@v1
+       with:
+          string: ${{ env.REGISTRY_IMAGE_NAME }}
+     - run: |
+          echo "REGISTRY_IMAGE_NAME_LOWERCASE=${{ steps.string.outputs.lowercase }}" >> ${GITHUB_ENV}
+
+     - name: Check REGISTRY_IMAGE_NAME_LOWERCASE
+       run: |
+         echo "env.$REGISTRY_IMAGE_NAME_LOWERCASE"
+
+     - uses: actions/checkout@v2
+
+     - name: Build image
+       run: |
+        docker build -f ./Dockerfile -t ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} .
