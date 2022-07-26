@@ -3,11 +3,10 @@
 //! for actually reading or writing to that object, but that sort of behavior
 //! can easily be built on top of this using the rust-s3 crate.
 
+use regex::Regex;
 use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
-
-use regex::Regex;
 
 lazy_static::lazy_static! {
     /// Constant regex that matches an S3 path
@@ -82,7 +81,7 @@ impl S3Path {
     }
 
     pub async fn copy_from_local(&self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
-        let body = aws_sdk_s3::ByteStream::from_path(path.as_ref())
+        let body = aws_sdk_s3::types::ByteStream::from_path(path.as_ref())
             .await
             .map_err(|_| {
                 std::io::Error::new(
@@ -90,6 +89,7 @@ impl S3Path {
                     "Failed to read path as ByteStream",
                 )
             })?;
+
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
         let aws_cfg = aws_config::from_env().region(region).load().await;
         let client = aws_sdk_s3::Client::new(&aws_cfg);
