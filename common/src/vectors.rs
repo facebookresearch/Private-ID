@@ -2,8 +2,6 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use rayon::prelude::ParallelSliceMut;
-use std::cmp::Eq;
-use std::cmp::Ord;
 use std::collections::HashSet;
 use std::hash::Hash;
 

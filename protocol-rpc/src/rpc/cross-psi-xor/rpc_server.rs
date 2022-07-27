@@ -3,7 +3,6 @@
 
 use itertools::Itertools;
 use std::borrow::BorrowMut;
-use std::convert::TryInto;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;

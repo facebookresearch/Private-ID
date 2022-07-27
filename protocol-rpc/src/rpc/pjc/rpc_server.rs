@@ -9,7 +9,6 @@ extern crate tokio;
 extern crate tonic;
 
 use log::info;
-use std::convert::TryInto;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;

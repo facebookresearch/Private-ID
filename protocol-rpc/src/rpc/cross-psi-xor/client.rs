@@ -14,7 +14,6 @@ use clap::Arg;
 use clap::ArgGroup;
 use itertools::Itertools;
 use log::info;
-use std::convert::TryInto;
 use std::str::FromStr;
 use tonic::Request;
 

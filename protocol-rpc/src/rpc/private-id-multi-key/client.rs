@@ -5,7 +5,6 @@ use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
 use log::info;
-use std::convert::TryInto;
 use tonic::Request;
 
 use common::gcs_path::GCSPath;
