@@ -5,7 +5,7 @@
 name = "crypto"
 version = "0.1.0"
 authors = ["Facebook Inc"]
-edition = "2018"
+edition = "2021"
 
 [features]
 avx2 = ["curve25519-dalek/simd_backend"]
