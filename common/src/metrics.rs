@@ -2,7 +2,6 @@
 //  SPDX-License-Identifier: Apache-2.0
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json;
 use std::fs::File;
 use std::sync::Arc;
 use std::sync::RwLock;
