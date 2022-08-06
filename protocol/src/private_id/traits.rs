@@ -1,8 +1,9 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use crate::private_id::ProtocolError;
 use crypto::prelude::TPayload;
+
+use crate::private_id::ProtocolError;
 
 pub trait PartnerPrivateIdProtocol {
     fn gen_permute_pattern(&self) -> Result<(), ProtocolError>;

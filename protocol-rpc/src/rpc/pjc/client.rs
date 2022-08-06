@@ -4,9 +4,8 @@
 use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
-use tonic::Request;
-
 use common::timer;
+use tonic::Request;
 mod rpc_client;
 use crypto::prelude::ByteBuffer;
 use crypto::prelude::TPayload;

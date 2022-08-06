@@ -1,11 +1,12 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use protocol::fileio::*;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
+
+use protocol::fileio::*;
 
 #[test]
 fn test_load_data() {

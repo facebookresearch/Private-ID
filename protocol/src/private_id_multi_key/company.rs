@@ -1,30 +1,27 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use itertools::Itertools;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
-
-use crypto::eccipher::gen_scalar;
-use crypto::eccipher::ECCipher;
-use crypto::eccipher::ECRistrettoParallel;
-use crypto::prelude::*;
 
 use common::files;
 use common::permutations::gen_permute_pattern;
 use common::permutations::permute;
 use common::permutations::undo_permute;
 use common::timer;
-
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
+use itertools::Itertools;
 use zeroize::Zeroizing;
-
-use crate::private_id_multi_key::traits::CompanyPrivateIdMultiKeyProtocol;
 
 use super::load_data;
 use super::serialize_helper;
 use super::writer_helper;
 use super::ProtocolError;
+use crate::private_id_multi_key::traits::CompanyPrivateIdMultiKeyProtocol;
 
 #[derive(Debug)]
 pub struct CompanyPrivateIdMultiKey {

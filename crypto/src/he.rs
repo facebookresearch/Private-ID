@@ -1,6 +1,12 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
+use std::ops::Neg;
+use std::sync::Arc;
+
 use paillier::Add;
 use paillier::Decrypt;
 use paillier::DecryptionKey;
@@ -16,11 +22,6 @@ use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use serde::Deserialize;
 use serde::Serialize;
-use std::fmt::Debug;
-use std::fmt::Error;
-use std::fmt::Formatter;
-use std::ops::Neg;
-use std::sync::Arc;
 
 use crate::prelude::BigInt;
 use crate::prelude::ByteBuffer;
@@ -317,8 +318,9 @@ impl<'a> HEReducer<'a> for PaillierParallel {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rand::Rng;
+
+    use super::*;
 
     pub mod aux {
         use super::*;

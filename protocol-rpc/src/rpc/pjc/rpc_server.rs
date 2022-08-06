@@ -8,17 +8,13 @@ extern crate rpc;
 extern crate tokio;
 extern crate tonic;
 
-use log::info;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tonic::Request;
-use tonic::Response;
-use tonic::Status;
-use tonic::Streaming;
 
 use common::timer;
 use crypto::prelude::TypeHeEncKey;
+use log::info;
 use protocol::pjc::company::CompanyPjc;
 use protocol::pjc::traits::*;
 use protocol::shared::LoadData;
@@ -36,6 +32,10 @@ use rpc::proto::gen_pjc::ServiceResponse;
 use rpc::proto::gen_pjc::Stats;
 use rpc::proto::streaming::read_from_stream;
 use rpc::proto::streaming::write_to_stream;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct PJCService {
     pub killswitch: Arc<AtomicBool>,

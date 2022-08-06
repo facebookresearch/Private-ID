@@ -4,6 +4,10 @@
 use std::sync::Arc;
 use std::sync::RwLock;
 
+use common::files;
+use common::permutations::permute;
+use common::permutations::undo_permute;
+use common::timer;
 use crypto::eccipher::gen_scalar;
 use crypto::eccipher::ECCipher;
 #[cfg(not(target_arch = "wasm32"))]
@@ -13,18 +17,12 @@ use crypto::eccipher::ECRistrettoSequential as ECRistretto;
 use crypto::prelude::*;
 use zeroize::Zeroizing;
 
-use common::files;
-use common::permutations::permute;
-use common::permutations::undo_permute;
-use common::timer;
-
+use super::fill_permute;
+use super::ProtocolError;
 use crate::fileio::load_data;
 use crate::fileio::load_json;
 use crate::fileio::KeyedCSV;
 use crate::private_id::traits::CompanyPrivateIdProtocol;
-
-use super::fill_permute;
-use super::ProtocolError;
 
 #[derive(Debug)]
 pub struct CompanyPrivateId {

@@ -1,10 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use rayon::iter::IndexedParallelIterator;
-use rayon::iter::IntoParallelIterator;
-use rayon::iter::ParallelIterator;
-
 use std::fmt::Debug;
 use std::fmt::Error;
 use std::fmt::Formatter;
@@ -15,6 +11,9 @@ use num_bigint::ToBigInt;
 use num_traits::identities::Zero;
 use num_traits::One;
 use num_traits::Signed;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 use crate::gcd::mod_inverse;
 use crate::prelude::ByteBuffer;
@@ -287,6 +286,8 @@ impl Default for PaillierParallel {
 #[cfg(test)]
 mod tests {
 
+    use std::num::Wrapping;
+
     use num_bigint::BigUint;
     use num_bigint::RandBigInt;
     use num_bigint::ToBigInt;
@@ -298,7 +299,6 @@ mod tests {
     use rayon::iter::IndexedParallelIterator;
     use rayon::iter::IntoParallelIterator;
     use rayon::iter::ParallelIterator;
-    use std::num::Wrapping;
 
     use crate::paillier::decrypt_fast;
     use crate::paillier::encrypt;

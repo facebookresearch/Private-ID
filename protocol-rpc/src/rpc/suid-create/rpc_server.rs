@@ -5,11 +5,6 @@ use std::borrow::BorrowMut;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tonic::Code;
-use tonic::Request;
-use tonic::Response;
-use tonic::Status;
-use tonic::Streaming;
 
 use common::timer;
 use protocol::suid_create::merger::SUIDCreateMerger;
@@ -30,6 +25,11 @@ use rpc::proto::gen_suid_create::SuidsPartyMergerAck;
 use rpc::proto::streaming::read_from_stream;
 use rpc::proto::streaming::write_to_stream;
 use rpc::proto::streaming::TPayloadStream;
+use tonic::Code;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct SUIDCreateService {
     protocol: SUIDCreateMerger,

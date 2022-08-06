@@ -1,23 +1,11 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use log::info;
-use rand::distributions::Uniform;
-use rand::Rng;
-use rayon::iter::IntoParallelIterator;
-use rayon::iter::ParallelIterator;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
-use zeroize::Zeroizing;
 
-use crate::cross_psi_xor::traits::*;
-use crate::fileio::load_data_with_features;
-use crate::shared::LoadData;
-use crate::shared::Reveal;
-use crate::shared::TFeatures;
 use common::timer;
-
 use crypto::cupcake::CupcakeParallel;
 use crypto::eccipher;
 use crypto::eccipher::gen_scalar;
@@ -25,6 +13,18 @@ use crypto::eccipher::ECCipher;
 use crypto::prelude::ByteBuffer;
 use crypto::prelude::Scalar;
 use crypto::prelude::TPayload;
+use log::info;
+use rand::distributions::Uniform;
+use rand::Rng;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
+use zeroize::Zeroizing;
+
+use crate::cross_psi_xor::traits::*;
+use crate::fileio::load_data_with_features;
+use crate::shared::LoadData;
+use crate::shared::Reveal;
+use crate::shared::TFeatures;
 
 #[derive(Debug)]
 pub struct PartnerCrossPsiXOR {

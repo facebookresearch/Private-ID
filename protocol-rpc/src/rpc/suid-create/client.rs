@@ -4,11 +4,9 @@
 use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
-use log::info;
-use tonic::Request;
-
 use common::timer;
 use crypto::prelude::TPayload;
+use log::info;
 use protocol::suid_create::sharer::SUIDCreateSharer;
 use protocol::suid_create::traits::*;
 use rpc::connect::create_client::create_client;
@@ -17,6 +15,7 @@ use rpc::proto::gen_suid_create::Init;
 use rpc::proto::gen_suid_create::ServiceResponse;
 use rpc::proto::gen_suid_create::Step1Barrier;
 use rpc::proto::RpcClient;
+use tonic::Request;
 
 mod rpc_client;
 

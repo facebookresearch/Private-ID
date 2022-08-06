@@ -1,6 +1,14 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
+use std::sync::Arc;
+use std::sync::RwLock;
+
+use common::files;
+use common::permutations::gen_permute_pattern;
+use common::permutations::permute;
+use common::permutations::undo_permute;
+use common::timer;
 use crypto::eccipher::gen_scalar;
 use crypto::eccipher::ECCipher;
 #[cfg(not(target_arch = "wasm32"))]
@@ -10,22 +18,12 @@ use crypto::eccipher::ECRistrettoSequential as ECRistretto;
 use crypto::prelude::*;
 use zeroize::Zeroizing;
 
+use super::fill_permute;
+use super::ProtocolError;
 use crate::fileio::load_data;
 use crate::fileio::load_json;
 use crate::fileio::KeyedCSV;
 use crate::private_id::traits::PartnerPrivateIdProtocol;
-
-use common::files;
-use common::permutations::gen_permute_pattern;
-use common::permutations::permute;
-use common::permutations::undo_permute;
-use common::timer;
-
-use std::sync::Arc;
-use std::sync::RwLock;
-
-use super::fill_permute;
-use super::ProtocolError;
 
 pub struct PartnerPrivateId {
     private_keys: Zeroizing<(Scalar, Scalar)>,

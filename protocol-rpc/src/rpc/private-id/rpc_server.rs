@@ -12,11 +12,6 @@ use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tonic::Code;
-use tonic::Request;
-use tonic::Response;
-use tonic::Status;
-use tonic::Streaming;
 
 use common::gcs_path::GCSPath;
 use common::metrics;
@@ -41,6 +36,11 @@ use rpc::proto::gen_private_id::VCompanyAck;
 use rpc::proto::streaming::read_from_stream;
 use rpc::proto::streaming::write_to_stream;
 use rpc::proto::streaming::TPayloadStream;
+use tonic::Code;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct PrivateIdService {
     protocol: CompanyPrivateId,

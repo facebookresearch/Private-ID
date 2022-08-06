@@ -9,12 +9,6 @@ extern crate protocol;
 extern crate rpc;
 extern crate tonic;
 
-use clap::App;
-use clap::Arg;
-use clap::ArgGroup;
-use common::gcs_path::GCSPath;
-use common::s3_path::S3Path;
-use log::info;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
@@ -22,6 +16,13 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 use std::time;
+
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
+use common::gcs_path::GCSPath;
+use common::s3_path::S3Path;
+use log::info;
 
 mod rpc_server;
 use rpc::connect::create_server::create_server;

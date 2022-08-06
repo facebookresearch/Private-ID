@@ -1,16 +1,16 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
+use std::str::FromStr;
+
 use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
-use log::info;
-use tonic::Request;
-
 use common::gcs_path::GCSPath;
 use common::s3_path::S3Path;
 use common::timer;
 use crypto::prelude::TPayload;
+use log::info;
 use protocol::private_id_multi_key::partner::PartnerPrivateIdMultiKey;
 use protocol::private_id_multi_key::traits::*;
 use rpc::connect::create_client::create_client;
@@ -19,7 +19,7 @@ use rpc::proto::gen_private_id_multi_key::Init;
 use rpc::proto::gen_private_id_multi_key::ServiceResponse;
 use rpc::proto::gen_private_id_multi_key::Step1Barrier;
 use rpc::proto::RpcClient;
-use std::str::FromStr;
+use tonic::Request;
 
 mod rpc_client;
 

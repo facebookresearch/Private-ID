@@ -4,11 +4,11 @@
 use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
+
+use regex::Regex;
 use tokio::fs::File;
 use tokio_util::codec::BytesCodec;
 use tokio_util::codec::FramedRead;
-
-use regex::Regex;
 
 lazy_static::lazy_static! {
     /// Constant regex that matches an GCS path

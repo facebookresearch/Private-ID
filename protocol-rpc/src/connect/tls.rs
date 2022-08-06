@@ -1,13 +1,13 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use log::debug;
-use log::error;
-use log::info;
+use std::path::Path;
 
 use futures::executor::block_on;
 use http::Uri;
-use std::path::Path;
+use log::debug;
+use log::error;
+use log::info;
 use tonic::transport::Certificate;
 use tonic::transport::Identity;
 use url::Url;

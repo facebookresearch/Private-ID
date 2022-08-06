@@ -1,14 +1,13 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use common::permutations::gen_permute_pattern;
-use common::timer;
-
+use std::error::Error;
+use std::fmt;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use std::error::Error;
-use std::fmt;
+use common::permutations::gen_permute_pattern;
+use common::timer;
 
 #[derive(Debug)]
 pub enum ProtocolError {

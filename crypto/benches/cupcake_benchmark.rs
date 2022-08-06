@@ -2,13 +2,12 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 use criterion::*;
+use crypto::cupcake::CupcakeParallel;
 use rand::distributions::Uniform;
 use rand::Rng;
 use rayon::iter::IndexedParallelIterator;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
-
-use crypto::cupcake::CupcakeParallel;
 
 fn parallel_enc(n: usize, c: &mut Criterion) {
     let mut rng = rand::thread_rng();

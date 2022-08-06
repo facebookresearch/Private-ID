@@ -1,20 +1,11 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use common::timer;
-
-use num_bigint::BigUint;
-use num_traits::Zero;
-
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
-use zeroize::Zeroizing;
 
-use crate::fileio::load_data_with_features;
-use crate::pjc::traits::CompanyPJCProtocol;
-use crate::shared::LoadData;
-use crate::shared::TFeatures;
+use common::timer;
 use crypto::eccipher;
 use crypto::eccipher::gen_scalar;
 use crypto::eccipher::ECCipher;
@@ -24,6 +15,14 @@ use crypto::prelude::EncryptionKey;
 use crypto::prelude::Scalar;
 use crypto::prelude::TPayload;
 use crypto::prelude::TypeHeEncKey;
+use num_bigint::BigUint;
+use num_traits::Zero;
+use zeroize::Zeroizing;
+
+use crate::fileio::load_data_with_features;
+use crate::pjc::traits::CompanyPJCProtocol;
+use crate::shared::LoadData;
+use crate::shared::TFeatures;
 
 #[derive(Debug)]
 pub struct CompanyPjc {

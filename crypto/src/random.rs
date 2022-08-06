@@ -3,12 +3,14 @@
 
 // Web-capable implementation of RngCore to replace the one in rand_core::OsRng
 
+use std::io::Write;
+
+use rand_core::CryptoRng;
+use rand_core::RngCore;
+
 use self::rand::prelude::ThreadRng;
 use self::rand::Rng;
 use self::rand_core::Error;
-use rand_core::CryptoRng;
-use rand_core::RngCore;
-use std::io::Write;
 
 pub struct CsRng {
     rng: ThreadRng,

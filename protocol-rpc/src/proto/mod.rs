@@ -50,9 +50,10 @@ pub enum RpcClient {
 use crypto::prelude::*;
 
 pub mod from {
+    use num_bigint::BigUint;
+
     use super::common::*;
     use super::*;
-    use num_bigint::BigUint;
 
     impl From<&EncryptionKey> for common::Payload {
         fn from(key: &EncryptionKey) -> Self {
@@ -94,10 +95,11 @@ pub mod from {
 
 #[cfg(test)]
 mod tests {
-    use super::common::*;
-    use super::*;
     use num_bigint::BigUint;
     use num_traits::identities::Zero;
+
+    use super::common::*;
+    use super::*;
 
     #[test]
     fn test_ser_dsr_he_enc_key() {

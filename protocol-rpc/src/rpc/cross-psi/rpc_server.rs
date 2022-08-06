@@ -5,10 +5,6 @@ use std::borrow::BorrowMut;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tonic::Request;
-use tonic::Response;
-use tonic::Status;
-use tonic::Streaming;
 
 use common::timer;
 use crypto::prelude::TypeHeEncKey;
@@ -31,6 +27,10 @@ use rpc::proto::gen_crosspsi::KeysAck;
 use rpc::proto::gen_crosspsi::ServiceResponse;
 use rpc::proto::streaming::read_from_stream;
 use rpc::proto::streaming::write_to_stream;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct CrossPsiService {
     pub killswitch: Arc<AtomicBool>,

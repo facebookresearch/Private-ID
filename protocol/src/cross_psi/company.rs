@@ -1,26 +1,12 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0ss
 
-use log::info;
-use num_bigint::BigUint;
-use num_bigint::RandBigInt;
-use num_traits::identities::Zero;
-use num_traits::One;
-use rayon::iter::IntoParallelIterator;
-use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::cross_psi::traits::*;
-use crate::fileio::load_data_with_features;
-use crate::shared::LoadData;
-use crate::shared::Reveal;
-use crate::shared::ShareableEncKey;
-use crate::shared::TFeatures;
 use common::timer;
-
 use crypto::eccipher;
 use crypto::eccipher::gen_scalar;
 use crypto::eccipher::ECCipher;
@@ -31,6 +17,20 @@ use crypto::prelude::ByteBuffer;
 use crypto::prelude::EncryptionKey;
 use crypto::prelude::Scalar;
 use crypto::prelude::TPayload;
+use log::info;
+use num_bigint::BigUint;
+use num_bigint::RandBigInt;
+use num_traits::identities::Zero;
+use num_traits::One;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
+
+use crate::cross_psi::traits::*;
+use crate::fileio::load_data_with_features;
+use crate::shared::LoadData;
+use crate::shared::Reveal;
+use crate::shared::ShareableEncKey;
+use crate::shared::TFeatures;
 
 #[derive(Debug)]
 pub struct CompanyCrossPsi {

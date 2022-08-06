@@ -9,10 +9,11 @@ use rand::thread_rng;
 use rand::Rng;
 
 pub mod gen {
-    use super::*;
     use rand::prelude::SliceRandom;
     use rayon::iter::IntoParallelRefIterator;
     use rayon::iter::ParallelIterator;
+
+    use super::*;
 
     pub struct Data {
         pub player_a: Vec<String>,

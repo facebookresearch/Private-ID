@@ -7,17 +7,18 @@ extern crate clap;
 extern crate ctrlc;
 extern crate tonic;
 
-use clap::App;
-use clap::Arg;
-use clap::ArgGroup;
-use common::s3_path::S3Path;
-use log::info;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 use std::time;
+
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
+use common::s3_path::S3Path;
+use log::info;
 
 mod rpc_server;
 use rpc::connect::create_server::create_server;

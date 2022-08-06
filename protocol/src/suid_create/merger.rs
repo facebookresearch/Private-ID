@@ -1,18 +1,15 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use itertools::Itertools;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+use common::timer;
 use crypto::eccipher::ECCipher;
 use crypto::eccipher::ECRistrettoParallel;
 use crypto::prelude::*;
-
-use common::timer;
-
-use crate::suid_create::traits::SUIDCreateMergerProtocol;
+use itertools::Itertools;
 
 use super::compute_prefix_sum;
 use super::elgamal_decrypt;
@@ -22,6 +19,7 @@ use super::load_data;
 use super::unflatten_vec;
 use super::writer_helper;
 use super::ProtocolError;
+use crate::suid_create::traits::SUIDCreateMergerProtocol;
 
 // A very specific union find implementation that will only work when elements
 // are in range [0, N) where N is a positive integer

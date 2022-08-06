@@ -1,10 +1,11 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use rayon::prelude::ParallelSliceMut;
 use std::error::Error;
 use std::path::Path;
 use std::str::FromStr;
+
+use rayon::prelude::ParallelSliceMut;
 
 pub struct KeyedNums<T> {
     pub key: String,
@@ -269,6 +270,7 @@ mod test {
     #[test]
     fn test_write_vec_to_csv() {
         use std::io::Read;
+
         use tempfile::NamedTempFile;
         let s1 = vec![String::from("3"), String::from("a")];
         let s2 = vec![String::from("2"), String::from("a")];
@@ -287,6 +289,7 @@ mod test {
     #[test]
     fn test_write_vec_to_csv_with_header() {
         use std::io::Read;
+
         use tempfile::NamedTempFile;
         let s0 = vec![String::from("ID"), String::from("NAME")];
         let s1 = vec![String::from("3"), String::from("a")];
@@ -306,6 +309,7 @@ mod test {
     #[test]
     fn test_write_vec_to_csv_rownumber() {
         use std::io::Read;
+
         use tempfile::NamedTempFile;
         let s1 = vec![String::from("3"), String::from("a")];
         let s2 = vec![String::from("2"), String::from("a")];
@@ -324,6 +328,7 @@ mod test {
     #[test]
     fn test_write_u64cols_to_file() {
         use std::io::Read;
+
         use tempfile::NamedTempFile;
         let s1 = vec![11, 21];
         let s2 = vec![12, 22];

@@ -17,8 +17,9 @@ pub mod suid_create;
 pub mod shared {
     extern crate crypto;
 
-    use crypto::prelude::*;
     use std::path::Path;
+
+    use crypto::prelude::*;
 
     /// Type of the input expected right now
     pub type TDomain = u64;

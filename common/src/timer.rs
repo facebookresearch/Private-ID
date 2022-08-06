@@ -1,17 +1,16 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use log::info;
 use std::fmt::Error;
 use std::fmt::Formatter;
 use std::ops::SubAssign;
 use std::sync::Arc;
 use std::sync::RwLock;
-
 // Native
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
 
+use log::info;
 // Web Broswer
 #[cfg(target_arch = "wasm32")]
 use wasm_timer::Instant;

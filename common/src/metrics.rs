@@ -1,10 +1,11 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
-use serde::Deserialize;
-use serde::Serialize;
 use std::fs::File;
 use std::sync::Arc;
 use std::sync::RwLock;
+
+use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Serialize, Deserialize)]
 struct RawMetrics {
@@ -166,6 +167,7 @@ mod tests {
     #[test]
     fn test_metrics_save() {
         use std::io::Read;
+
         use tempfile::NamedTempFile;
 
         let partner_sz = Some(4);

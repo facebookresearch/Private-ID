@@ -1,10 +1,6 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use rayon::iter::IndexedParallelIterator;
-use rayon::iter::IntoParallelIterator;
-use rayon::iter::ParallelIterator;
-
 use std::cmp;
 use std::fmt::Debug;
 use std::fmt::Error;
@@ -19,6 +15,9 @@ use cupcake::traits::Serializable;
 use cupcake::DefaultSchemeType;
 use cupcake::FVCiphertext;
 use cupcake::SecretKey;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 use crate::prelude::ByteBuffer;
 

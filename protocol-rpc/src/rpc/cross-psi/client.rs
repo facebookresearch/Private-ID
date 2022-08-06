@@ -4,13 +4,12 @@
 use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
-use log::info;
-use tonic::Request;
-
 use common::timer;
 use crypto::prelude::ByteBuffer;
 use crypto::prelude::TPayload;
 use crypto::prelude::TypeHeEncKey;
+use log::info;
+use tonic::Request;
 mod rpc_client;
 use protocol::cross_psi::partner::PartnerCrossPsi;
 use protocol::cross_psi::traits::*;

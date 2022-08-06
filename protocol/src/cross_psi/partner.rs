@@ -1,6 +1,21 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+use std::ops::Deref;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
+
+use common::timer;
+use crypto::eccipher;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::paillier::subtract_plaintext;
+use crypto::paillier::PaillierParallel;
+use crypto::prelude::EncryptionKey;
+use crypto::prelude::Scalar;
+use crypto::prelude::TPayload;
 use log::info;
 use num_bigint::BigUint;
 use num_bigint::RandBigInt;
@@ -10,11 +25,6 @@ use num_traits::Signed;
 use num_traits::Zero;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::path::Path;
-use std::sync::Arc;
-use std::sync::RwLock;
 
 use crate::cross_psi::traits::*;
 use crate::fileio::load_data_with_features;
@@ -22,16 +32,6 @@ use crate::shared::LoadData;
 use crate::shared::Reveal;
 use crate::shared::ShareableEncKey;
 use crate::shared::TFeatures;
-use common::timer;
-
-use crypto::eccipher;
-use crypto::eccipher::gen_scalar;
-use crypto::eccipher::ECCipher;
-use crypto::paillier::subtract_plaintext;
-use crypto::paillier::PaillierParallel;
-use crypto::prelude::EncryptionKey;
-use crypto::prelude::Scalar;
-use crypto::prelude::TPayload;
 
 #[derive(Debug)]
 pub struct PartnerCrossPsi {

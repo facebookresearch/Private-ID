@@ -1,14 +1,14 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use log::error;
-use log::info;
-use log::warn;
-
-use futures::executor::block_on;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+
+use futures::executor::block_on;
+use log::error;
+use log::info;
+use log::warn;
 use tonic::transport::ClientTlsConfig;
 use tonic::transport::Endpoint;
 

@@ -6,10 +6,11 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::shared::TFeatures;
 use common::files;
 use common::timer;
 use serde_json::Value;
+
+use crate::shared::TFeatures;
 
 /// load text and update the protocol
 pub fn load_data_with_features<T>(

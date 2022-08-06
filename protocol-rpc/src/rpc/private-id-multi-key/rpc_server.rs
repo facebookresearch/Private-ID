@@ -1,6 +1,12 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
+use std::borrow::BorrowMut;
+use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use common::gcs_path::GCSPath;
 use common::metrics;
 use common::s3_path::S3Path;
@@ -24,11 +30,6 @@ use rpc::proto::gen_private_id_multi_key::WCompanyAck;
 use rpc::proto::streaming::read_from_stream;
 use rpc::proto::streaming::write_to_stream;
 use rpc::proto::streaming::TPayloadStream;
-use std::borrow::BorrowMut;
-use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use tonic::Code;
 use tonic::Request;
 use tonic::Response;

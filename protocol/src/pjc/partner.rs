@@ -4,21 +4,11 @@
 extern crate common;
 extern crate crypto;
 
-use common::timer;
-
-use num_bigint::BigUint;
-use num_traits::One;
-
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
-use zeroize::Zeroizing;
 
-use crate::fileio::load_data_with_features;
-use crate::pjc::traits::PartnerPJCProtocol;
-use crate::shared::LoadData;
-use crate::shared::ShareableEncKey;
-use crate::shared::TFeatures;
+use common::timer;
 use crypto::eccipher;
 use crypto::eccipher::gen_scalar;
 use crypto::eccipher::ECCipher;
@@ -26,6 +16,15 @@ use crypto::paillier::PaillierParallel;
 use crypto::prelude::EncryptionKey;
 use crypto::prelude::Scalar;
 use crypto::prelude::TPayload;
+use num_bigint::BigUint;
+use num_traits::One;
+use zeroize::Zeroizing;
+
+use crate::fileio::load_data_with_features;
+use crate::pjc::traits::PartnerPJCProtocol;
+use crate::shared::LoadData;
+use crate::shared::ShareableEncKey;
+use crate::shared::TFeatures;
 
 #[derive(Debug)]
 pub struct PartnerPjc {

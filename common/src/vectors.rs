@@ -1,9 +1,10 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use rayon::prelude::ParallelSliceMut;
 use std::collections::HashSet;
 use std::hash::Hash;
+
+use rayon::prelude::ParallelSliceMut;
 
 /// set subtract a - b. Returns all elements of a that are not in b
 /// returned elements of a may not be unique

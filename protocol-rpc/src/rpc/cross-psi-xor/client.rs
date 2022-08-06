@@ -9,18 +9,18 @@ extern crate retry;
 extern crate rpc;
 extern crate tonic;
 
+use std::str::FromStr;
+
 use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
-use itertools::Itertools;
-use log::info;
-use std::str::FromStr;
-use tonic::Request;
-
 use common::gcs_path::GCSPath;
 use common::s3_path::S3Path;
 use common::timer;
 use crypto::prelude::TPayload;
+use itertools::Itertools;
+use log::info;
+use tonic::Request;
 mod rpc_client;
 use protocol::cross_psi_xor::partner::PartnerCrossPsiXOR;
 use protocol::cross_psi_xor::traits::*;

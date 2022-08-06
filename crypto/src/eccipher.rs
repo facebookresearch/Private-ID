@@ -1,14 +1,15 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
+
 use rand::rngs::OsRng;
 use rand::RngCore;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use sha2::Sha512;
-use std::fmt::Debug;
-use std::fmt::Error;
-use std::fmt::Formatter;
 
 use crate::prelude::ByteBuffer;
 use crate::prelude::CompressedRistretto;
@@ -316,10 +317,11 @@ pub fn gen_scalar() -> Scalar {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rand::distributions;
     use rand::thread_rng;
     use rand::Rng;
+
+    use super::*;
 
     fn vec_compare<T: PartialEq>(va: &[T], vb: &[T]) -> bool {
         (va.len() == vb.len()) &&  // zip stops at the shortest

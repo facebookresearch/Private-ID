@@ -9,16 +9,17 @@ extern crate protocol;
 extern crate rpc;
 extern crate tonic;
 
-use clap::App;
-use clap::Arg;
-use clap::ArgGroup;
-use log::info;
 use std::net::SocketAddr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 use std::time;
+
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
+use log::info;
 
 mod rpc_server;
 use rpc::connect::create_server::create_server;

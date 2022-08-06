@@ -3,10 +3,11 @@
 //! for actually reading or writing to that object, but that sort of behavior
 //! can easily be built on top of this using the rust-s3 crate.
 
-use regex::Regex;
 use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
+
+use regex::Regex;
 
 lazy_static::lazy_static! {
     /// Constant regex that matches an S3 path

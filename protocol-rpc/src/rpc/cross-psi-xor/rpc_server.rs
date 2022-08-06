@@ -1,21 +1,17 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use itertools::Itertools;
 use std::borrow::BorrowMut;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tonic::Request;
-use tonic::Response;
-use tonic::Status;
-use tonic::Streaming;
 
 use common::gcs_path::GCSPath;
 use common::s3_path::S3Path;
 use common::timer;
 use crypto::prelude::TPayload;
+use itertools::Itertools;
 use log::info;
 use protocol::cross_psi_xor::company::CompanyCrossPsiXOR;
 use protocol::cross_psi_xor::traits::CompanyCrossPsiXORProtocol;
@@ -34,6 +30,10 @@ use rpc::proto::gen_crosspsi_xor::KeysAck;
 use rpc::proto::gen_crosspsi_xor::ServiceResponse;
 use rpc::proto::streaming::read_from_stream;
 use rpc::proto::streaming::write_to_stream;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct CrossPsiXorService {
     pub killswitch: Arc<AtomicBool>,

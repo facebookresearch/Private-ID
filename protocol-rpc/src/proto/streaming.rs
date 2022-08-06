@@ -1,17 +1,18 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use crypto::prelude::*;
-
-use crate::proto::common::Payload;
-use async_stream::stream;
-use futures::Stream;
 use std::cmp;
+
+use async_stream::stream;
+use crypto::prelude::*;
+use futures::Stream;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Request;
 use tonic::Response;
 use tonic::Status;
 use tonic::Streaming;
+
+use crate::proto::common::Payload;
 
 fn chunks_count<T>(data: &[T]) -> usize {
     cmp::max(32_usize, data.len() / 2000_usize)

@@ -3,20 +3,17 @@
 
 extern crate csv;
 
-use itertools::Itertools;
 use std::sync::Arc;
 use std::sync::RwLock;
-
-use crypto::eccipher::gen_scalar;
-use crypto::eccipher::ECCipher;
-use crypto::eccipher::ECRistrettoParallel;
-use crypto::prelude::*;
 
 use common::permutations::gen_permute_pattern;
 use common::permutations::permute;
 use common::permutations::undo_permute;
-
-use crate::suid_create::traits::SUIDCreateSharerProtocol;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
+use itertools::Itertools;
 
 use super::compute_prefix_sum;
 use super::elgamal_encrypt;
@@ -26,6 +23,7 @@ use super::serialize_helper;
 use super::unflatten_vec;
 use super::writer_helper;
 use super::ProtocolError;
+use crate::suid_create::traits::SUIDCreateSharerProtocol;
 
 pub struct SUIDCreateSharer {
     private_key: Scalar,

@@ -103,12 +103,13 @@ pub fn mod_inverse(m: &BigUint, n: &BigUint) -> Option<BigInt> {
 
 #[cfg(test)]
 mod tests {
+    use std::mem;
+
     use num_bigint::RandBigInt;
     use num_bigint::ToBigInt;
     use num_bigint::ToBigUint;
     use num_integer::Integer;
     use num_traits::One;
-    use std::mem;
 
     use crate::gcd::extended_binary_gcd;
     use crate::gcd::mod_inverse;
