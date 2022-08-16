@@ -99,6 +99,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("not-matched-value")
                 .takes_value(true)
                 .help("Override the default placeholder value for non-matched records"),
+            Arg::with_name("run_id")
+                .takes_value(true)
+                .long("run_id")
+                .default_value("")
+                .help("A run_id used to identify all the logs in a PL/PA run."),
             Arg::with_name("use-row-numbers")
                 .long("use-row-numbers")
                 .takes_value(false)

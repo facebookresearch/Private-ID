@@ -94,6 +94,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .requires("tls-key")
                 .requires("tls-cert")
                 .help("Path to root CA certificate issued cert and keys"),
+            Arg::with_name("run_id")
+                .takes_value(true)
+                .long("run_id")
+                .default_value("")
+                .help("A run_id used to identify all the logs in a PL/PA run."),
         ])
         .groups(&[
             ArgGroup::with_name("tls")

@@ -95,6 +95,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("tls-domain")
                 .takes_value(true)
                 .help("Override TLS domain for SSL cert (if host is IP)"),
+            Arg::with_name("run_id")
+                .takes_value(true)
+                .long("run_id")
+                .default_value("")
+                .help("A run_id used to identify all the logs in a PL/PA run."),
         ])
         .groups(&[
             ArgGroup::with_name("tls")
