@@ -254,3 +254,51 @@ impl PartnerPrivateIdMultiKeyProtocol for PartnerPrivateIdMultiKey {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::{self};
+
+    use tempfile::NamedTempFile;
+
+    use super::*;
+    fn create_data_file() -> Result<NamedTempFile, io::Error> {
+        let data = "email1,phone1 \n
+        phone2, \n
+        email3,";
+        use std::io::Write;
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+        // Write some test data to the first handle.
+        file1.write_all(data.as_bytes()).unwrap();
+        Ok(file1)
+    }
+
+    #[test]
+    fn check_load_data() {
+        let f = create_data_file().unwrap();
+
+        let partner = PartnerPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        partner.load_data(p, false).unwrap();
+
+        let v = partner.plaintext.read().unwrap().clone();
+        assert_eq!(v[0], vec![String::from("email1"), String::from("phone1")]);
+        assert_eq!(v[1], vec![String::from("phone2")]);
+        assert_eq!(v[2], vec![String::from("email3")]);
+        assert_eq!(partner.get_size(), 3);
+    }
+
+    #[test]
+    fn check_permute_hash_to_bytes() {
+        let f = create_data_file().unwrap();
+
+        let partner = PartnerPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        partner.load_data(p, false).unwrap();
+        partner.permute_hash_to_bytes().unwrap();
+        let mut v = partner.self_permutation.read().unwrap().clone();
+        v.sort();
+        assert_eq!(v, vec![0, 1, 2]);
+    }
+}
