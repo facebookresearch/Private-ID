@@ -502,7 +502,25 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
 
 #[cfg(test)]
 mod tests {
+    use std::io::{self};
+
+    use tempfile::NamedTempFile;
+
     use super::*;
+    fn create_data_file() -> Result<NamedTempFile, io::Error> {
+        let data = "email1,phone1 \n
+        phone2, \n
+        email3,";
+
+        use std::io::Write;
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+
+        // Write some test data to the first handle.
+        file1.write_all(data.as_bytes()).unwrap();
+        Ok(file1)
+    }
+
     #[test]
     fn test_get_e_company_size() {
         let b = CompanyPrivateIdMultiKey::new();
@@ -519,5 +537,19 @@ mod tests {
     fn test_get_id_map_size() {
         let b = CompanyPrivateIdMultiKey::new();
         assert_eq!(b.get_id_map_size(), 0);
+    }
+
+    #[test]
+    fn check_load_data() {
+        let f = create_data_file().unwrap();
+
+        let company = CompanyPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        company.load_data(p, false);
+        let v = company.plaintext.read().unwrap().clone();
+
+        assert_eq!(v[0], vec![String::from("email1"), String::from("phone1")]);
+        assert_eq!(v[1], vec![String::from("phone2")]);
+        assert_eq!(v[2], vec![String::from("email3")]);
     }
 }
