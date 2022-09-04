@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use common::files;
 use common::permutations::gen_permute_pattern;
 use common::permutations::permute;
 use common::permutations::undo_permute;
@@ -481,21 +480,28 @@ impl CompanyPrivateIdMultiKeyProtocol for CompanyPrivateIdMultiKey {
     fn print_id_map(&self) {
         match (self.plaintext.clone().read(), self.id_map.clone().read()) {
             (Ok(data), Ok(id_map)) => {
-                writer_helper(&data, &id_map, None);
+                writer_helper(&data, &id_map, None, None);
             }
             _ => panic!("Cannot print id_map"),
         }
     }
 
-    fn save_id_map(&self, path: &str) -> Result<(), ProtocolError> {
+    fn save_id_map(&self, path: &str, num_split: Option<usize>) -> Result<(), ProtocolError> {
         match (self.plaintext.clone().read(), self.id_map.clone().read()) {
             (Ok(data), Ok(id_map)) => {
-                writer_helper(&data, &id_map, Some(path.to_string()));
+                writer_helper(&data, &id_map, Some(path.to_string()), num_split);
                 Ok(())
             }
             _ => Err(ProtocolError::ErrorIO(
                 "Unable to write partner view to file".to_string(),
             )),
+        }
+    }
+
+    fn get_id_map_size(&self) -> usize {
+        match self.id_map.clone().read() {
+            Ok(id_map) => id_map.len(),
+            _ => panic!("Cannot get id_map size"),
         }
     }
 }

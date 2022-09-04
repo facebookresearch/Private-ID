@@ -13,7 +13,8 @@ pub trait PartnerPrivateIdMultiKeyProtocol {
 
     fn create_id_map(&self, partner: TPayload, company: TPayload);
     fn print_id_map(&self);
-    fn save_id_map(&self, path: &str) -> Result<(), ProtocolError>;
+    fn save_id_map(&self, path: &str, num_split: Option<usize>) -> Result<(), ProtocolError>;
+    fn get_id_map_size(&self) -> usize;
 }
 
 pub trait CompanyPrivateIdMultiKeyProtocol {
@@ -38,5 +39,6 @@ pub trait CompanyPrivateIdMultiKeyProtocol {
     fn write_company_to_id_map(&self);
 
     fn print_id_map(&self);
-    fn save_id_map(&self, path: &str) -> Result<(), ProtocolError>;
+    fn save_id_map(&self, path: &str, num_split: Option<usize>) -> Result<(), ProtocolError>;
+    fn get_id_map_size(&self) -> usize;
 }

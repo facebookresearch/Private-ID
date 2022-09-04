@@ -100,6 +100,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("run_id")
                 .default_value("")
                 .help("A run_id used to identify all the logs in a PL/PA run."),
+            Arg::with_name("s3api_max_rows")
+                .long("s3api_max_rows")
+                .takes_value(true)
+                .default_value("5000000")
+                .help("Number of rows per each output S3 file to split."),
         ])
         .groups(&[
             ArgGroup::with_name("tls")
@@ -114,6 +119,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let global_timer = timer::Timer::new_silent("global");
     let input_path_str = matches.value_of("input").unwrap_or("input.csv");
     let mut input_path = input_path_str.to_string();
+    let s3api_max_rows_str = matches.value_of("s3api_max_rows").unwrap_or("5000000");
+    let s3_api_max_rows: usize = s3api_max_rows_str.to_string().parse().unwrap();
     if let Ok(s3_path) = S3Path::from_str(input_path_str) {
         info!(
             "Reading {} from S3 and copying to local path",
@@ -358,27 +365,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
                 let (_file, path) = s3_tempfile.keep().unwrap();
                 let path = path.to_str().expect("Failed to convert path to str");
+                let num_split = ((partner_protocol.get_id_map_size() as f32)
+                    / (s3_api_max_rows as f32))
+                    .ceil() as usize;
                 partner_protocol
-                    .save_id_map(&String::from(path))
+                    .save_id_map(&String::from(path), Some(num_split))
                     .expect("Failed to save id map to tempfile");
-                output_path_s3
-                    .copy_from_local(&path)
-                    .await
-                    .expect("Failed to write to S3");
+                for n in 0..num_split {
+                    let chunk_path = format!("{}_{}", path, n);
+                    output_path_s3
+                        .copy_from_local(&chunk_path)
+                        .await
+                        .expect("Failed to write to S3");
+                }
             } else if let Ok(output_path_gcp) = GCSPath::from_str(p) {
                 let gcs_tempfile = tempfile::NamedTempFile::new().unwrap();
                 let (_file, path) = gcs_tempfile.keep().unwrap();
                 let path = path.to_str().expect("Failed to convert path to str");
                 partner_protocol
-                    .save_id_map(&String::from(path))
+                    .save_id_map(&String::from(path), None)
                     .expect("Failed to save id map to tempfile");
                 output_path_gcp
                     .copy_from_local(&path)
                     .await
                     .expect("Failed to write to GCS");
             } else {
+                let num_split = ((partner_protocol.get_id_map_size() as f32)
+                    / (s3_api_max_rows as f32))
+                    .ceil() as usize;
                 partner_protocol
-                    .save_id_map(&String::from(p))
+                    .save_id_map(&String::from(p), Some(num_split))
                     .expect("Failed to save id map to output file");
             }
         }
