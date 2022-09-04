@@ -43,6 +43,7 @@ pub struct PrivateIdMultiKeyService {
     input_with_headers: bool,
     metrics_path: Option<String>,
     metrics_obj: metrics::Metrics,
+    s3_api_max_rows: usize,
     pub killswitch: Arc<AtomicBool>,
 }
 
@@ -52,6 +53,7 @@ impl PrivateIdMultiKeyService {
         output_path: Option<&str>,
         input_with_headers: bool,
         metrics_path: Option<String>,
+        s3_api_max_rows: usize,
     ) -> PrivateIdMultiKeyService {
         PrivateIdMultiKeyService {
             protocol: CompanyPrivateIdMultiKey::new(),
@@ -60,6 +62,7 @@ impl PrivateIdMultiKeyService {
             input_with_headers,
             metrics_path,
             metrics_obj: metrics::Metrics::new("private-id-multi-key".to_string()),
+            s3_api_max_rows,
             killswitch: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -298,26 +301,35 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
                     let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
                     let (_file, path) = s3_tempfile.keep().unwrap();
                     let path = path.to_str().expect("Failed to convert path to str");
+                    let num_split = ((self.protocol.get_id_map_size() as f32)
+                        / (self.s3_api_max_rows as f32))
+                        .ceil() as usize;
                     self.protocol
-                        .save_id_map(&String::from(path))
+                        .save_id_map(&String::from(path), Some(num_split))
                         .expect("Failed to save id map to tempfile");
-                    output_path_s3
-                        .copy_from_local(&path)
-                        .await
-                        .expect("Failed to write to S3");
+                    for n in 0..num_split {
+                        let chunk_path = format!("{}_{}", path, n);
+                        output_path_s3
+                            .copy_from_local(&chunk_path)
+                            .await
+                            .expect("Failed to write to S3");
+                    }
                 } else if let Ok(output_path_gcp) = GCSPath::from_str(p) {
                     let gcs_tempfile = tempfile::NamedTempFile::new().unwrap();
                     let (_file, path) = gcs_tempfile.keep().unwrap();
                     let path = path.to_str().expect("Failed to convert path to str");
                     self.protocol
-                        .save_id_map(&String::from(path))
+                        .save_id_map(&String::from(path), None)
                         .expect("Failed to save id map to tempfile");
                     output_path_gcp
                         .copy_from_local(&path)
                         .await
                         .expect("Failed to write to GCS");
                 } else {
-                    self.protocol.save_id_map(p).unwrap();
+                    let num_split = ((self.protocol.get_id_map_size() as f32)
+                        / (self.s3_api_max_rows as f32))
+                        .ceil() as usize;
+                    self.protocol.save_id_map(p, Some(num_split)).unwrap();
                 }
             }
             None => self.protocol.print_id_map(),

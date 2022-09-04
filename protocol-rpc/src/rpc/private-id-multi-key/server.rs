@@ -99,6 +99,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("run_id")
                 .default_value("")
                 .help("A run_id used to identify all the logs in a PL/PA run."),
+            Arg::with_name("s3api_max_rows")
+                .long("s3api_max_rows")
+                .takes_value(true)
+                .default_value("5000000")
+                .help("Number of rows per each output S3 file to split."),
         ])
         .groups(&[
             ArgGroup::with_name("tls")
@@ -129,6 +134,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input_with_headers = matches.is_present("input-with-headers");
     let output_path = matches.value_of("output");
     let metric_path = matches.value_of("metric-path");
+    let s3api_max_rows_str = matches.value_of("s3api_max_rows").unwrap_or("5000000");
+    let s3_api_max_rows: usize = s3api_max_rows_str.to_string().parse().unwrap();
 
     let no_tls = matches.is_present("no-tls");
     let host = matches.value_of("host");
@@ -167,6 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         output_path,
         input_with_headers,
         metrics_output_path,
+        s3_api_max_rows,
     );
 
     let ks = service.killswitch.clone();

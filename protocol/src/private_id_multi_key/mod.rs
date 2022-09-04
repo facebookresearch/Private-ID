@@ -62,20 +62,41 @@ fn load_data(plaintext: Arc<RwLock<Vec<Vec<String>>>>, path: &str, input_with_he
     t.qps("text read", text_len);
 }
 
-fn writer_helper(data: &[Vec<String>], id_map: &[(String, usize, bool)], path: Option<String>) {
-    let mut device = match path {
-        Some(path) => {
-            let wr = csv::WriterBuilder::new()
-                .flexible(true)
-                .buffer_capacity(1024)
-                .from_path(path)
-                .unwrap();
-            Some(wr)
-        }
-        None => None,
-    };
+fn writer_helper(
+    data: &[Vec<String>],
+    id_map: &[(String, usize, bool)],
+    path: Option<String>,
+    num_split: Option<usize>,
+) {
+    let mut device_list = Vec::new();
+    let mut chunk_size = id_map.len();
+    match path {
+        Some(path) => match num_split {
+            Some(num_split) => {
+                for n in 0..num_split {
+                    let chunk_path = format!("{}_{}", path, n);
+                    let wr = csv::WriterBuilder::new()
+                        .flexible(true)
+                        .buffer_capacity(1024)
+                        .from_path(chunk_path)
+                        .unwrap();
+                    device_list.push(wr);
+                    chunk_size = ((id_map.len() as f32) / (num_split as f32)).ceil() as usize;
+                }
+            }
+            None => {
+                let wr = csv::WriterBuilder::new()
+                    .flexible(true)
+                    .buffer_capacity(1024)
+                    .from_path(path)
+                    .unwrap();
+                device_list.push(wr);
+            }
+        },
+        None => (),
+    }
 
-    for (key, idx, flag) in id_map.iter() {
+    for (pos, (key, idx, flag)) in id_map.iter().enumerate() {
         let mut v = vec![(*key).clone()];
 
         match flag {
@@ -83,13 +104,11 @@ fn writer_helper(data: &[Vec<String>], id_map: &[(String, usize, bool)], path: O
             false => v.push("NA".to_string()),
         }
 
-        match device {
-            Some(ref mut wr) => {
-                wr.write_record(v.as_slice()).unwrap();
-            }
-            None => {
-                println!("{}", v.join(","));
-            }
+        if device_list.is_empty() {
+            println!("{}", v.join(","));
+        } else {
+            let device = &mut device_list[pos / chunk_size];
+            device.write_record(v.as_slice()).unwrap();
         }
     }
 }
