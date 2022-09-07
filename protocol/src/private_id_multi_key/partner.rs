@@ -461,4 +461,73 @@ mod tests {
 
         assert_eq!(actual_result, expected_result);
     }
+
+    #[test]
+    fn check_unshuffle_encrypt() {
+        //unshuffle_encrypt() will use partner.private_keys.1, company_permutation and company TPayload for encryption.
+        //if private_keys.1 and company_permutation are fixed, the result is always same.
+        let f = create_data_file().unwrap();
+
+        let mut partner = PartnerPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        partner.load_data(p, false).unwrap();
+        let company = vec![
+            ByteBuffer {
+                buffer: vec![
+                    36, 244, 207, 223, 128, 173, 31, 181, 186, 89, 61, 91, 219, 83, 150, 163, 56,
+                    181, 116, 224, 145, 141, 18, 242, 129, 233, 88, 17, 110, 49, 49, 113,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    206, 39, 208, 50, 231, 84, 72, 52, 135, 144, 245, 104, 135, 123, 216, 160, 250,
+                    156, 243, 96, 68, 64, 103, 112, 164, 31, 215, 241, 135, 231, 229, 51,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    144, 162, 198, 54, 153, 9, 60, 84, 104, 61, 151, 133, 153, 255, 136, 35, 177,
+                    232, 237, 86, 120, 242, 246, 122, 108, 43, 120, 114, 122, 164, 232, 51,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    120, 158, 173, 88, 177, 146, 46, 30, 111, 2, 68, 17, 136, 215, 136, 104, 90,
+                    99, 11, 75, 109, 8, 51, 118, 132, 25, 188, 220, 104, 111, 176, 2,
+                ],
+            },
+        ];
+
+        partner.company_permutation = Arc::new(RwLock::new(vec![2, 0, 1]));
+        partner.private_keys.1 = create_key();
+
+        let actual_result = partner.unshuffle_encrypt(company).unwrap();
+        let expected_result = vec![
+            ByteBuffer {
+                buffer: vec![
+                    202, 241, 242, 47, 249, 131, 246, 166, 85, 138, 218, 82, 84, 153, 30, 46, 133,
+                    64, 162, 113, 123, 163, 114, 137, 37, 175, 188, 211, 29, 31, 140, 1,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    94, 224, 94, 242, 165, 118, 221, 50, 246, 154, 226, 214, 153, 9, 99, 197, 204,
+                    62, 30, 150, 243, 209, 123, 42, 94, 157, 3, 206, 7, 225, 230, 123,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    176, 194, 85, 162, 206, 222, 179, 118, 53, 252, 105, 204, 185, 60, 160, 145,
+                    164, 6, 89, 69, 170, 120, 63, 6, 15, 198, 94, 114, 76, 140, 65, 8,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    54, 143, 63, 196, 218, 246, 85, 75, 171, 239, 105, 248, 133, 85, 150, 20, 1,
+                    236, 251, 228, 106, 88, 96, 240, 68, 236, 174, 68, 237, 25, 49, 43,
+                ],
+            },
+        ];
+        assert_eq!(actual_result, expected_result);
+    }
 }
