@@ -409,4 +409,56 @@ mod tests {
         expected.sort();
         assert_eq!(res, expected);
     }
+
+    #[test]
+    fn check_save_id_map() {
+        use std::io::Read;
+        let f = create_data_file().unwrap();
+
+        let mut partner = PartnerPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        partner.load_data(p, false).unwrap();
+        partner.permute_hash_to_bytes().unwrap();
+        partner.self_permutation = Arc::new(RwLock::new(vec![2, 0, 1]));
+
+        let v_partner = vec![
+            ByteBuffer {
+                buffer: vec![
+                    184, 37, 136, 74, 91, 89, 249, 229, 149, 35, 102, 42, 232, 146, 17, 246, 76,
+                    220, 123, 255, 26, 158, 35, 211, 76, 0, 12, 77, 138, 141, 88, 55,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    100, 97, 144, 135, 147, 68, 216, 225, 242, 22, 79, 71, 68, 234, 128, 43, 10,
+                    77, 232, 44, 231, 186, 118, 248, 170, 72, 69, 235, 244, 14, 89, 39,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    80, 11, 202, 56, 183, 53, 94, 71, 140, 170, 181, 22, 207, 222, 150, 81, 80,
+                    180, 174, 79, 191, 137, 150, 58, 5, 76, 147, 129, 97, 101, 254, 78,
+                ],
+            },
+        ];
+
+        let s_prime_company = vec![ByteBuffer {
+            buffer: vec![
+                150, 101, 24, 58, 27, 195, 133, 170, 204, 58, 112, 209, 217, 143, 84, 106, 228,
+                249, 130, 71, 190, 173, 65, 47, 162, 8, 216, 116, 205, 239, 8, 17,
+            ],
+        }];
+        partner.private_keys.1 = create_key();
+        partner.create_id_map(v_partner, s_prime_company);
+
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+        let p = file1.path().to_str().unwrap();
+        partner.save_id_map(p).unwrap();
+        let mut actual_result = String::new();
+        file1.read_to_string(&mut actual_result).unwrap();
+        let expected_result = "08FCF66A09440EFCB475BBCFA5915648A9A7DD0F2D0B75E965EDBAEC249D7D,NA\n30A397CD5C79AB7D6FBD59BF191326BAC43983497C81E1E2F109B3252EACE5F,email1,phone1\n7E105B924F454CF6E0BB4DC7158003A5647DC64A08FDC58BFCC03BDFF85718,email3\nD69F32E652AED8427DAACF74D57B807714160D7454310BF3515DD5AA5F98F4F,phone2\n";
+
+        assert_eq!(actual_result, expected_result);
+    }
 }
