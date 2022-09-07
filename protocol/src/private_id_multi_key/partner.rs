@@ -274,6 +274,15 @@ mod tests {
         Ok(file1)
     }
 
+    fn create_key() -> Scalar {
+        let l_plus_two_bytes: [u8; 32] = [
+            0xef, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9,
+            0xde, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x10,
+        ];
+        Scalar::from_bits(l_plus_two_bytes)
+    }
+
     #[test]
     fn check_load_data() {
         let f = create_data_file().unwrap();
@@ -300,5 +309,104 @@ mod tests {
         let mut v = partner.self_permutation.read().unwrap().clone();
         v.sort();
         assert_eq!(v, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn check_encrypt() {
+        let f = create_data_file().unwrap();
+
+        let mut partner = PartnerPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        partner.load_data(p, false).unwrap();
+        partner.permute_hash_to_bytes().unwrap();
+
+        let data = vec![ByteBuffer {
+            buffer: vec![
+                62, 18, 201, 254, 28, 155, 30, 218, 108, 118, 81, 64, 32, 200, 123, 153, 164, 39,
+                197, 222, 181, 193, 86, 185, 54, 23, 127, 203, 61, 232, 30, 34,
+            ],
+        }];
+
+        let expected_result = vec![ByteBuffer {
+            buffer: vec![
+                68, 53, 160, 155, 8, 186, 3, 37, 64, 232, 81, 44, 69, 213, 20, 243, 106, 45, 90,
+                245, 216, 85, 109, 207, 70, 130, 15, 119, 105, 14, 159, 99,
+            ],
+        }];
+
+        partner.private_keys.1 = create_key();
+        let ret = partner.encrypt(data).unwrap();
+
+        assert_eq!(ret, expected_result);
+    }
+
+    #[test]
+    fn check_create_id_map() {
+        let f = create_data_file().unwrap();
+
+        let mut partner = PartnerPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        partner.load_data(p, false).unwrap();
+        partner.permute_hash_to_bytes().unwrap();
+        partner.self_permutation = Arc::new(RwLock::new(vec![2, 0, 1]));
+
+        let v_partner = vec![
+            ByteBuffer {
+                buffer: vec![
+                    184, 37, 136, 74, 91, 89, 249, 229, 149, 35, 102, 42, 232, 146, 17, 246, 76,
+                    220, 123, 255, 26, 158, 35, 211, 76, 0, 12, 77, 138, 141, 88, 55,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    100, 97, 144, 135, 147, 68, 216, 225, 242, 22, 79, 71, 68, 234, 128, 43, 10,
+                    77, 232, 44, 231, 186, 118, 248, 170, 72, 69, 235, 244, 14, 89, 39,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    80, 11, 202, 56, 183, 53, 94, 71, 140, 170, 181, 22, 207, 222, 150, 81, 80,
+                    180, 174, 79, 191, 137, 150, 58, 5, 76, 147, 129, 97, 101, 254, 78,
+                ],
+            },
+        ];
+
+        let s_prime_company = vec![ByteBuffer {
+            buffer: vec![
+                150, 101, 24, 58, 27, 195, 133, 170, 204, 58, 112, 209, 217, 143, 84, 106, 228,
+                249, 130, 71, 190, 173, 65, 47, 162, 8, 216, 116, 205, 239, 8, 17,
+            ],
+        }];
+        partner.private_keys.1 = create_key();
+
+        partner.create_id_map(v_partner, s_prime_company);
+        partner.print_id_map();
+
+        let mut res = partner.id_map.read().unwrap().clone();
+        res.sort();
+        let mut expected = vec![
+            (
+                String::from("08FCF66A09440EFCB475BBCFA5915648A9A7DD0F2D0B75E965EDBAEC249D7D"),
+                0,
+                false,
+            ),
+            (
+                String::from("30A397CD5C79AB7D6FBD59BF191326BAC43983497C81E1E2F109B3252EACE5F"),
+                0,
+                true,
+            ),
+            (
+                String::from("7E105B924F454CF6E0BB4DC7158003A5647DC64A08FDC58BFCC03BDFF85718"),
+                2,
+                true,
+            ),
+            (
+                String::from("D69F32E652AED8427DAACF74D57B807714160D7454310BF3515DD5AA5F98F4F"),
+                1,
+                true,
+            ),
+        ];
+        expected.sort();
+        assert_eq!(res, expected);
     }
 }
