@@ -521,6 +521,15 @@ mod tests {
         Ok(file1)
     }
 
+    fn create_key() -> Scalar {
+        let l_plus_two_bytes: [u8; 32] = [
+            0xef, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9,
+            0xde, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x10,
+        ];
+        Scalar::from_bits(l_plus_two_bytes)
+    }
+
     #[test]
     fn test_get_e_company_size() {
         let b = CompanyPrivateIdMultiKey::new();
@@ -551,5 +560,75 @@ mod tests {
         assert_eq!(v[0], vec![String::from("email1"), String::from("phone1")]);
         assert_eq!(v[1], vec![String::from("phone2")]);
         assert_eq!(v[2], vec![String::from("email3")]);
+    }
+
+    #[test]
+    fn check_write_company_to_id_map() {
+        let f = create_data_file().unwrap();
+
+        let mut company = CompanyPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        company.load_data(p, false);
+        company.permutation = Arc::new(RwLock::new(vec![2, 0, 1]));
+
+        company.w_company = Arc::new(RwLock::new(vec![
+            ByteBuffer {
+                buffer: vec![
+                    58, 238, 93, 247, 63, 124, 81, 222, 215, 243, 95, 187, 205, 5, 208, 227, 101,
+                    148, 128, 240, 157, 22, 38, 218, 110, 130, 240, 13, 75, 104, 73, 97,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    214, 21, 219, 73, 112, 150, 130, 90, 224, 145, 41, 23, 251, 237, 166, 76, 231,
+                    200, 59, 116, 68, 223, 226, 162, 97, 48, 191, 15, 49, 103, 144, 82,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    236, 161, 226, 204, 138, 177, 182, 83, 166, 68, 126, 141, 217, 34, 99, 150,
+                    239, 116, 79, 75, 27, 10, 91, 83, 192, 15, 83, 146, 140, 178, 237, 109,
+                ],
+            },
+        ]));
+
+        company.s_prime_partner = Arc::new(RwLock::new(vec![ByteBuffer {
+            buffer: vec![
+                0, 119, 48, 179, 225, 233, 92, 97, 158, 42, 97, 60, 16, 8, 240, 134, 84, 32, 209,
+                173, 230, 87, 191, 5, 44, 184, 1, 155, 194, 46, 95, 8,
+            ],
+        }]));
+        company.private_keys.1 = create_key();
+        company.private_keys.2 = create_key();
+
+        company.write_company_to_id_map();
+        company.print_id_map();
+
+        let mut res = company.id_map.read().unwrap().clone();
+        res.sort();
+        let mut expected = vec![
+            (
+                String::from("2CA6934AAEB83F429276A2A431FBD05A3E90CF8CAD72DF5327CE93A37CC79"),
+                0,
+                true,
+            ),
+            (
+                String::from("46FC0D94F2B89C4CCAF4BE054E79ED5BFF8A43E8D8FFD3B74E9496F7FEE882E"),
+                2,
+                true,
+            ),
+            (
+                String::from("888B5EDF9AD79141C841E9ED6CE34BC582669E4FEF516920101687CB6CE2F85A"),
+                1,
+                true,
+            ),
+            (
+                String::from("B891BC079AD554CB3D73A2392F588E4BEA97F33F98718B1F4520C51EDCDC"),
+                0,
+                false,
+            ),
+        ];
+        expected.sort();
+        assert_eq!(res, expected);
     }
 }
