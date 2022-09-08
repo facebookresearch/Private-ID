@@ -631,4 +631,57 @@ mod tests {
         expected.sort();
         assert_eq!(res, expected);
     }
+
+    #[test]
+    fn check_save_id_map() {
+        //save_id_map() will use company.private_keys.1, private_keys.2, permutation, s_prime_partner and w_company TPayload for encryption.
+        //if private_keys.1, private_keys.2, s_prime_partner and permutation are fixed, the result is always same.
+        use std::io::Read;
+        let f = create_data_file().unwrap();
+
+        let mut company = CompanyPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        company.load_data(p, false);
+        company.permutation = Arc::new(RwLock::new(vec![2, 0, 1]));
+
+        company.w_company = Arc::new(RwLock::new(vec![
+            ByteBuffer {
+                buffer: vec![
+                    58, 238, 93, 247, 63, 124, 81, 222, 215, 243, 95, 187, 205, 5, 208, 227, 101,
+                    148, 128, 240, 157, 22, 38, 218, 110, 130, 240, 13, 75, 104, 73, 97,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    214, 21, 219, 73, 112, 150, 130, 90, 224, 145, 41, 23, 251, 237, 166, 76, 231,
+                    200, 59, 116, 68, 223, 226, 162, 97, 48, 191, 15, 49, 103, 144, 82,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    236, 161, 226, 204, 138, 177, 182, 83, 166, 68, 126, 141, 217, 34, 99, 150,
+                    239, 116, 79, 75, 27, 10, 91, 83, 192, 15, 83, 146, 140, 178, 237, 109,
+                ],
+            },
+        ]));
+
+        company.s_prime_partner = Arc::new(RwLock::new(vec![ByteBuffer {
+            buffer: vec![
+                0, 119, 48, 179, 225, 233, 92, 97, 158, 42, 97, 60, 16, 8, 240, 134, 84, 32, 209,
+                173, 230, 87, 191, 5, 44, 184, 1, 155, 194, 46, 95, 8,
+            ],
+        }]));
+        company.private_keys.1 = create_key();
+        company.private_keys.2 = create_key();
+
+        company.write_company_to_id_map();
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+        let p = file1.path().to_str().unwrap();
+        company.save_id_map(p).unwrap();
+        let mut actual_result = String::new();
+        file1.read_to_string(&mut actual_result).unwrap();
+        let expected_result = "2CA6934AAEB83F429276A2A431FBD05A3E90CF8CAD72DF5327CE93A37CC79,email1,phone1\n46FC0D94F2B89C4CCAF4BE054E79ED5BFF8A43E8D8FFD3B74E9496F7FEE882E,email3\n888B5EDF9AD79141C841E9ED6CE34BC582669E4FEF516920101687CB6CE2F85A,phone2\nB891BC079AD554CB3D73A2392F588E4BEA97F33F98718B1F4520C51EDCDC,NA\n";
+        assert_eq!(actual_result, expected_result);
+    }
 }
