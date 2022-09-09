@@ -26,3 +26,4 @@ num-bigint = { version = "0.4", features = ["rand"] }
 num-traits = "0.2"
 zeroize = "1.5.5"
 tempfile = "3.2.0"
+mockall = "0.10.2"
