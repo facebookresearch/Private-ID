@@ -684,4 +684,117 @@ mod tests {
         let expected_result = "2CA6934AAEB83F429276A2A431FBD05A3E90CF8CAD72DF5327CE93A37CC79,email1,phone1\n46FC0D94F2B89C4CCAF4BE054E79ED5BFF8A43E8D8FFD3B74E9496F7FEE882E,email3\n888B5EDF9AD79141C841E9ED6CE34BC582669E4FEF516920101687CB6CE2F85A,phone2\nB891BC079AD554CB3D73A2392F588E4BEA97F33F98718B1F4520C51EDCDC,NA\n";
         assert_eq!(actual_result, expected_result);
     }
+
+    #[test]
+    fn check_set_set_diff_output() {
+        let f = create_data_file().unwrap();
+        let company = CompanyPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        company.load_data(p, false);
+
+        let data = vec![
+            ByteBuffer {
+                buffer: vec![
+                    170, 206, 33, 27, 149, 177, 31, 116, 89, 46, 96, 98, 116, 115, 143, 239, 208,
+                    136, 101, 118, 101, 28, 222, 176, 134, 209, 195, 132, 222, 148, 61, 74,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    126, 159, 62, 144, 16, 33, 230, 162, 97, 55, 213, 11, 52, 45, 222, 188, 202,
+                    142, 50, 71, 228, 111, 224, 45, 177, 175, 241, 142, 247, 14, 215, 126,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    20, 250, 150, 75, 227, 186, 198, 234, 129, 171, 43, 37, 17, 97, 177, 86, 118,
+                    209, 51, 215, 43, 71, 187, 80, 17, 225, 204, 175, 216, 85, 37, 29,
+                ],
+            },
+        ];
+        company
+            .set_set_diff_output(String::from("w_company"), data.clone())
+            .unwrap();
+
+        let res = company
+            .w_company
+            .read()
+            .map(|data| data.to_vec())
+            .map_err(|err| {
+                error!("Unable to get w_company: {}", err);
+                ProtocolError::ErrorDeserialization("cannot obtain w_company".to_string())
+            })
+            .ok()
+            .unwrap();
+        assert_eq!(res, data);
+
+        company
+            .set_set_diff_output(String::from("s_prime_partner"), data.clone())
+            .unwrap();
+        let res = company
+            .s_prime_partner
+            .read()
+            .map(|data| data.to_vec())
+            .map_err(|err| {
+                error!("Unable to get s_prime_partner: {}", err);
+                ProtocolError::ErrorDeserialization("cannot obtain s_prime_partner".to_string())
+            })
+            .ok()
+            .unwrap();
+        assert_eq!(res, data);
+    }
+
+    #[test]
+    fn check_get_set_diff_output() {
+        let f = create_data_file().unwrap();
+        let mut company = CompanyPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        company.load_data(p, false);
+        company.permutation = Arc::new(RwLock::new(vec![2, 0, 1]));
+        let data = vec![
+            ByteBuffer {
+                buffer: vec![
+                    58, 238, 93, 247, 63, 124, 81, 222, 215, 243, 95, 187, 205, 5, 208, 227, 101,
+                    148, 128, 240, 157, 22, 38, 218, 110, 130, 240, 13, 75, 104, 73, 97,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    214, 21, 219, 73, 112, 150, 130, 90, 224, 145, 41, 23, 251, 237, 166, 76, 231,
+                    200, 59, 116, 68, 223, 226, 162, 97, 48, 191, 15, 49, 103, 144, 82,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    236, 161, 226, 204, 138, 177, 182, 83, 166, 68, 126, 141, 217, 34, 99, 150,
+                    239, 116, 79, 75, 27, 10, 91, 83, 192, 15, 83, 146, 140, 178, 237, 109,
+                ],
+            },
+        ];
+
+        company.v_partner = Arc::new(RwLock::new(data.clone()));
+        let v_partner_res = company
+            .get_set_diff_output(String::from("v_partner"))
+            .unwrap();
+
+        company.v_company = Arc::new(RwLock::new(data.clone()));
+        let v_company_res = company
+            .get_set_diff_output(String::from("v_company"))
+            .unwrap();
+
+        company.s_partner = Arc::new(RwLock::new(data.clone()));
+        let s_partner_res = company
+            .get_set_diff_output(String::from("s_partner"))
+            .unwrap();
+
+        company.s_prime_company = Arc::new(RwLock::new(data.clone()));
+        let s_prime_company_res = company
+            .get_set_diff_output(String::from("s_prime_company"))
+            .unwrap();
+
+        assert_eq!(v_partner_res, data);
+        assert_eq!(v_company_res, data);
+        assert_eq!(s_partner_res, data);
+        assert_eq!(s_prime_company_res, data);
+    }
 }
