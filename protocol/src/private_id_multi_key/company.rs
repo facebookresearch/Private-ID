@@ -842,4 +842,72 @@ mod tests {
         ];
         assert_eq!(expected_res, actural_res);
     }
+
+    #[test]
+    fn check_calculate_set_diff() {
+        let f = create_data_file().unwrap();
+        let mut company = CompanyPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        company.load_data(p, false);
+        company.permutation = Arc::new(RwLock::new(vec![2, 0, 1]));
+
+        let data = vec![
+            ByteBuffer {
+                buffer: vec![
+                    200, 135, 56, 19, 5, 207, 16, 147, 198, 229, 224, 111, 97, 119, 247, 238, 48,
+                    209, 55, 188, 30, 178, 53, 4, 110, 27, 182, 220, 156, 57, 53, 63,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    102, 237, 233, 208, 207, 235, 165, 5, 177, 27, 168, 233, 239, 69, 163, 80, 155,
+                    2, 85, 192, 182, 25, 20, 189, 118, 5, 225, 153, 13, 254, 201, 40,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    48, 54, 39, 197, 69, 34, 214, 167, 225, 117, 64, 223, 51, 164, 33, 208, 18,
+                    108, 38, 248, 215, 189, 94, 180, 82, 105, 196, 43, 189, 2, 220, 6,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    228, 188, 46, 30, 21, 100, 156, 96, 162, 185, 103, 149, 89, 159, 81, 67, 119,
+                    112, 0, 174, 99, 188, 74, 7, 13, 236, 98, 48, 50, 145, 156, 50,
+                ],
+            },
+        ];
+
+        let psum = vec![0, 2, 3, 4];
+        company.private_keys.0 = create_key();
+        company
+            .set_encrypted_partner_keys(data.clone(), psum.clone())
+            .unwrap();
+        company
+            .set_encrypted_company(String::from("e_company"), data, psum)
+            .unwrap();
+
+        company.calculate_set_diff().unwrap();
+
+        let v_partner_res = company
+            .get_set_diff_output(String::from("v_partner"))
+            .unwrap();
+
+        let v_company_res = company
+            .get_set_diff_output(String::from("v_company"))
+            .unwrap();
+
+        let s_partner_res = company
+            .get_set_diff_output(String::from("s_partner"))
+            .unwrap();
+
+        let s_prime_company_res = company
+            .get_set_diff_output(String::from("s_prime_company"))
+            .unwrap();
+
+        assert_eq!(v_partner_res.len(), 3);
+        assert_eq!(v_company_res.len(), 3);
+        assert_eq!(s_partner_res.len(), 3);
+        assert_eq!(s_prime_company_res.len(), 3);
+    }
 }
