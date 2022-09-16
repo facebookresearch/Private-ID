@@ -797,4 +797,49 @@ mod tests {
         assert_eq!(s_partner_res, data);
         assert_eq!(s_prime_company_res, data);
     }
+
+    #[test]
+    fn check_get_permuted_keys() {
+        use std::io::Write;
+        let data = "email1,phone1";
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut f = NamedTempFile::new().unwrap();
+
+        // Write some test data to the first handle.
+        f.write_all(data.as_bytes()).unwrap();
+
+        let mut company = CompanyPrivateIdMultiKey::new();
+        let p = f.path().to_str().unwrap();
+        company.load_data(p, false);
+        company.private_keys.0 = create_key();
+
+        let actural_res = company.get_permuted_keys().unwrap();
+        let expected_res = vec![
+            ByteBuffer {
+                buffer: vec![
+                    56, 197, 96, 89, 53, 196, 33, 112, 252, 240, 13, 203, 205, 213, 229, 14, 40,
+                    27, 147, 68, 58, 201, 22, 220, 97, 221, 221, 214, 107, 68, 69, 71,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    164, 174, 70, 150, 206, 226, 174, 2, 30, 223, 217, 72, 100, 37, 12, 173, 165,
+                    85, 58, 201, 213, 74, 238, 97, 8, 93, 143, 87, 178, 122, 176, 12,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![0, 0, 0, 0, 0, 0, 0, 0],
+            },
+            ByteBuffer {
+                buffer: vec![2, 0, 0, 0, 0, 0, 0, 0],
+            },
+            ByteBuffer {
+                buffer: vec![2, 0, 0, 0, 0, 0, 0, 0],
+            },
+            ByteBuffer {
+                buffer: vec![2, 0, 0, 0, 0, 0, 0, 0],
+            },
+        ];
+        assert_eq!(expected_res, actural_res);
+    }
 }
