@@ -81,29 +81,88 @@ impl S3Path {
         Ok(path.to_string())
     }
 
-    pub async fn copy_from_local(&self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
-        let body = aws_sdk_s3::types::ByteStream::from_path(path.as_ref())
-            .await
-            .map_err(|_| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Failed to read path as ByteStream",
-                )
-            })?;
-
+    pub async fn copy_from_local(&self, path: impl AsRef<Path>) -> Result<(), aws_sdk_s3::Error> {
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
         let aws_cfg = aws_config::from_env().region(region).load().await;
         let client = aws_sdk_s3::Client::new(&aws_cfg);
-        client
-            .put_object()
-            .bucket(self.get_bucket_name())
-            .key(self.get_key())
-            .body(body)
+        Self::upload_multipart(&client, self.get_bucket_name(), path, self.get_key()).await?;
+        Ok(())
+    }
+
+    pub async fn upload_multipart(
+        client: &aws_sdk_s3::Client,
+        bucket: &String,
+        path: impl AsRef<Path>,
+        key: &String,
+    ) -> Result<(), aws_sdk_s3::Error> {
+        let file_size = tokio::fs::metadata(path.as_ref()).await.unwrap().len();
+        let chunk_size = 314572800; // 300 MB per part
+        let chunks = ((file_size as f32) / (chunk_size as f32)).ceil() as u64;
+
+        let u = client
+            .create_multipart_upload()
+            .bucket(bucket)
+            .key(key)
             .send()
             .await
-            .map_err(|_| {
-                std::io::Error::new(std::io::ErrorKind::Other, "Failed to writeinput file to S3")
-            })?;
+            .unwrap();
+        let uid = u.upload_id().ok_or_else(|| {
+            aws_sdk_s3::Error::NoSuchUpload(
+                aws_sdk_s3::error::NoSuchUpload::builder()
+                    .message("No upload ID")
+                    .build(),
+            )
+        })?;
+        let mut completed_parts: Vec<aws_sdk_s3::model::CompletedPart> = Vec::new();
+        for i in 0..chunks {
+            let length = if i == chunks - 1 {
+                // If we're on the last chunk, the length to read might be less than a whole chunk.
+                // We substract the size of all previous chunks from the total file size to get the
+                // size of the final chunk.
+                file_size - (i * chunk_size)
+            } else {
+                chunk_size
+            };
+            let byte_stream = aws_sdk_s3::types::ByteStream::read_from()
+                .path(path.as_ref())
+                .offset(i * chunk_size)
+                .length(aws_smithy_http::byte_stream::Length::Exact(length))
+                .build()
+                .await;
+            let upload = client
+                .upload_part()
+                .bucket(bucket)
+                .key(key)
+                .upload_id(uid)
+                .part_number((i + 1) as i32)
+                .body(byte_stream.unwrap())
+                .send()
+                .await
+                .unwrap();
+            let cp = aws_sdk_s3::model::CompletedPart::builder()
+                .set_e_tag(upload.e_tag)
+                .part_number((i + 1) as i32)
+                .build();
+            completed_parts.push(cp);
+        }
+        // Complete multipart upload, sending the (etag, part id) list along the request.
+        let b = aws_sdk_s3::model::CompletedMultipartUpload::builder()
+            .set_parts(Some(completed_parts))
+            .build();
+        let completed = client
+            .complete_multipart_upload()
+            .multipart_upload(b)
+            .upload_id(uid)
+            .bucket(bucket)
+            .key(key)
+            .send()
+            .await?;
+        // Print etag removing quotes.
+        if let Some(etag) = completed.e_tag {
+            println!("{}", etag.replace('\"', ""));
+        } else {
+            eprintln!("Error receiving etag");
+        }
         Ok(())
     }
 }
