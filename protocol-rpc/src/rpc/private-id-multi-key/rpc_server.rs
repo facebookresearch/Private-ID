@@ -352,3 +352,67 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
         Ok(Response::new(CommitmentAck {}))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::{self};
+
+    use tempfile::NamedTempFile;
+
+    use super::*;
+    fn create_data_file() -> Result<NamedTempFile, io::Error> {
+        let data = "email1,phone1 \n
+        phone2, \n
+        email3,";
+
+        use std::io::Write;
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+
+        // Write some test data to the first handle.
+        file1.write_all(data.as_bytes()).unwrap();
+        Ok(file1)
+    }
+
+    #[tokio::test]
+    async fn test_recv_parameters() {
+        let f = create_data_file().unwrap();
+        let p = f.path().to_str().unwrap();
+        let svc = PrivateIdMultiKeyService::new(p, None, false, None);
+        let r1 = Request::new(Init {});
+        let response_initialize = svc.initialize(r1).await;
+
+        let response_recv_s_partner = svc
+            .recv_s_partner(Request::new(ServiceResponse {
+                ack: Some(Ack::ECompanyAck(ECompanyAck {})),
+            }))
+            .await;
+        let response_recv_s_prime_company = svc
+            .recv_s_prime_company(Request::new(ServiceResponse {
+                ack: Some(Ack::ECompanyAck(ECompanyAck {})),
+            }))
+            .await;
+        let response_recv_v_company = svc
+            .recv_v_company(Request::new(ServiceResponse {
+                ack: Some(Ack::ECompanyAck(ECompanyAck {})),
+            }))
+            .await;
+        let response_recv_v_partner = svc
+            .recv_v_partner(Request::new(ServiceResponse {
+                ack: Some(Ack::ECompanyAck(ECompanyAck {})),
+            }))
+            .await;
+        let response_recv_u_company = svc
+            .recv_u_company(Request::new(ServiceResponse {
+                ack: Some(Ack::ECompanyAck(ECompanyAck {})),
+            }))
+            .await;
+
+        assert!(response_initialize.is_ok());
+        assert!(response_recv_s_partner.is_ok());
+        assert!(response_recv_s_prime_company.is_ok());
+        assert!(response_recv_v_company.is_ok());
+        assert!(response_recv_v_partner.is_ok());
+        assert!(response_recv_u_company.is_ok());
+    }
+}
