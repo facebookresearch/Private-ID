@@ -343,4 +343,15 @@ mod test {
         drop(file1);
         assert_eq!(buf, "11,12,13\n21,22,23\n");
     }
+
+    #[test]
+    fn test_write_vec_to_stdout() {
+        let s1 = vec![String::from("3"), String::from("a")];
+        let s2 = vec![String::from("2"), String::from("a")];
+        let s3 = vec![String::from("1"), String::from("a")];
+        let mut id_map = vec![s1, s2, s3];
+        let res = write_vec_to_stdout(&id_map, 4, false, false);
+
+        assert!(res.is_ok());
+    }
 }
