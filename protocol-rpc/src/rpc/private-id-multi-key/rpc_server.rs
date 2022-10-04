@@ -357,6 +357,7 @@ impl PrivateIdMultiKey for PrivateIdMultiKeyService {
 mod tests {
     use std::io::{self};
 
+    use crypto::prelude::*;
     use tempfile::NamedTempFile;
 
     use super::*;
@@ -414,5 +415,66 @@ mod tests {
         assert!(response_recv_v_company.is_ok());
         assert!(response_recv_v_partner.is_ok());
         assert!(response_recv_u_company.is_ok());
+    }
+    #[tokio::test]
+    async fn test_reveal() {
+        let f = create_data_file().unwrap();
+        let p = f.path().to_str().unwrap();
+        let svc = PrivateIdMultiKeyService::new(p, None, false, None);
+        let response = svc.reveal(Request::new(Commitment {})).await;
+
+        assert!(response.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_calculate_set_diff() {
+        let f = create_data_file().unwrap();
+        let p = f.path().to_str().unwrap();
+        let svc = PrivateIdMultiKeyService::new(p, None, false, None);
+
+        let data = vec![
+            ByteBuffer {
+                buffer: vec![
+                    200, 135, 56, 19, 5, 207, 16, 147, 198, 229, 224, 111, 97, 119, 247, 238, 48,
+                    209, 55, 188, 30, 178, 53, 4, 110, 27, 182, 220, 156, 57, 53, 63,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    102, 237, 233, 208, 207, 235, 165, 5, 177, 27, 168, 233, 239, 69, 163, 80, 155,
+                    2, 85, 192, 182, 25, 20, 189, 118, 5, 225, 153, 13, 254, 201, 40,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    48, 54, 39, 197, 69, 34, 214, 167, 225, 117, 64, 223, 51, 164, 33, 208, 18,
+                    108, 38, 248, 215, 189, 94, 180, 82, 105, 196, 43, 189, 2, 220, 6,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    228, 188, 46, 30, 21, 100, 156, 96, 162, 185, 103, 149, 89, 159, 81, 67, 119,
+                    112, 0, 174, 99, 188, 74, 7, 13, 236, 98, 48, 50, 145, 156, 50,
+                ],
+            },
+        ];
+
+        let psum = vec![0, 2, 3, 4];
+        // company.private_keys.0 = create_key();
+        svc.protocol
+            .set_encrypted_partner_keys(data.clone(), psum.clone())
+            .unwrap();
+        svc.protocol
+            .set_encrypted_company(String::from("e_company"), data, psum)
+            .unwrap();
+
+        let response = svc
+            .calculate_set_diff(Request::new(Step1Barrier {
+                e_company_ack: Some(ECompanyAck {}),
+                u_partner_ack: Some(UPartnerAck {}),
+            }))
+            .await;
+
+        assert!(response.is_ok());
     }
 }
