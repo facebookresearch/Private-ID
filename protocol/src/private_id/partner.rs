@@ -217,4 +217,8 @@ impl PartnerPrivateIdProtocol for PartnerPrivateId {
             .map_err(|_| {});
         id_map_str.unwrap()
     }
+
+    fn get_id_map_size(&self) -> usize {
+        self.id_map.read().unwrap().len()
+    }
 }

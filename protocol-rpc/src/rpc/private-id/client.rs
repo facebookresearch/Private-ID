@@ -7,6 +7,7 @@ use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
 use common::gcs_path::GCSPath;
+use common::metrics;
 use common::s3_path::S3Path;
 use common::timer;
 use crypto::prelude::TPayload;
@@ -52,6 +53,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .short("o")
                 .takes_value(true)
                 .help("Path to output file, output format: private-id, option(key)"),
+            Arg::with_name("metric-path")
+                .long("metric-path")
+                .takes_value(true)
+                .help("Path to metric output file"),
             Arg::with_name("stdout")
                 .long("stdout")
                 .short("u")
@@ -150,6 +155,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let na_val = matches.value_of("not-matched-value");
     let use_row_numbers = matches.is_present("use-row-numbers");
 
+    let metric_path = matches.value_of("metric-path");
+    let metrics = metrics::Metrics::new("private-id-multi-key".to_string());
+    let mut metrics_output_path: Option<String> = None;
+    if let Some(val) = metric_path {
+        metrics_output_path = Some(val.to_string());
+    }
+
     let mut client_context = {
         let no_tls = matches.is_present("no-tls");
         let host_pre = matches.value_of("company");
@@ -177,6 +189,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Input path: {}", input_path);
     if output_path.is_some() {
         info!("Output path: {}", output_path.unwrap());
+        if metrics_output_path.is_none() {
+            metrics_output_path = Some(format!("{}_metrics", output_path.unwrap()));
+        }
     } else {
         info!("Output view to stdout (first 10 items)");
     }
@@ -192,6 +207,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
     partner_protocol.gen_permute_pattern().unwrap();
     let u_partner = partner_protocol.permute_hash_to_bytes().unwrap();
+    metrics.set_partner_input_size(partner_protocol.get_size());
 
     // 5. Initialize company - this loads company's data and generates its permutation pattern
     let init_ack = match client_context
@@ -219,6 +235,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 7. Permute and encrypt data from company with own keys
     let (e_company, v_company) = partner_protocol.encrypt_permute(u_company);
+    metrics.set_publisher_input_size(e_company.len());
 
     // 8. Send partner's data to company
     let ack_u_partner =
@@ -324,6 +341,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 15. Create partner's ID spine and print
     partner_protocol.create_id_map(v_partner, s_prime_company, na_val);
+    metrics.set_union_file_size(partner_protocol.get_id_map_size());
     match output_path {
         Some(p) => {
             if let Ok(output_path_s3) = S3Path::from_str(p) {
@@ -355,6 +373,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         None => partner_protocol.print_id_map(10, input_with_headers, use_row_numbers),
+    }
+    match &metrics_output_path {
+        Some(p) => {
+            if let Ok(metrics_path_s3) = S3Path::from_str(p) {
+                let s3_tempfile = tempfile::NamedTempFile::new().unwrap();
+                let (_file, path) = s3_tempfile.keep().unwrap();
+                let path = path.to_str().expect("Failed to convert path to str");
+                metrics
+                    .save_metrics(&String::from(path))
+                    .expect("Failed to write metrics to tempfile");
+                metrics_path_s3
+                    .copy_from_local(&path)
+                    .await
+                    .expect("Failed to write to S3");
+            } else {
+                metrics
+                    .save_metrics(p)
+                    .expect("Failed to write to metrics path");
+            }
+        }
+        None => {
+            metrics.print_metrics();
+        }
     }
 
     // 16. Create company's ID spine and print

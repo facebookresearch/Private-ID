@@ -16,6 +16,7 @@ pub trait PartnerPrivateIdMultiKeyProtocol {
     fn create_id_map(&self, partner: TPayload, company: TPayload);
     fn print_id_map(&self);
     fn save_id_map(&self, path: &str) -> Result<(), ProtocolError>;
+    fn get_id_map_size(&self) -> usize;
 }
 
 #[cfg_attr(test, automock)]
