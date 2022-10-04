@@ -166,3 +166,24 @@ fn main() {
 
     info!("Bye!");
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_par_random_string() {
+        let res = gen::par_random_string(8, 8);
+        assert_eq!(res.len(), 8);
+    }
+
+    #[test]
+    fn test_write_slice_to_file() {
+        use tempfile::NamedTempFile;
+        let file = NamedTempFile::new().unwrap();
+        let input = &mut [String::from("3"), String::from("2")];
+        let p = file.path().to_str().unwrap();
+        let res = gen::write_slice_to_file(input, 1, p);
+        assert!(res.is_ok());
+    }
+}

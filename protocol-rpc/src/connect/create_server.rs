@@ -61,3 +61,19 @@ pub fn create_server(
     };
     (server, tx, rx)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_create_server_no_tls() {
+        let _ = create_server(true, None, None, None, None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_create_server_tls_panic() {
+        let _ = create_server(false, None, None, None, None);
+    }
+}
