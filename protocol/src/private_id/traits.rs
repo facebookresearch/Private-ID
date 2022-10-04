@@ -21,6 +21,7 @@ pub trait PartnerPrivateIdProtocol {
         use_row_numbers: bool,
     ) -> Result<(), ProtocolError>;
     fn stringify_id_map(&self, use_row_numbers: bool) -> String;
+    fn get_id_map_size(&self) -> usize;
 }
 
 pub trait CompanyPrivateIdProtocol {

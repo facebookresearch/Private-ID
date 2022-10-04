@@ -151,13 +151,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut metrics_output_path: Option<String> = None;
     if metric_path.is_some() {
         metrics_output_path = Some(metric_path.unwrap().to_string());
-        if metrics_output_path.is_none() {
-            metrics_output_path = Some(format!("{}_metrics", output_path.unwrap()));
-        }
     }
 
     if output_path.is_some() {
         info!("Output path: {}", output_path.unwrap());
+        if metrics_output_path.is_none() {
+            metrics_output_path = Some(format!("{}_metrics", output_path.unwrap()));
+        }
     } else {
         info!("Output view to stdout (first 10 items)");
     }

@@ -253,6 +253,13 @@ impl PartnerPrivateIdMultiKeyProtocol for PartnerPrivateIdMultiKey {
             )),
         }
     }
+
+    fn get_id_map_size(&self) -> usize {
+        match self.id_map.clone().read() {
+            Ok(id_map) => id_map.len(),
+            _ => panic!("Cannot get id_map size"),
+        }
+    }
 }
 
 #[cfg(test)]
