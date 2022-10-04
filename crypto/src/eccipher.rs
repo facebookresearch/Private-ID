@@ -450,4 +450,27 @@ mod tests {
             "The ECRistrettoSequential is: Ristretto EC ops sequential implementation"
         );
     }
+
+    #[test]
+    fn test_ecristrettosequential_hash() {
+        let parr = ECRistrettoSequential::default();
+        let input = &mut [String::from("3"), String::from("2")];
+
+        let res = parr.hash(input);
+        assert_eq!(res.len(), 2);
+    }
+
+    #[test]
+    fn test_ecristrettosequential_hash_encrypt_to_bytes() {
+        let mut rng = OsRng;
+        let parr = ECRistrettoSequential::default();
+        let input = &mut [String::from("3"), String::from("2")];
+        let key = {
+            let mut scalar_bytes = [0u8; 64];
+            rng.fill_bytes(&mut scalar_bytes);
+            Scalar::from_bytes_mod_order_wide(&scalar_bytes)
+        };
+        let res = parr.hash_encrypt_to_bytes(input, &key);
+        assert_eq!(res.len(), 2);
+    }
 }
