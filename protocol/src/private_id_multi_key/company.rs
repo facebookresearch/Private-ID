@@ -688,7 +688,7 @@ mod tests {
     #[test]
     fn check_set_set_diff_output() {
         let f = create_data_file().unwrap();
-        let company = CompanyPrivateIdMultiKey::new();
+        let company = CompanyPrivateIdMultiKey::default();
         let p = f.path().to_str().unwrap();
         company.load_data(p, false);
 
@@ -720,10 +720,6 @@ mod tests {
             .w_company
             .read()
             .map(|data| data.to_vec())
-            .map_err(|err| {
-                error!("Unable to get w_company: {}", err);
-                ProtocolError::ErrorDeserialization("cannot obtain w_company".to_string())
-            })
             .ok()
             .unwrap();
         assert_eq!(res, data);
@@ -735,10 +731,6 @@ mod tests {
             .s_prime_partner
             .read()
             .map(|data| data.to_vec())
-            .map_err(|err| {
-                error!("Unable to get s_prime_partner: {}", err);
-                ProtocolError::ErrorDeserialization("cannot obtain s_prime_partner".to_string())
-            })
             .ok()
             .unwrap();
         assert_eq!(res, data);
