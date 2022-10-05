@@ -473,4 +473,39 @@ mod tests {
         let res = parr.hash_encrypt_to_bytes(input, &key);
         assert_eq!(res.len(), 2);
     }
+
+    #[test]
+    fn test_ecristrettosequential_to_points_encrypt() {
+        let mut rng = OsRng;
+        let parr = ECRistrettoSequential::default();
+        let input = &mut [
+            ByteBuffer {
+                buffer: vec![
+                    58, 238, 93, 247, 63, 124, 81, 222, 215, 243, 95, 187, 205, 5, 208, 227, 101,
+                    148, 128, 240, 157, 22, 38, 218, 110, 130, 240, 13, 75, 104, 73, 97,
+                ],
+            },
+            ByteBuffer {
+                buffer: vec![
+                    214, 21, 219, 73, 112, 150, 130, 90, 224, 145, 41, 23, 251, 237, 166, 76, 231,
+                    200, 59, 116, 68, 223, 226, 162, 97, 48, 191, 15, 49, 103, 144, 82,
+                ],
+            },
+        ];
+        let key = {
+            let mut scalar_bytes = [0u8; 64];
+            rng.fill_bytes(&mut scalar_bytes);
+            Scalar::from_bytes_mod_order_wide(&scalar_bytes)
+        };
+        let res = parr.to_points_encrypt(input, &key);
+        assert_eq!(res.len(), 2);
+    }
+
+    #[test]
+    fn test_ecristrettoparallel_hash() {
+        let parr = ECRistrettoParallel::default();
+        let input = &mut [String::from("3"), String::from("2")];
+        let res = parr.hash(input);
+        assert_eq!(res.len(), 2);
+    }
 }
