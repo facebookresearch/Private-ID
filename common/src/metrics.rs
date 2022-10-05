@@ -182,6 +182,7 @@ mod tests {
 
         let mut file = NamedTempFile::new().unwrap();
         m.save_metrics(file.path().to_str().unwrap()).unwrap();
+        m.print_metrics();
         let mut buf = String::new();
         file.read_to_string(&mut buf).unwrap();
         assert_eq!(
