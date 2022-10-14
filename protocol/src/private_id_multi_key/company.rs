@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use common::files;
 use common::permutations::gen_permute_pattern;
 use common::permutations::permute;
 use common::permutations::undo_permute;

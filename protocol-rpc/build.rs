@@ -11,6 +11,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "crosspsixor.proto",
         "pjc.proto",
         "suidcreate.proto",
+        "dpmccompany.proto",
+        "dpmcpartner.proto",
     ];
 
     tonic_build::configure()

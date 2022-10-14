@@ -27,3 +27,5 @@ num-traits = "0.2"
 zeroize = "1.5.5"
 tempfile = "3.2.0"
 mockall = "0.10.2"
+fernet = { version = "0.1.4", features = ["fernet_danger_timestamps"] }
+base64 = "0.13.0"

@@ -89,6 +89,30 @@ where
 }
 
 /// Reads CSV file into vector of rows,
+/// where each row is represented as a vector of u64
+/// All zero length fields are removed
+pub fn read_csv_as_u64<T>(filename: T) -> Vec<Vec<u64>>
+where
+    T: AsRef<Path>,
+{
+    let mut reader = csv::ReaderBuilder::new()
+        .delimiter(b',')
+        .flexible(false)
+        .has_headers(false)
+        .from_path(filename)
+        .expect("Failure reading CSV file");
+
+    let it = reader.records();
+    it.map(|x| {
+        x.unwrap()
+            .iter()
+            .map(|z| u64::from_str(z.trim()).unwrap_or_else(|_| panic!("Cannot format {} as u64", z)))
+            .collect::<Vec<u64>>()
+    })
+    .collect::<Vec<Vec<u64>>>()
+}
+
+/// Reads CSV file into vector of rows,
 /// where each row is a first as key, and then as interger-like values
 pub fn read_csv_as_keyed_nums<T>(filename: T, has_headers: bool) -> Vec<KeyedNums<u64>>
 where

@@ -19,6 +19,8 @@ use crate::proto::gen_pjc::pjc_client::PjcClient;
 use crate::proto::gen_private_id::private_id_client::PrivateIdClient;
 use crate::proto::gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClient;
 use crate::proto::gen_suid_create::suid_create_client::SuidCreateClient;
+use crate::proto::gen_dpmc_company::dpmc_company_client::DpmcCompanyClient;
+use crate::proto::gen_dpmc_partner::dpmc_partner_client::DpmcPartnerClient;
 use crate::proto::RpcClient;
 
 pub fn create_client(
@@ -86,11 +88,11 @@ pub fn create_client(
     };
     let has_tls = maybe_tls.is_some();
     let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
-    ctrlc::set_handler(move || {
-        r.store(false, Ordering::SeqCst);
-    })
-    .expect("Error setting Ctrl-C handler");
+    let _r = running.clone();
+    // ctrlc::set_handler(move || {
+    //     r.store(false, Ordering::SeqCst);
+    // })
+    // .expect("Error setting Ctrl-C handler");
 
     let mut retry_count: u32 = 0;
 
@@ -118,6 +120,12 @@ pub fn create_client(
                         "cross-psi-xor" => RpcClient::CrossPsiXor(CrossPsiXorClient::new(conn)),
                         "pjc" => RpcClient::Pjc(PjcClient::new(conn)),
                         "suid-create" => RpcClient::SuidCreate(SuidCreateClient::new(conn)),
+                        "dpmc-company" => RpcClient::DpmcCompany(
+                            DpmcCompanyClient::new(conn),
+                        ),
+                        "dpmc-partner" => RpcClient::DpmcPartner(
+                            DpmcPartnerClient::new(conn),
+                        ),
                         _ => panic!("wrong client"),
                     })
             } else {
@@ -137,6 +145,12 @@ pub fn create_client(
                     "pjc" => Ok(RpcClient::Pjc(PjcClient::connect(__uri).await.unwrap())),
                     "suid-create" => Ok(RpcClient::SuidCreate(
                         SuidCreateClient::connect(__uri).await.unwrap(),
+                    )),
+                    "dpmc-company" => Ok(RpcClient::DpmcCompany(
+                        DpmcCompanyClient::connect(__uri).await.unwrap(),
+                    )),
+                    "dpmc-partner" => Ok(RpcClient::DpmcPartner(
+                        DpmcPartnerClient::connect(__uri).await.unwrap(),
                     )),
                     _ => panic!("wrong client"),
                 }
