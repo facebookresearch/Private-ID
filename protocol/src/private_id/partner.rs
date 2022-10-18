@@ -21,7 +21,6 @@ use zeroize::Zeroizing;
 use super::fill_permute;
 use super::ProtocolError;
 use crate::fileio::load_data;
-use crate::fileio::load_json;
 use crate::fileio::KeyedCSV;
 use crate::private_id::traits::PartnerPrivateIdProtocol;
 
@@ -46,11 +45,6 @@ impl PartnerPrivateId {
 
     pub fn load_data(&self, path: &str, input_with_headers: bool) -> Result<(), ProtocolError> {
         load_data(self.plain_data.clone(), path, input_with_headers);
-        Ok(())
-    }
-
-    pub fn load_json(&self, path: &str, input_with_headers: bool) -> Result<(), ProtocolError> {
-        load_json(self.plain_data.clone(), path, input_with_headers);
         Ok(())
     }
 
