@@ -222,4 +222,35 @@ mod tests {
         );
         assert_eq!(v_empty_cols, vec![String::from("e")]);
     }
+
+    #[test]
+    fn test_load_data_with_features() {
+        let self_num_records = Arc::new(RwLock::default());
+        let self_num_features = Arc::new(RwLock::default());
+        let plaintext_features = Arc::new(RwLock::default());
+        let plaintext_keys = Arc::new(RwLock::default());
+
+        let data = "email1,0 \n
+        phone2, 1\n
+        email3, 0";
+
+        use std::io::Write;
+
+        use tempfile::NamedTempFile;
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+
+        // Write some test data to the first handle.
+        file1.write_all(data.as_bytes()).unwrap();
+        let p = file1.path().to_str().unwrap();
+        load_data_with_features(
+            p,
+            plaintext_keys.clone(),
+            plaintext_features,
+            self_num_features,
+            self_num_records,
+        );
+
+        assert_eq!(plaintext_keys.read().unwrap().len(), 3);
+    }
 }
