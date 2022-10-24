@@ -186,4 +186,15 @@ mod test {
         let res = gen::write_slice_to_file(input, 1, p);
         assert!(res.is_ok());
     }
+
+    #[test]
+    fn test_random_data() {
+        let size = 10;
+        let intrsct = size / 2;
+        let size_player = size - intrsct;
+
+        let data = gen::random_data(size_player, size_player, intrsct);
+
+        assert_eq!(data.player_a.len(), 10);
+    }
 }

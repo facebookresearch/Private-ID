@@ -8,7 +8,6 @@ use std::sync::RwLock;
 
 use common::files;
 use common::timer;
-use serde_json::Value;
 
 use crate::shared::TFeatures;
 
@@ -138,43 +137,6 @@ pub fn load_data(data: Arc<RwLock<KeyedCSV>>, path: &str, has_headers: bool) {
     }
 }
 
-pub fn load_json(data: Arc<RwLock<KeyedCSV>>, json_table: &str, has_headers: bool) -> bool {
-    // Read json object from dynamic str into the expected Vec<Vec> form (previously from a CSV)
-    let table: Value = serde_json::from_str(json_table).unwrap();
-    let table: &Vec<Value> = table.as_array().unwrap();
-    let table_len = table.len();
-
-    let mut lines: Vec<Vec<String>> = vec![vec!["".to_string()]; table.len()]; // -OR- files::read_csv_as_strings(path)
-    for (row_num, row) in table.iter().enumerate() {
-        lines[row_num] = vec![row.as_str().unwrap().to_string()];
-    }
-
-    let mut ret = false;
-    if let Ok(mut wguard) = data.write() {
-        if wguard.records.is_empty() {
-            let mut line_it = lines.drain(..);
-            if has_headers {
-                if let Some(headers) = line_it.next() {
-                    wguard.headers = headers;
-                }
-            }
-            for line in line_it {
-                if let Some((key, rest)) = line.split_first() {
-                    wguard.records.insert(key.to_string(), rest.to_vec());
-                }
-            }
-            let keys_len = wguard.records.len();
-            info!(
-                "Read {} lines from json (dedup: {} lines)",
-                table_len,
-                table_len - keys_len
-            );
-            ret = true
-        }
-    }
-    ret
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,5 +221,36 @@ mod tests {
             ]
         );
         assert_eq!(v_empty_cols, vec![String::from("e")]);
+    }
+
+    #[test]
+    fn test_load_data_with_features() {
+        let self_num_records = Arc::new(RwLock::default());
+        let self_num_features = Arc::new(RwLock::default());
+        let plaintext_features = Arc::new(RwLock::default());
+        let plaintext_keys = Arc::new(RwLock::default());
+
+        let data = "email1,0 \n
+        phone2, 1\n
+        email3, 0";
+
+        use std::io::Write;
+
+        use tempfile::NamedTempFile;
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+
+        // Write some test data to the first handle.
+        file1.write_all(data.as_bytes()).unwrap();
+        let p = file1.path().to_str().unwrap();
+        load_data_with_features(
+            p,
+            plaintext_keys.clone(),
+            plaintext_features,
+            self_num_features,
+            self_num_records,
+        );
+
+        assert_eq!(plaintext_keys.read().unwrap().len(), 3);
     }
 }

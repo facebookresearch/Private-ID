@@ -666,4 +666,31 @@ mod tests {
             .count();
         assert_eq!(matching, x.len());
     }
+
+    #[test]
+    fn check_decrypt() {
+        use crate::paillier::decrypt;
+        let mut rng = rand::thread_rng();
+        let (m_e, m_d) = gen_keypair(2048_u64);
+        let e_key = gen_encryption_key(m_e);
+        let d_key = gen_decryption_key(m_d);
+
+        for _ in 0..1000 {
+            let msg = rng.gen_biguint_range(&BigUint::zero(), &e_key.n);
+            let cipher = encrypt(msg.clone(), &e_key);
+            assert!(msg == decrypt(cipher, &d_key));
+        }
+    }
+
+    #[test]
+    fn check_enc_serialise() {
+        let vals: Vec<BigUint> = vec![
+            BigUint::parse_bytes(b"1234", 10).unwrap(),
+            BigUint::parse_bytes(b"1234", 10).unwrap(),
+        ];
+        let cipher = PaillierParallel::default();
+
+        let x = cipher.enc_serialise(vals.as_ref());
+        assert_eq!(x.len(), 2);
+    }
 }
