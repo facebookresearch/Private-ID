@@ -7,7 +7,7 @@ use crypto::{
     eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
     prelude::*,
 };
-use common::timer;
+use common::{timer, permutations::{gen_permute_pattern, permute},};
 use rayon::iter::{ParallelDrainRange, ParallelIterator};
 use std::{convert::TryInto, sync::{Arc, RwLock}};
 use super::{load_data_keys, load_data_features, serialize_helper, ProtocolError};
@@ -20,6 +20,7 @@ pub struct PartnerDpmc {
     company_public_key: Arc<RwLock<TPoint>>,
     helper_public_key: Arc<RwLock<TPoint>>,
     ec_cipher: ECRistrettoParallel,
+    permutation: Arc<RwLock<Vec<usize>>>,
     plaintext_keys: Arc<RwLock<Vec<Vec<String>>>>,
     plaintext_features: Arc<RwLock<TFeatures>>,
     aes_key: Arc<RwLock<String>>,
@@ -35,6 +36,7 @@ impl PartnerDpmc {
             company_public_key: Arc::new(RwLock::default()),
             helper_public_key: Arc::new(RwLock::default()),
             ec_cipher: ECRistrettoParallel::default(),
+            permutation: Arc::new(RwLock::default()),
             plaintext_keys: Arc::new(RwLock::default()),
             plaintext_features: Arc::new(RwLock::default()),
             aes_key: Arc::new(RwLock::default()),
@@ -76,6 +78,7 @@ impl PartnerDpmc {
         match self.company_public_key.clone().write() {
             Ok(mut company_pk) => {
                 *company_pk = pk[0];
+                assert_eq!((*company_pk).is_identity(), false);
                 Ok(())
             }
             _ => {
@@ -97,6 +100,7 @@ impl PartnerDpmc {
         ) {
             (Ok(mut helper_pk), Ok(mut aes_key)) => {
                 *helper_pk = pk[0];
+                assert_eq!((*helper_pk).is_identity(), false);
 
                 *aes_key = {
                     let x = self.ec_cipher.to_bytes(&vec![self.partner_scalar * (*helper_pk)]);
@@ -124,12 +128,24 @@ impl Default for PartnerDpmc {
 
 impl PartnerDpmcProtocol for PartnerDpmc {
     fn get_encrypted_keys(&self) -> Result<TPayload, ProtocolError> {
-        match (self.plaintext_keys.clone().read(), self.aes_key.clone().read(),) {
-            (Ok(pdata), Ok(aes_key)) => {
+        match (
+            self.plaintext_keys.clone().read(),
+            self.aes_key.clone().read(),
+            self.permutation.clone().write(),
+        ) {
+            (Ok(pdata), Ok(aes_key), Ok(mut permutation)) => {
                 let t = timer::Timer::new_silent("partner data");
 
+                // Generate random permutation.
+                permutation.clear();
+                permutation.extend(gen_permute_pattern(pdata.len()));
+
+                // Permute, flatten, encrypt
                 let (mut d_flat, offset) = {
-                    let (d_flat, mut offset, metadata) = serialize_helper(pdata.clone());
+                    let mut d = pdata.clone();
+                    permute(permutation.as_slice(), &mut d);
+
+                    let (d_flat, mut offset, metadata) = serialize_helper(d);
                     offset.extend(metadata);
 
                     // Encrypt
@@ -173,11 +189,18 @@ impl PartnerDpmcProtocol for PartnerDpmc {
             self.plaintext_features.clone().read(),
             self.company_public_key.clone().read(),
             self.aes_key.clone().read(),
+            self.permutation.clone().read(),
         ) {
-            (Ok(pdata), Ok(company_public_key), Ok(aes_key)) => {
+            (Ok(pdata), Ok(company_public_key), Ok(aes_key), Ok(permutation)) => {
                 let t = timer::Timer::new_silent("get_features_xor_shares");
                 let n_rows = pdata[0].len();
                 let n_features = pdata.len();
+
+                // Apply the same permutation as in keys.
+                let mut permuted_pdata = pdata.clone();
+                for i in 0..n_features {
+                    permute(permutation.as_slice(), &mut permuted_pdata[i]);
+                }
 
                 let z_i =
                     (0..n_rows)
@@ -210,7 +233,7 @@ impl PartnerDpmcProtocol for PartnerDpmc {
                             .collect::<Vec<_>>()
                             .iter()
                             .map(|i| {
-                                let z: u64 = pdata[f_idx][*i] ^ r_i[*i];
+                                let z: u64 = permuted_pdata[f_idx][*i] ^ r_i[*i];
                                 ByteBuffer {
                                     buffer: z.to_le_bytes().to_vec(),
                                 }

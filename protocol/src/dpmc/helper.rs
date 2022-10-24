@@ -78,6 +78,7 @@ impl HelperDpmc {
         match self.company_public_key.clone().write() {
             Ok(mut company_pk) => {
                 *company_pk = pk[0];
+                assert_eq!((*company_pk).is_identity(), false);
                 Ok(())
             }
             _ => {

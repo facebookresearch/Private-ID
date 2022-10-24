@@ -8,6 +8,7 @@ pub use curve25519_dalek::ristretto::RistrettoPoint;
 pub use curve25519_dalek::scalar;
 pub use curve25519_dalek::scalar::Scalar;
 pub use curve25519_dalek::traits::Identity;
+pub use curve25519_dalek::traits::IsIdentity;
 
 pub use crate::spoint::ByteBuffer;
 
