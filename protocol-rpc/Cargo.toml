@@ -92,7 +92,7 @@ itertools = "0.9.0"
 tempfile = "3.2.0"
 num-bigint = { version = "0.4", features = ["rand"] }
 num-traits = "0.2"
-
+rcgen = "0.10.0"
 
 [build-dependencies]
 tonic-build = { version = "0.7.2" }
