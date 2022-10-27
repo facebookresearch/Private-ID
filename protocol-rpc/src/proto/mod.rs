@@ -37,6 +37,18 @@ pub mod gen_dpmc_partner {
     tonic::include_proto!("dpmcpartner");
 }
 
+pub mod gen_dspmc_company {
+    tonic::include_proto!("dspmccompany");
+}
+
+pub mod gen_dspmc_helper {
+    tonic::include_proto!("dspmchelper");
+}
+
+pub mod gen_dspmc_partner {
+    tonic::include_proto!("dspmcpartner");
+}
+
 pub mod streaming;
 
 use gen_crosspsi::cross_psi_client::CrossPsiClient;
@@ -47,6 +59,9 @@ use gen_private_id_multi_key::private_id_multi_key_client::PrivateIdMultiKeyClie
 use gen_suid_create::suid_create_client::SuidCreateClient;
 use gen_dpmc_company::dpmc_company_client::DpmcCompanyClient;
 use gen_dpmc_partner::dpmc_partner_client::DpmcPartnerClient;
+use gen_dspmc_company::dspmc_company_client::DspmcCompanyClient;
+use gen_dspmc_helper::dspmc_helper_client::DspmcHelperClient;
+use gen_dspmc_partner::dspmc_partner_client::DspmcPartnerClient;
 use tonic::transport::Channel;
 pub enum RpcClient {
     PrivateId(PrivateIdClient<Channel>),
@@ -57,6 +72,9 @@ pub enum RpcClient {
     SuidCreate(SuidCreateClient<Channel>),
     DpmcCompany(DpmcCompanyClient<Channel>),
     DpmcPartner(DpmcPartnerClient<Channel>),
+    DspmcCompany(DspmcCompanyClient<Channel>),
+    DspmcHelper(DspmcHelperClient<Channel>),
+    DspmcPartner(DspmcPartnerClient<Channel>),
 }
 
 use crypto::prelude::*;

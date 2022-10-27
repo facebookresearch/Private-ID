@@ -21,6 +21,9 @@ use crate::proto::gen_private_id_multi_key::private_id_multi_key_client::Private
 use crate::proto::gen_suid_create::suid_create_client::SuidCreateClient;
 use crate::proto::gen_dpmc_company::dpmc_company_client::DpmcCompanyClient;
 use crate::proto::gen_dpmc_partner::dpmc_partner_client::DpmcPartnerClient;
+use crate::proto::gen_dspmc_company::dspmc_company_client::DspmcCompanyClient;
+use crate::proto::gen_dspmc_helper::dspmc_helper_client::DspmcHelperClient;
+use crate::proto::gen_dspmc_partner::dspmc_partner_client::DspmcPartnerClient;
 use crate::proto::RpcClient;
 
 pub fn create_client(
@@ -126,6 +129,15 @@ pub fn create_client(
                         "dpmc-partner" => RpcClient::DpmcPartner(
                             DpmcPartnerClient::new(conn),
                         ),
+                        "dspmc-company" => RpcClient::DspmcCompany(
+                            DspmcCompanyClient::new(conn),
+                        ),
+                        "dspmc-helper" => RpcClient::DspmcHelper(
+                            DspmcHelperClient::new(conn),
+                        ),
+                        "dspmc-partner" => RpcClient::DspmcPartner(
+                            DspmcPartnerClient::new(conn),
+                        ),
                         _ => panic!("wrong client"),
                     })
             } else {
@@ -151,6 +163,21 @@ pub fn create_client(
                     )),
                     "dpmc-partner" => Ok(RpcClient::DpmcPartner(
                         DpmcPartnerClient::connect(__uri).await.unwrap(),
+                    )),
+                    "dspmc-company" => Ok(RpcClient::DspmcCompany(
+                        DspmcCompanyClient::connect(__uri)
+                            .await
+                            .unwrap(),
+                    )),
+                    "dspmc-helper" => Ok(RpcClient::DspmcHelper(
+                        DspmcHelperClient::connect(__uri)
+                            .await
+                            .unwrap(),
+                    )),
+                    "dspmc-partner" => Ok(RpcClient::DspmcPartner(
+                        DspmcPartnerClient::connect(__uri)
+                            .await
+                            .unwrap(),
                     )),
                     _ => panic!("wrong client"),
                 }

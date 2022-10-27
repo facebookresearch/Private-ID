@@ -13,6 +13,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "suidcreate.proto",
         "dpmccompany.proto",
         "dpmcpartner.proto",
+        "dspmccompany.proto",
+        "dspmchelper.proto",
+        "dspmcpartner.proto",
     ];
 
     tonic_build::configure()

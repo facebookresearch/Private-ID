@@ -69,6 +69,22 @@ path = "src/rpc/dpmc/partner-server.rs"
 name = "dpmc-helper"
 path = "src/rpc/dpmc/client.rs"
 
+[[bin]]
+name = "dspmc-company-server"
+path = "src/rpc/dspmc/company-server.rs"
+
+[[bin]]
+name = "dspmc-helper-server"
+path = "src/rpc/dspmc/helper-server.rs"
+
+[[bin]]
+name = "dspmc-partner-server"
+path = "src/rpc/dspmc/partner-server.rs"
+
+[[bin]]
+name = "dspmc-shuffler"
+path = "src/rpc/dspmc/client.rs"
+
 [lib]
 name = "rpc"
 path = "src/lib.rs"

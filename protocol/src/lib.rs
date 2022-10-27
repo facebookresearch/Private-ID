@@ -13,6 +13,7 @@ pub mod pjc;
 pub mod private_id;
 pub mod private_id_multi_key;
 pub mod dpmc;
+pub mod dspmc;
 pub mod suid_create;
 
 pub mod shared {

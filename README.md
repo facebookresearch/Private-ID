@@ -218,6 +218,61 @@ env RUST_LOG=info cargo run --bin dpmc-helper -- \
   --tls-dir etc/example/dummy_certs
 ```
 
+## Delegated Private Matching for Compute with Secure Shuffling (DSPMC)
+
+Start helper (server)
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-helper-server -- \
+  --host 0.0.0.0:10030 \
+  --stdout \
+  --output-shares-path etc/example/dspmc/output_helper \
+  --no-tls
+```
+
+Start company (server)
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-company-server -- \
+  --host 0.0.0.0:10010 \
+  --helper localhost:10030 \
+  --input etc/example/dspmc/Ex0_company.csv \
+  --stdout \
+  --output-shares-path etc/example/dspmc/output_company \
+  --no-tls
+```
+
+Start multiple partners (servers)
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-partner-server -- \
+  --host 0.0.0.0:10020 \
+  --company localhost:10010 \
+  --input-keys etc/example/dspmc/Ex0_partner_1.csv \
+  --input-features etc/example/dspmc/Ex0_partner_1_features.csv \
+  --no-tls
+```
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-partner-server -- \
+  --host 0.0.0.0:10021 \
+  --company localhost:10010 \
+  --input-keys etc/example/dspmc/Ex0_partner_2.csv \
+  --input-features etc/example/dspmc/Ex0_partner_2_features.csv \
+  --no-tls
+```
+
+Start Shuffler (client)
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-shuffler -- \
+  --company localhost:10010 \
+  --helper localhost:10030 \
+  --partners localhost:10020,localhost:10021 \
+  --stdout \
+  --no-tls
+```
+
 # Citing Private-ID
 
 To cite Private-ID in academic papers, please use the following BibTeX entries.
