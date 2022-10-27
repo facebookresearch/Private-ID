@@ -253,4 +253,52 @@ mod tests {
 
         assert_eq!(plaintext_keys.read().unwrap().len(), 3);
     }
+
+    #[test]
+    fn test_load_data() {
+        let t = KeyedCSV {
+            headers: vec![],
+            records: HashMap::from([
+                (
+                    String::from("a"),
+                    vec![String::from("1"), String::from("10")],
+                ),
+                (
+                    String::from("b"),
+                    vec![String::from("2"), String::from("20")],
+                ),
+                (
+                    String::from("c"),
+                    vec![String::from("3"), String::from("30")],
+                ),
+                (
+                    String::from("d"),
+                    vec![String::from("4"), String::from("40")],
+                ),
+            ]),
+        };
+
+        let plain_data = Arc::new(RwLock::new(KeyedCSV::default()));
+
+        let data = "a,1,10 \n
+        b,2,20 \n
+        c,3,30 \n
+        d,4,40";
+
+        use std::io::Write;
+
+        use tempfile::NamedTempFile;
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+
+        // Write some test data to the first handle.
+        file1.write_all(data.as_bytes()).unwrap();
+        let p = file1.path().to_str().unwrap();
+
+        load_data(plain_data.clone(), p, false);
+
+        let r1 = plain_data.read().unwrap();
+        assert_eq!(*r1.headers, t.headers);
+        assert_eq!((*r1).records.clone(), t.records);
+    }
 }
