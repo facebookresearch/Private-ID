@@ -282,7 +282,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Got empty rows to print out")]
+    #[should_panic]
     fn test_sort_stringify_id_map_empty_row() {
         let s1 = vec![String::from("3"), String::from("a")];
         let s2 = vec![];
