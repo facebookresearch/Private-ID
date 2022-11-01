@@ -153,3 +153,32 @@ pub fn create_client(
 
     context
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn test_create_client_tls_panic() {
+        let no_tls = false;
+
+        let host_pre: Option<&str> = Some("localhost:10009");
+        let tls_dir = None;
+        let tls_key = None;
+        let tls_cert = None;
+        let tls_ca = None;
+        let tls_domain = None;
+
+        let _ = create_client(
+            no_tls,
+            host_pre,
+            tls_dir,
+            tls_key,
+            tls_cert,
+            tls_ca,
+            tls_domain,
+            "private-id-multi-key".to_string(),
+        );
+    }
+}

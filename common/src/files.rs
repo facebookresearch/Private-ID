@@ -258,7 +258,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Got empty rows to print out")]
+    #[should_panic]
     fn test_sort_stringify_id_map_empty_row() {
         let s1 = vec![String::from("3"), String::from("a")];
         let s2 = vec![];
@@ -353,5 +353,81 @@ mod test {
         let res = write_vec_to_stdout(&id_map, 4, false, false);
 
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_read_csv_as_keyed_ints() {
+        let data = "a,1,10\n
+b,2,20\n
+c,3,30\n
+d,4,40";
+
+        use std::io::Write;
+
+        use tempfile::NamedTempFile;
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+
+        // Write some test data to the first handle.
+        file1.write_all(data.as_bytes()).unwrap();
+        let p = file1.path().to_str().unwrap();
+        let r: Vec<KeyedNums<u64>> = read_csv_as_keyed_nums(p, false);
+        assert_eq!(r.len(), 4);
+        let s = r.iter().map(|x| x.key.clone()).collect::<Vec<String>>();
+        assert_eq!(s, vec!["a", "b", "c", "d"]);
+        assert_eq!(r[0].ints, vec![1, 10]);
+        assert_eq!(r[r.len() - 1].ints, vec![4, 40]);
+    }
+
+    #[test]
+    fn test_transpose_keyed_ints() {
+        let data = "a,1,10 \n
+b,2,20 \n
+c,3,30 \n
+d,4,40";
+
+        use std::io::Write;
+
+        use tempfile::NamedTempFile;
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+
+        // Write some test data to the first handle.
+        file1.write_all(data.as_bytes()).unwrap();
+        let p = file1.path().to_str().unwrap();
+        let r: Vec<KeyedNums<u64>> = read_csv_as_keyed_nums(p, false);
+        assert_eq!(r.len(), 4);
+        let (keys, rows) = transpose_keyed_nums(r);
+        assert_eq!(keys.len(), 4);
+        assert_eq!(keys, vec!["a", "b", "c", "d"]);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].len(), 4);
+        assert_eq!(rows[0], [1, 2, 3, 4]);
+        assert_eq!(rows[1].len(), 4);
+        assert_eq!(rows[1], [10, 20, 30, 40]);
+    }
+
+    #[test]
+    fn test_read_csv_as_strings() {
+        let data = "a,1,10\n
+b,2,20\n
+c,3,30\n
+d,4,40";
+
+        use std::io::Write;
+
+        use tempfile::NamedTempFile;
+        // Create a file inside of `std::env::temp_dir()`.
+        let mut file1 = NamedTempFile::new().unwrap();
+
+        // Write some test data to the first handle.
+        file1.write_all(data.as_bytes()).unwrap();
+        let p = file1.path().to_str().unwrap();
+        let r: Vec<Vec<String>> = read_csv_as_strings(p, false);
+        assert_eq!(r.len(), 4);
+        assert_eq!(r[0], ["a", "1", "10"]);
+        assert_eq!(r[1], ["b", "2", "20"]);
+        assert_eq!(r[2], ["c", "3", "30"]);
+        assert_eq!(r[3], ["d", "4", "40"]);
     }
 }

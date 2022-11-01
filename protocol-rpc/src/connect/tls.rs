@@ -147,4 +147,48 @@ mod tests {
             "https"
         );
     }
+
+    #[test]
+    fn test_host_into_uri() {
+        let _ = host_into_uri("foo.bar:10009/path?1234", false);
+    }
+
+    #[tokio::test]
+    async fn test_from_dir() {
+        use std::fs::File;
+        use std::io::Write;
+
+        use tempfile::tempdir;
+
+        // Create a directory inside of `std::env::temp_dir()`.
+        let dir = tempdir().unwrap();
+        use rcgen::*;
+        let subject_alt_names: &[_] = &["hello.world.example".to_string(), "localhost".to_string()];
+        let ca_subject_alt_names: &[_] = &["ca.world.example".to_string(), "localhost".to_string()];
+
+        let client_cert = generate_simple_self_signed(subject_alt_names).unwrap();
+        let ca_cert = generate_simple_self_signed(ca_subject_alt_names).unwrap();
+        let client_pem = client_cert.serialize_pem().unwrap();
+        let client_key = client_cert.serialize_private_key_pem();
+        let ca_pem = ca_cert.serialize_pem().unwrap();
+
+        let file_path_ca_pem = dir.path().join("ca.pem");
+        let mut file_ca_pem = File::create(file_path_ca_pem).unwrap();
+        file_ca_pem.write_all(ca_pem.as_bytes()).unwrap();
+
+        let file_path_client_pem = dir.path().join("client.pem");
+        let mut file_client_pem = File::create(file_path_client_pem).unwrap();
+        file_client_pem.write_all(client_pem.as_bytes()).unwrap();
+
+        let file_path_client_key = dir.path().join("client.key");
+        let mut file_client_key = File::create(file_path_client_key).unwrap();
+        file_client_key.write_all(client_key.as_bytes()).unwrap();
+
+        let _ = TlsContext::from_dir(dir.path(), false);
+
+        drop(file_ca_pem);
+        drop(file_client_pem);
+        drop(file_client_key);
+        dir.close().unwrap();
+    }
 }

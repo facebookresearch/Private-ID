@@ -279,4 +279,37 @@ mod tests {
                 .build();
         }
     }
+
+    #[test]
+    fn test_qps() {
+        let t = Builder::new()
+            .label("foo")
+            .extra_label("bar")
+            .size(199)
+            .build();
+        t.qps("test", 10);
+    }
+
+    #[test]
+    fn test_silent() {
+        let t = Builder::default()
+            .label("foo")
+            .silent(true)
+            .extra_label("bar")
+            .size(199)
+            .build();
+        assert!(t.silent);
+    }
+
+    #[test]
+    fn test_elapsed_str() {
+        let t = Builder::new()
+            .label("foo")
+            .silent(true)
+            .extra_label("bar")
+            .size(199)
+            .build();
+        t.elapsed_str(Some("1"));
+        t.elapsed_log(Some("1"));
+    }
 }
