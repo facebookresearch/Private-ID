@@ -157,7 +157,6 @@ env RUST_LOG=info cargo run --bin suid-create-client -- \
 
 The output will be ElGamal encrypted Universal IDs assigned to each entry in the `.csv` file.
 
-
 ## Delegated Private Matching for Compute (DPMC)
 
 We extend the Multi-key Private-ID protocol to multiple partners. Please refer to our [paper](TODO) for more details.

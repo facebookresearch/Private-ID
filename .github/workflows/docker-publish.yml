@@ -12,87 +12,90 @@ env:
 
 jobs:
   push:
-   runs-on: ubuntu-latest
-   name: Build and publish image
-   permissions:
-    contents: write
-    packages: write
+    runs-on: ubuntu-latest
+    name: Build and publish PID Image
+    permissions:
+      contents: write
+      packages: write
 
-   steps:
-     - name: Lowercase REGISTRY_IMAGE_NAME
-       id: string
-       uses: ASzc/change-string-case-action@v1
-       with:
+    steps:
+      - name: Lowercase REGISTRY_IMAGE_NAME
+        id: string
+        uses: ASzc/change-string-case-action@v1
+        with:
           string: ${{ env.REGISTRY_IMAGE_NAME }}
 
       - name: Load registry image name into env
         run: echo "REGISTRY_IMAGE_NAME_LOWERCASE=${{ steps.string.outputs.lowercase }}" >> ${GITHUB_ENV}
 
-     - name: Check REGISTRY_IMAGE_NAME_LOWERCASE
-       run: echo "env.$REGISTRY_IMAGE_NAME_LOWERCASE"
+      - name: Check REGISTRY_IMAGE_NAME_LOWERCASE
+        run: echo "env.$REGISTRY_IMAGE_NAME_LOWERCASE"
 
-     - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+        name: Checkout Private ID Repo
+        with:
+          fetch-depth: 0
 
-     - name: Build image
-       run: docker build -f ./Dockerfile -t ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} .
+      - name: Build image
+        run: docker build -f ./Dockerfile -t ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} .
 
-     - name: Create version string
-       id: create_version
-       uses: paulhatch/semantic-version@v4.0.2
-       with:
+      - name: Create version string
+        id: create_version
+        uses: paulhatch/semantic-version@v4.0.2
+        with:
           tag_prefix: "v"
           major_pattern: "((MAJOR))"
           minor_pattern: "((MINOR))"
           format: "${major}.${minor}.${patch}-pre${increment}"
 
-     - name: Add tag to commit
-       id: tag_version
-       uses: mathieudutour/github-tag-action@v6.0
-       with:
+      - name: Add tag to commit
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.0
+        with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           custom_tag: ${{ steps.create_version.outputs.version_tag }}
           tag_prefix: ""
 
-    # Tests can be added here
+      # Tests can be added here
 
-     - name: Log into registry ${{ env.REGISTRY }}
-       uses: docker/login-action@v1
-       with:
-         registry: ${{ env.REGISTRY }}
-         username: ${{ github.actor }}
-         password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-     - name: Set output
-       id: vars
-       run: echo ::set-output name=ref::${GITHUB_REF##*/}
+      - name: Set output
+        id: vars
+        run: echo ::set-output name=ref::${GITHUB_REF##*/}
 
-     - name: Tag docker image
-       run: |
+      - name: Tag docker image
+        run: |
           docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:${{ github.sha }}
           docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:${{ steps.vars.outputs.ref }}
           docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:latest
           docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:${{ steps.create_version.outputs.version_tag }}
 
-     # Can't create a docker tag of just `0` or `0.0` or `0.0.0`
-     - name: Tag docker major version
-       if: steps.create_version.outputs.major != 0
-       run: docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:${{ steps.create_version.outputs.major }}
+      # Can't create a docker tag of just `0` or `0.0` or `0.0.0`
+      - name: Tag docker major version
+        if: steps.create_version.outputs.major != 0
+        run: docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:${{ steps.create_version.outputs.major }}
 
-     - name: Tag docker major.minor version
-       if: steps.create_version.outputs.major != 0 || steps.create_version.outputs.minor != 0
-       run: docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:${{ steps.create_version.outputs.major }}.${{ steps.create_version.outputs.minor }}
+      - name: Tag docker major.minor version
+        if: steps.create_version.outputs.major != 0 || steps.create_version.outputs.minor != 0
+        run: docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:${{ steps.create_version.outputs.major }}.${{ steps.create_version.outputs.minor }}
 
-     - name: Tag docker major.minor.patch version
-       if: steps.create_version.outputs.major != 0 || steps.create_version.outputs.minor != 0 || steps.create_version.outputs.patch != 0
-       run: docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:${{ steps.create_version.outputs.major }}.${{ steps.create_version.outputs.minor }}.${{ steps.create_version.outputs.patch }}
+      - name: Tag docker major.minor.patch version
+        if: steps.create_version.outputs.major != 0 || steps.create_version.outputs.minor != 0 || steps.create_version.outputs.patch != 0
+        run: docker tag ${{ env.LOCAL_IMAGE_NAME }}:${{ env.LOCAL_IMAGE_TAG }} ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}:${{ steps.create_version.outputs.major }}.${{ steps.create_version.outputs.minor }}.${{ steps.create_version.outputs.patch }}
 
-     - name: Push image to registry
-       run: docker push --all-tags ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}
+      - name: Push image to registry
+        run: docker push --all-tags ${{ env.REGISTRY_IMAGE_NAME_LOWERCASE }}
 
-     - name: Create release
-       uses: "actions/create-release@v1"
-       env:
+      - name: Create release
+        uses: "actions/create-release@v1"
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-       with:
+        with:
           release_name: ${{ steps.create_version.outputs.version_tag }}
           tag_name: ${{ steps.create_version.outputs.version_tag }}
