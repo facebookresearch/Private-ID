@@ -6,7 +6,9 @@
 use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
+use std::time::Duration;
 
+use aws_config::default_provider::credentials::DefaultCredentialsChain;
 use regex::Regex;
 
 lazy_static::lazy_static! {
@@ -45,8 +47,16 @@ impl S3Path {
     }
 
     pub async fn copy_to_local(&self) -> Result<String, std::io::Error> {
+        let default_provider = DefaultCredentialsChain::builder()
+            .load_timeout(Duration::from_secs(30))
+            .build()
+            .await;
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
-        let aws_cfg = aws_config::from_env().region(region).load().await;
+        let aws_cfg = aws_config::from_env()
+            .credentials_provider(default_provider)
+            .region(region)
+            .load()
+            .await;
         let client = aws_sdk_s3::Client::new(&aws_cfg);
         let resp = client
             .get_object()
@@ -82,8 +92,16 @@ impl S3Path {
     }
 
     pub async fn copy_from_local(&self, path: impl AsRef<Path>) -> Result<(), aws_sdk_s3::Error> {
+        let default_provider = DefaultCredentialsChain::builder()
+            .load_timeout(Duration::from_secs(30))
+            .build()
+            .await;
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
-        let aws_cfg = aws_config::from_env().region(region).load().await;
+        let aws_cfg = aws_config::from_env()
+            .region(region)
+            .credentials_provider(default_provider)
+            .load()
+            .await;
         let client = aws_sdk_s3::Client::new(&aws_cfg);
         Self::upload_multipart(&client, self.get_bucket_name(), path, self.get_key()).await?;
         Ok(())
