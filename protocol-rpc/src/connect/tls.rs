@@ -14,8 +14,8 @@ use url::Url;
 
 #[derive(Clone, Debug)]
 pub struct TlsContext {
-    pub identity: tonic::transport::Identity,
-    pub ca: tonic::transport::Certificate,
+    pub identity: Option<tonic::transport::Identity>,
+    pub ca: Option<tonic::transport::Certificate>,
 }
 
 impl TlsContext {
@@ -47,8 +47,8 @@ impl TlsContext {
         debug!("Successfully read key, cert and CA cert");
 
         TlsContext {
-            identity: Identity::from_pem(cert, key),
-            ca: Certificate::from_pem(ca),
+            identity: Some(Identity::from_pem(cert, key)),
+            ca: Some(Certificate::from_pem(ca)),
         }
     }
 
@@ -91,6 +91,63 @@ impl TlsContext {
         let ca_path = tls_dir_path.as_ref().join(Path::new("ca.pem"));
 
         TlsContext::from_paths(key_path.as_path(), cert_path.as_path(), ca_path.as_path())
+    }
+
+    /// Construct TlsContext for Client from corresponding file in the system
+    /// panics if file not found
+    pub fn from_path_client<T>(ca_path: T) -> TlsContext
+    where
+        T: AsRef<Path> + Copy,
+    {
+        info!("Reading TLS file, ca: {}", ca_path.as_ref().display());
+        [ca_path].iter().for_each(|p| {
+            if !Path::new(p.as_ref()).exists() {
+                panic!("File {} not found", p.as_ref().display())
+            }
+        });
+
+        let z = async {
+            let ca = tokio::fs::read(ca_path).await.unwrap();
+            ca
+        };
+        let ca = block_on(z);
+        info!("Successfully read CA cert");
+
+        TlsContext {
+            identity: None,
+            ca: Some(Certificate::from_pem(ca)),
+        }
+    }
+
+    /// Construct TlsContext for Serever from corresponding files in the system
+    /// panics if file not found
+    pub fn from_paths_server<T>(key_path: T, cert_path: T) -> TlsContext
+    where
+        T: AsRef<Path> + Copy,
+    {
+        info!(
+            "Reading TLS files, key: {}, cert: {}",
+            key_path.as_ref().display(),
+            cert_path.as_ref().display(),
+        );
+        [key_path, cert_path].iter().for_each(|p| {
+            if !Path::new(p.as_ref()).exists() {
+                panic!("File {} not found", p.as_ref().display())
+            }
+        });
+
+        let z = async {
+            let key = tokio::fs::read(key_path).await.unwrap();
+            let cert = tokio::fs::read(cert_path).await.unwrap();
+            (key, cert)
+        };
+        let (key, cert) = block_on(z);
+        debug!("Successfully read key and cert");
+
+        TlsContext {
+            identity: Some(Identity::from_pem(cert, key)),
+            ca: None,
+        }
     }
 }
 
@@ -189,6 +246,65 @@ mod tests {
         drop(file_ca_pem);
         drop(file_client_pem);
         drop(file_client_key);
+        dir.close().unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_from_path_client() {
+        use std::fs::File;
+        use std::io::Write;
+
+        use tempfile::tempdir;
+
+        // Create a directory inside of `std::env::temp_dir()`.
+        let dir = tempdir().unwrap();
+        use rcgen::*;
+        let ca_subject_alt_names: &[_] = &["ca.world.example".to_string(), "localhost".to_string()];
+
+        let ca_cert = generate_simple_self_signed(ca_subject_alt_names).unwrap();
+        let ca_pem = ca_cert.serialize_pem().unwrap();
+
+        let file_path_ca_pem = dir.path().join("ca.pem");
+        let mut file_ca_pem = File::create(file_path_ca_pem).unwrap();
+        file_ca_pem.write_all(ca_pem.as_bytes()).unwrap();
+
+        let _ = TlsContext::from_path_client(dir.path().join(Path::new("ca.pem")).as_path());
+
+        drop(file_ca_pem);
+        dir.close().unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_from_path_server() {
+        use std::fs::File;
+        use std::io::Write;
+
+        use tempfile::tempdir;
+
+        // Create a directory inside of `std::env::temp_dir()`.
+        let dir = tempdir().unwrap();
+        use rcgen::*;
+        let subject_alt_names: &[_] = &["hello.world.example".to_string(), "localhost".to_string()];
+
+        let server_cert = generate_simple_self_signed(subject_alt_names).unwrap();
+        let server_pem = server_cert.serialize_pem().unwrap();
+        let private_key = server_cert.serialize_private_key_pem();
+
+        let file_path_server_pem = dir.path().join("server.pem");
+        let mut file_server_pem = File::create(file_path_server_pem).unwrap();
+        file_server_pem.write_all(server_pem.as_bytes()).unwrap();
+
+        let file_path_private_key = dir.path().join("private.key");
+        let mut file_private_key = File::create(file_path_private_key).unwrap();
+        file_private_key.write_all(private_key.as_bytes()).unwrap();
+
+        let _ = TlsContext::from_paths_server(
+            dir.path().join(Path::new("private.key")).as_path(),
+            dir.path().join(Path::new("server.pem")).as_path(),
+        );
+
+        drop(file_server_pem);
+        drop(file_private_key);
         dir.close().unwrap();
     }
 }
