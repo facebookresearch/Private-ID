@@ -8,7 +8,8 @@ use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 
-use aws_config::default_provider::credentials::DefaultCredentialsChain;
+use aws_config::default_provider::credentials::default_provider;
+use aws_credential_types::cache::CredentialsCache;
 use regex::Regex;
 
 lazy_static::lazy_static! {
@@ -47,12 +48,14 @@ impl S3Path {
     }
 
     pub async fn copy_to_local(&self) -> Result<String, std::io::Error> {
-        let default_provider = DefaultCredentialsChain::builder()
-            .load_timeout(Duration::from_secs(30))
-            .build()
-            .await;
+        let default_provider = default_provider().await;
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
         let aws_cfg = aws_config::from_env()
+            .credentials_cache(
+                CredentialsCache::lazy_builder()
+                    .load_timeout(Duration::from_secs(30))
+                    .into_credentials_cache(),
+            )
             .credentials_provider(default_provider)
             .region(region)
             .load()
@@ -92,13 +95,15 @@ impl S3Path {
     }
 
     pub async fn copy_from_local(&self, path: impl AsRef<Path>) -> Result<(), aws_sdk_s3::Error> {
-        let default_provider = DefaultCredentialsChain::builder()
-            .load_timeout(Duration::from_secs(30))
-            .build()
-            .await;
+        let default_provider = default_provider().await;
         let region = aws_sdk_s3::Region::new(self.get_region().clone());
         let aws_cfg = aws_config::from_env()
             .region(region)
+            .credentials_cache(
+                CredentialsCache::lazy_builder()
+                    .load_timeout(Duration::from_secs(30))
+                    .into_credentials_cache(),
+            )
             .credentials_provider(default_provider)
             .load()
             .await;
