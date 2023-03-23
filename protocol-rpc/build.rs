@@ -12,9 +12,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "pjc.proto",
         "suidcreate.proto",
     ];
+    let out_env = if cfg!(fbcode_build) { "OUT" } else { "OUT_DIR" };
+    let out_dir = std::env::var_os(out_env).unwrap_or_else(|| panic!("env `{out_env}` not set"));
 
     tonic_build::configure()
-        .out_dir(std::env::var("OUT").unwrap())
+        .out_dir(&out_dir)
         .compile(
             proto_files,
             // HACK: we need '.' directory for build with Buck
