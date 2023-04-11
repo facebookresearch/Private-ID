@@ -276,6 +276,22 @@ env RUST_LOG=info cargo run --bin dspmc-shuffler -- \
 
 To cite Private-ID in academic papers, please use the following BibTeX entries.
 
+## Delegated Private-ID
+```
+@Misc{EPRINT:MMTSBC23,
+  author = "Dimitris Mouris and
+    Daniel Masny and
+    Ni Trieu and
+    Shubho Sengupta and
+    Prasad Buddhavarapu and
+    Benjamin M Case",
+  title = "Delegated Private Matching for Compute",
+  year = 2023,
+  howpublished = "Cryptology ePrint Archive, Report 2023/012",
+  note = "\url{https://eprint.iacr.org/2023/012}",
+}
+```
+
 ## Multi-Key Private-ID
 ```
 @Misc{EPRINT:BCGKMSTX21,
@@ -314,6 +330,7 @@ To cite Private-ID in academic papers, please use the following BibTeX entries.
 Private-ID is Apache 2.0 licensed, as found in the [LICENSE](/LICENSE) file.
 
 ## Additional Resources on Private Computation at Meta
+* [Delegated Multi-key Private Matching for Compute: Improving match rates and enabling adoption](https://research.facebook.com/blog/2023/1/delegated-multi-key-private-matching-for-compute-improving-match-rates-and-enabling-adoption/)
 * [Private matching for compute](https://engineering.fb.com/2020/07/10/open-source/private-matching/)
 * [The Value of Secure Multi-Party Computation](https://privacytech.fb.com/multi-party-computation/)
 * [Building the Next Era of Personalized Experiences](https://www.facebook.com/business/news/building-the-next-era-of-personalized-experiences)
