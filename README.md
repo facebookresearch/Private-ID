@@ -157,6 +157,121 @@ env RUST_LOG=info cargo run --bin suid-create-client -- \
 
 The output will be ElGamal encrypted Universal IDs assigned to each entry in the `.csv` file.
 
+## Delegated Private Matching for Compute (DPMC)
+
+We extend the Multi-key Private-ID protocol to multiple partners. Please refer to our [paper](TODO) for more details.
+
+To run Company
+```bash
+env RUST_LOG=info cargo run --bin dpmc-company-server -- \
+  --host 0.0.0.0:10010 \
+  --input etc/example/dpmc/Ex0_company.csv \
+  --stdout \
+  --output-shares-path etc/example/dpmc/output_company \
+  --no-tls
+```
+
+To multiple partners (servers)
+```bash
+env RUST_LOG=info cargo run --bin dpmc-partner-server -- \
+  --host 0.0.0.0:10020 \
+  --company localhost:10010 \
+  --input-keys etc/example/dpmc/Ex0_partner_1.csv \
+  --input-features etc/example/dpmc/Ex0_partner_1_features.csv \
+  --no-tls
+```
+
+```bash
+env RUST_LOG=info cargo run --bin dpmc-partner-server -- \
+  --host 0.0.0.0:10021 \
+  --company localhost:10010 \
+  --input-keys etc/example/dpmc/Ex0_partner_2.csv \
+  --input-features etc/example/dpmc/Ex0_partner_2_features.csv \
+  --no-tls
+```
+
+Start helper (client)
+```bash
+env RUST_LOG=info cargo run --bin dpmc-helper -- \
+  --company localhost:10010 \
+  --partners localhost:10020,localhost:10021 \
+  --stdout \
+  --output-shares-path etc/example/dpmc/output_partner \
+  --no-tls
+```
+
+The above will generate one-to-one matches. To enable one-to-many matches (one
+record from C will match to `M` P records), use the flag `--one-to-many M` in the
+`dpmc-helper` binary, where `M` is the number of matches.
+
+For example, using the same scripts as above for company and partners, to run
+`1-2` matching, start the helper as follows:
+
+```bash
+env RUST_LOG=info cargo run --bin dpmc-helper -- \
+  --company localhost:10010 \
+  --partners localhost:10020,localhost:10021 \
+  --one-to-many 2 \
+  --stdout \
+  --output-shares-path etc/example/dpmc/output_partner \
+  --tls-dir etc/example/dummy_certs
+```
+
+## Delegated Private Matching for Compute with Secure Shuffling (DSPMC)
+
+Start helper (server)
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-helper-server -- \
+  --host 0.0.0.0:10030 \
+  --stdout \
+  --output-shares-path etc/example/dspmc/output_helper \
+  --no-tls
+```
+
+Start company (server)
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-company-server -- \
+  --host 0.0.0.0:10010 \
+  --helper localhost:10030 \
+  --input etc/example/dspmc/Ex0_company.csv \
+  --stdout \
+  --output-shares-path etc/example/dspmc/output_company \
+  --no-tls
+```
+
+Start multiple partners (servers)
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-partner-server -- \
+  --host 0.0.0.0:10020 \
+  --company localhost:10010 \
+  --input-keys etc/example/dspmc/Ex0_partner_1.csv \
+  --input-features etc/example/dspmc/Ex0_partner_1_features.csv \
+  --no-tls
+```
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-partner-server -- \
+  --host 0.0.0.0:10021 \
+  --company localhost:10010 \
+  --input-keys etc/example/dspmc/Ex0_partner_2.csv \
+  --input-features etc/example/dspmc/Ex0_partner_2_features.csv \
+  --no-tls
+```
+
+Start Shuffler (client)
+
+```bash
+env RUST_LOG=info cargo run --bin dspmc-shuffler -- \
+  --company localhost:10010 \
+  --helper localhost:10030 \
+  --partners localhost:10020,localhost:10021 \
+  --stdout \
+  --no-tls
+```
+
 # Citing Private-ID
 
 To cite Private-ID in academic papers, please use the following BibTeX entries.
