@@ -19,7 +19,7 @@ pub mod gen {
         pub player_a: Vec<String>,
         pub player_a_values: Option<Vec<u32>>,
         pub player_b: Vec<String>,
-        pub player_b_values: Option<Vec<u32>>,
+        pub player_b_values: Option<Vec<String>>,
     }
 
     pub fn random_data(
@@ -40,11 +40,15 @@ pub mod gen {
         player_b.extend_from_slice(&intersection);
         player_b.shuffle(&mut rng);
 
+        let player_b_features = (0..(player_a_size + intersection_size))
+            .map(|_| random_u8().to_string())
+            .collect::<Vec<String>>();
+
         Data {
             player_a,
             player_b,
             player_a_values: None,
-            player_b_values: None,
+            player_b_values: Some(player_b_features),
         }
     }
 
@@ -73,6 +77,12 @@ pub mod gen {
     fn random_u32() -> u32 {
         let mut r = thread_rng();
         let s: u32 = r.gen();
+        s
+    }
+
+    fn random_u8() -> u8 {
+        let mut r = thread_rng();
+        let s: u8 = r.gen();
         s
     }
 
@@ -132,6 +142,14 @@ fn main() {
                 .takes_value(true)
                 .default_value("0"),
         )
+        .arg(
+            Arg::with_name("features")
+                .short("f")
+                .long("features")
+                .value_name("FEATURES")
+                .help("number of features")
+                .takes_value(false),
+        )
         .get_matches();
 
     let size = matches
@@ -145,14 +163,18 @@ fn main() {
         .unwrap()
         .parse::<usize>()
         .expect("size param");
+
+    let gen_features = matches.is_present("features");
     let dir = matches.value_of("dir").unwrap_or("./");
 
     let fn_a = format!("{}/input_{}_size_{}_cols_{}.csv", dir, "a", size, cols);
     let fn_b = format!("{}/input_{}_size_{}_cols_{}.csv", dir, "b", size, cols);
+    let fn_b_features = format!("{}/input_{}_size_{}_cols_{}_features.csv", dir, "b", size, cols);
 
     info!("Generating output of size {}", size);
     info!("Player a output: {}", fn_a);
     info!("Player b output: {}", fn_b);
+    info!("Player b features: {}", fn_b_features);
 
     let intrsct = size / 2 as usize;
     let size_player = size - intrsct;
@@ -163,6 +185,11 @@ fn main() {
 
     gen::write_slice_to_file(&data.player_b, cols, &fn_b).unwrap();
     info!("File {} finished", fn_b);
+
+    if gen_features {
+        gen::write_slice_to_file(&data.player_b_values.unwrap(), 0, &fn_b_features).unwrap();
+        info!("File {} finished", fn_b_features);
+    }
 
     info!("Bye!");
 }
