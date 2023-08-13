@@ -8,7 +8,7 @@ Private-ID is implemented in Rust to take advantage of the languages security fe
 
 The following should build and run the unit tests for the building blocks used by the protocols
 
-- `cargo build`, `cargo test`
+- `cargo build --release`, `cargo test`
 
 Each protocol involves two parties and they have to be run in its own shell environment. We call one party Company and another party Partner.
 
@@ -18,68 +18,62 @@ Run the script at etc/example/generate_cert.sh to generate dummy_certs directroy
 
 This protocol maps the email addresses from both parties to a single ID spine, so that same e-mail addresses map to the same key.
 
-To run Company
-
+To run Company:
 ```bash
-env RUST_LOG=info cargo run --bin private-id-server -- \
+env RUST_LOG=info cargo run --release --bin private-id-server -- \
   --host 0.0.0.0:10009 \
   --input etc/example/email_company.csv \
   --stdout \
-  --tls-dir etc/example/dummy_certs
+  --no-tls
 ```
 
-To run Partner
-
+To run Partner:
 ```bash
-env RUST_LOG=info cargo run --bin private-id-client -- \
+env RUST_LOG=info cargo run --release --bin private-id-client -- \
   --company localhost:10009 \
   --input etc/example/email_partner.csv \
   --stdout \
-  --tls-dir etc/example/dummy_certs
+  --no-tls
 ```
 
 ## Private-ID MultiKey
 
 We extend the Private-ID protocol to match multiple identifiers. Please refer to our [paper](https://eprint.iacr.org/2021/770) for more details.
 
-To run Company
-
+To run Company:
 ```bash
-env RUST_LOG=info cargo run --bin private-id-multi-key-server -- \
+env RUST_LOG=info cargo run --release --bin private-id-multi-key-server -- \
   --host 0.0.0.0:10009 \
   --input etc/example/private_id_multi_key/Ex1_company.csv \
   --stdout \
-  --tls-dir etc/example/dummy_certs
+  --no-tls
 ```
 
-To run Partner
-
+To run Partner:
 ```bash
-env RUST_LOG=info cargo run --bin private-id-multi-key-client -- \
+env RUST_LOG=info cargo run --release --bin private-id-multi-key-client -- \
   --company localhost:10009 \
   --input etc/example/private_id_multi_key/Ex1_partner.csv \
   --stdout \
-  --tls-dir etc/example/dummy_certs
+  --no-tls
 ```
 
 ## PS3I
 
 This protocol does an inner join based on email addresses as keys and then generates additive share of a feature associated with that email address. The shares are generated in the designated output files as 64 bit numbers
 
-To run Company
-
+To run Company:
 ```bash
-env RUST_LOG=info cargo run --bin cross-psi-server -- \
+env RUST_LOG=info cargo run --release --bin cross-psi-server -- \
   --host 0.0.0.0:10010 \
   --input etc/example/input_company.csv \
   --output etc/example/output_company.csv \
   --no-tls
 ```
 
-To run Partner
-
+To run Partner:
 ```bash
-env RUST_LOG=info cargo run --bin cross-psi-client -- \
+env RUST_LOG=info cargo run --release --bin cross-psi-client -- \
   --company localhost:10010 \
   --input etc/example/input_partner.csv \
   --output etc/example/output_partner.csv \
@@ -90,20 +84,18 @@ env RUST_LOG=info cargo run --bin cross-psi-client -- \
 
 This protocol does an inner join based on email addresses as keys and then generates XOR share of a feature associated with that email address. The shares are generated in the designated output files as 64 bit numbers
 
-To run Company
-
+To run Company:
 ```bash
-env RUST_LOG=info cargo run --bin cross-psi-xor-server -- \
+env RUST_LOG=info cargo run --release --bin cross-psi-xor-server -- \
   --host 0.0.0.0:10010 \
   --input etc/example/cross_psi_xor/input_company.csv \
   --output etc/example/cross_psi_xor/output_company \
   --no-tls
 ```
 
-To run Partner
-
+To run Partner:
 ```bash
-env RUST_LOG=info cargo run --bin cross-psi-xor-client -- \
+env RUST_LOG=info cargo run --release --bin cross-psi-xor-client -- \
   --company localhost:10010 \
   --input etc/example/cross_psi_xor/input_partner.csv \
   --output etc/example/cross_psi_xor/output_partner \
@@ -117,42 +109,44 @@ Thus `output_company_company_feature.csv` and `output_partner_company_feature.cs
 ### Private Join and Compute
 This is an implementation of Google's [Private Join and Compute](https://github.com/google/private-join-and-compute) protocol, that does a inner join based on email addresses and computes a sum of the corresponding feature for the Partner.
 
+To run Company:
 ```bash
-env RUST_LOG=info cargo run --bin pjc-client -- \
-  --company localhost:10011 \
-  --input etc/example/pjc_partner.csv \
-  --stdout \
-  --tls-dir etc/example/dummy_certs
-```
-
-```bash
-env RUST_LOG=info cargo run --bin pjc-server -- \
+env RUST_LOG=info cargo run --release --bin pjc-server -- \
   --host 0.0.0.0:10011 \
   --input etc/example/pjc_company.csv \
   --stdout \
-  --tls-dir etc/example/dummy_certs
+  --no-tls
+```
+
+To run Partner:
+```bash
+env RUST_LOG=info cargo run --release --bin pjc-client -- \
+  --company localhost:10011 \
+  --input etc/example/pjc_partner.csv \
+  --stdout \
+  --no-tls
 ```
 
 ## SUMID
 This is an implmentation of 2-party version of Secure Universal ID protocol. This can work on multiple keys. In the current implementation, the merger party also assumes the role of one data party and the sharer party assumes the role of all the other data parties. The data parties are the `.csv` files show below
 
-To run merger
+To run merger:
 ```bash
-env RUST_LOG=info cargo run --bin suid-create-server -- \
+env RUST_LOG=info cargo run --release --bin suid-create-server -- \
   --host 0.0.0.0:10010 \
   --input etc/example/suid/Example1/DataParty2_input.csv \
   --stdout \
-  --tls-dir etc/example/dummy_certs
+  --no-tls
 ```
 
-To run merger
+To run client:
 ```bash
-env RUST_LOG=info cargo run --bin suid-create-client -- \
+env RUST_LOG=info cargo run --release --bin suid-create-client -- \
   --merger localhost:10010 \
   --input etc/example/suid/Example1/DataParty1_input.csv \
   --input etc/example/suid/Example1/DataParty3_input.csv \
   --stdout \
-  --tls-dir etc/example/dummy_certs
+  --no-tls
 ```
 
 The output will be ElGamal encrypted Universal IDs assigned to each entry in the `.csv` file.
@@ -161,9 +155,9 @@ The output will be ElGamal encrypted Universal IDs assigned to each entry in the
 
 We extend the Multi-key Private-ID protocol to multiple partners. Please refer to our [paper](TODO) for more details.
 
-To run Company
+To run Company:
 ```bash
-env RUST_LOG=info cargo run --bin dpmc-company-server -- \
+env RUST_LOG=info cargo run --release --bin dpmc-company-server -- \
   --host 0.0.0.0:10010 \
   --input etc/example/dpmc/Ex0_company.csv \
   --stdout \
@@ -171,9 +165,9 @@ env RUST_LOG=info cargo run --bin dpmc-company-server -- \
   --no-tls
 ```
 
-To multiple partners (servers)
+To run multiple partners (servers):
 ```bash
-env RUST_LOG=info cargo run --bin dpmc-partner-server -- \
+env RUST_LOG=info cargo run --release --bin dpmc-partner-server -- \
   --host 0.0.0.0:10020 \
   --company localhost:10010 \
   --input-keys etc/example/dpmc/Ex0_partner_1.csv \
@@ -182,7 +176,7 @@ env RUST_LOG=info cargo run --bin dpmc-partner-server -- \
 ```
 
 ```bash
-env RUST_LOG=info cargo run --bin dpmc-partner-server -- \
+env RUST_LOG=info cargo run --release --bin dpmc-partner-server -- \
   --host 0.0.0.0:10021 \
   --company localhost:10010 \
   --input-keys etc/example/dpmc/Ex0_partner_2.csv \
@@ -190,9 +184,9 @@ env RUST_LOG=info cargo run --bin dpmc-partner-server -- \
   --no-tls
 ```
 
-Start helper (client)
+Start helper (client):
 ```bash
-env RUST_LOG=info cargo run --bin dpmc-helper -- \
+env RUST_LOG=info cargo run --release --bin dpmc-helper -- \
   --company localhost:10010 \
   --partners localhost:10020,localhost:10021 \
   --stdout \
@@ -208,31 +202,29 @@ For example, using the same scripts as above for company and partners, to run
 `1-2` matching, start the helper as follows:
 
 ```bash
-env RUST_LOG=info cargo run --bin dpmc-helper -- \
+env RUST_LOG=info cargo run --release --bin dpmc-helper -- \
   --company localhost:10010 \
   --partners localhost:10020,localhost:10021 \
   --one-to-many 2 \
   --stdout \
   --output-shares-path etc/example/dpmc/output_partner \
-  --tls-dir etc/example/dummy_certs
+  --no-tls
 ```
 
 ## Delegated Private Matching for Compute with Secure Shuffling (DSPMC)
 
-Start helper (server)
-
+Start helper (server):
 ```bash
-env RUST_LOG=info cargo run --bin dspmc-helper-server -- \
+env RUST_LOG=info cargo run --release --bin dspmc-helper-server -- \
   --host 0.0.0.0:10030 \
   --stdout \
   --output-shares-path etc/example/dspmc/output_helper \
   --no-tls
 ```
 
-Start company (server)
-
+Start company (server):
 ```bash
-env RUST_LOG=info cargo run --bin dspmc-company-server -- \
+env RUST_LOG=info cargo run --release --bin dspmc-company-server -- \
   --host 0.0.0.0:10010 \
   --helper localhost:10030 \
   --input etc/example/dspmc/Ex0_company.csv \
@@ -241,10 +233,9 @@ env RUST_LOG=info cargo run --bin dspmc-company-server -- \
   --no-tls
 ```
 
-Start multiple partners (servers)
-
+Start multiple partners (servers):
 ```bash
-env RUST_LOG=info cargo run --bin dspmc-partner-server -- \
+env RUST_LOG=info cargo run --release --bin dspmc-partner-server -- \
   --host 0.0.0.0:10020 \
   --company localhost:10010 \
   --input-keys etc/example/dspmc/Ex0_partner_1.csv \
@@ -253,7 +244,7 @@ env RUST_LOG=info cargo run --bin dspmc-partner-server -- \
 ```
 
 ```bash
-env RUST_LOG=info cargo run --bin dspmc-partner-server -- \
+env RUST_LOG=info cargo run --release --bin dspmc-partner-server -- \
   --host 0.0.0.0:10021 \
   --company localhost:10010 \
   --input-keys etc/example/dspmc/Ex0_partner_2.csv \
@@ -261,14 +252,55 @@ env RUST_LOG=info cargo run --bin dspmc-partner-server -- \
   --no-tls
 ```
 
-Start Shuffler (client)
-
+Start Shuffler (client):
 ```bash
-env RUST_LOG=info cargo run --bin dspmc-shuffler -- \
+env RUST_LOG=info cargo run --release --bin dspmc-shuffler -- \
   --company localhost:10010 \
   --helper localhost:10030 \
   --partners localhost:10020,localhost:10021 \
   --stdout \
+  --no-tls
+```
+
+### Note: Running over the network
+To run over the network instead of localhost prepend the IP address with `http://` or `https://`. For example:
+
+To run Company (in IP `1.23.34.45`):
+```bash
+env RUST_LOG=info cargo run --release --bin dpmc-company-server -- \
+  --host 0.0.0.0:10010 \
+  --input etc/example/dpmc/Ex0_company.csv \
+  --stdout \
+  --output-shares-path etc/example/dpmc/output_company \
+  --no-tls
+```
+
+To run multiple partners (servers) (in IPs `76.65.54.43` and `76.65.54.44`):
+```bash
+env RUST_LOG=info cargo run --release --bin dpmc-partner-server -- \
+  --host 0.0.0.0:10020 \
+  --company http://1.23.34.45:10010 \
+  --input-keys etc/example/dpmc/Ex0_partner_1.csv \
+  --input-features etc/example/dpmc/Ex0_partner_1_features.csv \
+  --no-tls
+```
+
+```bash
+env RUST_LOG=info cargo run --release --bin dpmc-partner-server -- \
+  --host 0.0.0.0:10021 \
+  --company http://1.23.34.45:10010 \
+  --input-keys etc/example/dpmc/Ex0_partner_2.csv \
+  --input-features etc/example/dpmc/Ex0_partner_2_features.csv \
+  --no-tls
+```
+
+Start helper (client):
+```bash
+env RUST_LOG=info cargo run --release --bin dpmc-helper -- \
+  --company http://1.23.34.45:10010 \
+  --partners http://76.65.54.43:10020,http://76.65.54.44:10021 \
+  --stdout \
+  --output-shares-path etc/example/dpmc/output_partner \
   --no-tls
 ```
 
