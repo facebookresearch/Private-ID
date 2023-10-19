@@ -17,8 +17,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "dspmchelper.proto",
         "dspmcpartner.proto",
     ];
+    let out_env = if cfg!(fbcode_build) { "OUT" } else { "OUT_DIR" };
+    let out_dir = std::env::var_os(out_env).unwrap_or_else(|| panic!("env `{out_env}` is not set"));
 
     tonic_build::configure()
+        .out_dir(out_dir)
         .compile(
             proto_files,
             // HACK: we need '.' directory for build with Buck
