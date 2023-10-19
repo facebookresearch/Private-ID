@@ -8,6 +8,11 @@ use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 
+use aws_sdk_s3::Region;
+use aws_sdk_s3::error::NoSuchUpload;
+use aws_sdk_s3::model::CompletedPart;
+use aws_sdk_s3::model::CompletedMultipartUpload;
+use aws_sdk_s3::types::ByteStream;
 use aws_config::default_provider::credentials::default_provider;
 use aws_credential_types::cache::CredentialsCache;
 use regex::Regex;
@@ -49,7 +54,7 @@ impl S3Path {
 
     pub async fn copy_to_local(&self) -> Result<String, std::io::Error> {
         let default_provider = default_provider().await;
-        let region = aws_sdk_s3::config::Region::new(self.get_region().clone());
+        let region = Region::new(self.get_region().clone());
         let aws_cfg = aws_config::from_env()
             .credentials_cache(
                 CredentialsCache::lazy_builder()
@@ -96,7 +101,7 @@ impl S3Path {
 
     pub async fn copy_from_local(&self, path: impl AsRef<Path>) -> Result<(), aws_sdk_s3::Error> {
         let default_provider = default_provider().await;
-        let region = aws_sdk_s3::config::Region::new(self.get_region().clone());
+        let region = Region::new(self.get_region().clone());
         let aws_cfg = aws_config::from_env()
             .region(region)
             .credentials_cache(
@@ -131,12 +136,12 @@ impl S3Path {
             .unwrap();
         let uid = u.upload_id().ok_or_else(|| {
             aws_sdk_s3::Error::NoSuchUpload(
-                aws_sdk_s3::types::error::NoSuchUpload::builder()
+                NoSuchUpload::builder()
                     .message("No upload ID")
                     .build(),
             )
         })?;
-        let mut completed_parts: Vec<aws_sdk_s3::types::CompletedPart> = Vec::new();
+        let mut completed_parts: Vec<CompletedPart> = Vec::new();
         for i in 0..chunks {
             let length = if i == chunks - 1 {
                 // If we're on the last chunk, the length to read might be less than a whole chunk.
@@ -146,7 +151,7 @@ impl S3Path {
             } else {
                 chunk_size
             };
-            let byte_stream = aws_sdk_s3::primitives::ByteStream::read_from()
+            let byte_stream = ByteStream::read_from()
                 .path(path.as_ref())
                 .offset(i * chunk_size)
                 .length(aws_smithy_http::byte_stream::Length::Exact(length))
@@ -162,14 +167,14 @@ impl S3Path {
                 .send()
                 .await
                 .unwrap();
-            let cp = aws_sdk_s3::types::CompletedPart::builder()
+            let cp = CompletedPart::builder()
                 .set_e_tag(upload.e_tag)
                 .part_number((i + 1) as i32)
                 .build();
             completed_parts.push(cp);
         }
         // Complete multipart upload, sending the (etag, part id) list along the request.
-        let b = aws_sdk_s3::types::CompletedMultipartUpload::builder()
+        let b = CompletedMultipartUpload::builder()
             .set_parts(Some(completed_parts))
             .build();
         let completed = client
