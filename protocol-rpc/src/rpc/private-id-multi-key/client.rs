@@ -93,8 +93,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Arg::with_name("tls-ca")
                 .long("tls-ca")
                 .takes_value(true)
-                .requires("tls-key")
-                .requires("tls-cert")
                 .help("Path to root CA certificate issued cert and keys"),
             Arg::with_name("tls-domain")
                 .long("tls-domain")
@@ -108,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ])
         .groups(&[
             ArgGroup::with_name("tls")
-                .args(&["no-tls", "tls-dir", "tls-key"])
+                .args(&["no-tls", "tls-dir", "tls-ca"])
                 .required(true),
             ArgGroup::with_name("out")
                 .args(&["output", "stdout"])

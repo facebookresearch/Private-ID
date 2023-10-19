@@ -93,7 +93,8 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                 .write()
                 .map(|mut d| {
                     let t = timer::Timer::new_silent("Load e_company");
-                    d.append(&mut self.ec_cipher.to_points(&data));
+                    d.clear();
+                    d.extend(&self.ec_cipher.to_points(&data));
                     t.qps("deserialize", data.len());
                 })
                 .map_err(|_| {
@@ -105,7 +106,8 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
                 .write()
                 .map(|mut d| {
                     let t = timer::Timer::new_silent("Load v_company");
-                    d.append(&mut self.ec_cipher.to_points(&data));
+                    d.clear();
+                    d.extend(&self.ec_cipher.to_points(&data));
                     t.qps("deserialize", data.len());
                 })
                 .map_err(|_| {
@@ -121,14 +123,13 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
             .write()
             .map(|mut data| {
                 let t = timer::Timer::new_silent("load_u_partner");
-                if data.is_empty() {
-                    data.extend(
-                        &self
-                            .ec_cipher
-                            .to_points_encrypt(&u_partner_payload, &self.private_keys.0),
-                    );
-                    t.qps("deserialize_exp", u_partner_payload.len());
-                }
+                data.clear();
+                data.extend(
+                    &self
+                        .ec_cipher
+                        .to_points_encrypt(&u_partner_payload, &self.private_keys.0),
+                );
+                t.qps("deserialize_exp", u_partner_payload.len());
             })
             .map_err(|err| {
                 error!("Cannot load e_company {}", err);
@@ -146,22 +147,21 @@ impl CompanyPrivateIdProtocol for CompanyPrivateId {
             .write()
             .map(|mut data| {
                 let t = timer::Timer::new_silent("load_s_prime_partner");
-                if data.is_empty() {
-                    for k in self
-                        .ec_cipher
-                        .to_bytes(
-                            &self
-                                .ec_cipher
-                                .to_points_encrypt(&s_prime_partner, &self.private_keys.1),
-                        )
-                        .iter()
-                    {
-                        let record = (*self.plain_data.clone().read().unwrap())
-                            .get_empty_record_with_key(k.to_string(), na_val);
-                        data.push(record);
-                    }
-                    t.qps("deserialize_exp", s_prime_partner.len());
+                data.clear();
+                for k in self
+                    .ec_cipher
+                    .to_bytes(
+                        &self
+                            .ec_cipher
+                            .to_points_encrypt(&s_prime_partner, &self.private_keys.1),
+                    )
+                    .iter()
+                {
+                    let record = (*self.plain_data.clone().read().unwrap())
+                        .get_empty_record_with_key(k.to_string(), na_val);
+                    data.push(record);
                 }
+                t.qps("deserialize_exp", s_prime_partner.len());
             })
             .map_err(|err| {
                 error!("Cannot load s_double_prime_partner {}", err);

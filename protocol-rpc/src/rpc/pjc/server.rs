@@ -65,13 +65,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("tls-key")
                 .takes_value(true)
                 .requires("tls-cert")
-                .requires("tls-ca")
                 .help("Path to tls key (non-encrypted)"),
             Arg::with_name("tls-cert")
                 .long("tls-cert")
                 .takes_value(true)
                 .requires("tls-key")
-                .requires("tls-ca")
                 .help(
                     "Path to tls certificate (pem format), SINGLE cert, \
                      NO CHAINING, required by client as well",
