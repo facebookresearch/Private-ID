@@ -2,29 +2,35 @@
 //  SPDX-License-Identifier: Apache-2.0
 
 extern crate csv;
-extern crate base64;
 
-use std::{
-    collections::{ HashMap, HashSet },
-    convert::TryInto,
-    path::Path,
-    sync::{Arc, RwLock},
-};
-use crypto::{
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    prelude::*,
-};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::convert::TryInto;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
+
+use base64::engine::general_purpose;
+use base64::Engine as _;
+use common::permutations::gen_permute_pattern;
+use common::permutations::permute;
+use common::permutations::undo_permute;
+use common::timer;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
+use fernet::Fernet;
 use itertools::Itertools;
-use common::{
-    permutations::{gen_permute_pattern, permute, undo_permute},
-    timer,
-};
-use rand::{distributions::Uniform, Rng,};
-use rayon::iter::{ParallelDrainRange, ParallelIterator};
-use super::{
-    writer_helper_dpmc, ProtocolError
-};
-use crate::{dpmc::traits::HelperDpmcProtocol, shared::TFeatures,};
+use rand::distributions::Uniform;
+use rand::Rng;
+use rayon::iter::ParallelDrainRange;
+use rayon::iter::ParallelIterator;
+
+use super::writer_helper_dpmc;
+use super::ProtocolError;
+use crate::dpmc::traits::HelperDpmcProtocol;
+use crate::shared::TFeatures;
 
 #[derive(Debug)]
 struct PartnerData {
@@ -68,8 +74,9 @@ impl HelperDpmc {
         }
     }
 
-    pub fn set_company_public_key(&self,
-        company_public_key: TPayload
+    pub fn set_company_public_key(
+        &self,
+        company_public_key: TPayload,
     ) -> Result<(), ProtocolError> {
         let pk = self.ec_cipher.to_points(&company_public_key);
         // Check that one key is sent
@@ -78,7 +85,7 @@ impl HelperDpmc {
         match self.company_public_key.clone().write() {
             Ok(mut company_pk) => {
                 *company_pk = pk[0];
-                assert_eq!((*company_pk).is_identity(), false);
+                assert!(!(*company_pk).is_identity());
                 Ok(())
             }
             _ => {
@@ -91,9 +98,8 @@ impl HelperDpmc {
     }
 
     pub fn get_helper_public_key(&self) -> Result<TPayload, ProtocolError> {
-        Ok(self.ec_cipher.to_bytes(&vec![self.keypair_pk]))
+        Ok(self.ec_cipher.to_bytes(&[self.keypair_pk]))
     }
-
 }
 
 impl Default for HelperDpmc {
@@ -104,20 +110,23 @@ impl Default for HelperDpmc {
 
 fn decrypt_shares(mut enc_t: TPayload, aes_key: String) -> (TFeatures, TPayload) {
     let mut t = {
-        let fernet = fernet::Fernet::new(&aes_key).unwrap();
-        enc_t.par_drain(..).map(|x| {
-            let ctxt_str = String::from_utf8(x.buffer).unwrap();
-            ByteBuffer{
-                buffer: fernet.decrypt(&ctxt_str).unwrap().to_vec()
-            }
-        }).collect::<Vec<_>>()
+        let fernet = Fernet::new(&aes_key).unwrap();
+        enc_t
+            .par_drain(..)
+            .map(|x| {
+                let ctxt_str = String::from_utf8(x.buffer).unwrap();
+                ByteBuffer {
+                    buffer: fernet.decrypt(&ctxt_str).unwrap().to_vec(),
+                }
+            })
+            .collect::<Vec<_>>()
     };
 
     let num_features =
         u64::from_le_bytes(t.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
     let num_rows =
         u64::from_le_bytes(t.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-    let g_zi = t.drain(num_features * num_rows..).map(|x| x).collect::<Vec<_>>();
+    let g_zi = t.drain(num_features * num_rows..).collect::<Vec<_>>();
 
     let mut features = TFeatures::new();
     for i in (0..num_features).rev() {
@@ -132,14 +141,13 @@ fn decrypt_shares(mut enc_t: TPayload, aes_key: String) -> (TFeatures, TPayload)
 }
 
 impl HelperDpmcProtocol for HelperDpmc {
-
     fn remove_partner_scalar_from_p_and_set_shares(
         &self,
         data: TPayload,
         psum: Vec<usize>,
         enc_alpha_t: Vec<u8>,
         p_scalar_g: TPayload,
-        xor_shares: TPayload
+        xor_shares: TPayload,
     ) -> Result<(), ProtocolError> {
         match (
             self.partners_data.clone().write(),
@@ -150,21 +158,26 @@ impl HelperDpmcProtocol for HelperDpmc {
 
                 let aes_key = {
                     let aes_key_bytes = {
-                        let x = self.ec_cipher.to_points_encrypt(&p_scalar_g, &self.keypair_sk);
+                        let x = self
+                            .ec_cipher
+                            .to_points_encrypt(&p_scalar_g, &self.keypair_sk);
                         let y = self.ec_cipher.to_bytes(&x);
                         y[0].buffer.clone()
                     };
-                    base64::encode_config(&aes_key_bytes, base64::URL_SAFE)
+                    general_purpose::URL_SAFE.encode(aes_key_bytes)
                 };
 
                 let alpha_t = {
-                    let ctxt_str: String =
-                        String::from_utf8(enc_alpha_t.clone()).unwrap();
+                    let ctxt_str: String = String::from_utf8(enc_alpha_t.clone()).unwrap();
 
                     Scalar::from_bits(
-                        fernet::Fernet::new(&aes_key).unwrap()
-                            .decrypt(&ctxt_str).unwrap()
-                            .to_vec()[0..32].try_into().unwrap()
+                        Fernet::new(&aes_key)
+                            .unwrap()
+                            .decrypt(&ctxt_str)
+                            .unwrap()
+                            .to_vec()[0..32]
+                            .try_into()
+                            .unwrap(),
                     )
                 };
 
@@ -174,9 +187,7 @@ impl HelperDpmcProtocol for HelperDpmc {
 
                 // Unflatten
                 let pdata = {
-                    let t = self
-                        .ec_cipher
-                        .to_points_encrypt(&data, &alpha_t.invert());
+                    let t = self.ec_cipher.to_points_encrypt(&data, &alpha_t.invert());
 
                     psum.get(0..num_keys)
                         .unwrap()
@@ -190,13 +201,13 @@ impl HelperDpmcProtocol for HelperDpmc {
 
                 let (features, g_zi) = decrypt_shares(xor_shares, aes_key);
 
-                partners_data.push(PartnerData{
+                partners_data.push(PartnerData {
                     h_b_partner: pdata,
-                    features: features,
-                    g_zi: g_zi,
+                    features,
+                    g_zi,
                 });
 
-                set_diffs.push(SetDiff{
+                set_diffs.push(SetDiff {
                     s_company: HashSet::<String>::new(),
                     s_partner: HashSet::<String>::new(),
                 });
@@ -206,14 +217,16 @@ impl HelperDpmcProtocol for HelperDpmc {
             _ => {
                 error!("Cannot load e_company");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot load h_b_partner".to_string(),
+                    "cannot load h_b_partner".to_string(),
                 ))
             }
         }
     }
 
-    fn set_encrypted_company(&self,
-        company: TPayload, company_psum: Vec<usize>
+    fn set_encrypted_company(
+        &self,
+        company: TPayload,
+        company_psum: Vec<usize>,
     ) -> Result<(), ProtocolError> {
         match (self.h_company_beta.clone().write(),) {
             (Ok(mut h_company_beta),) => {
@@ -222,7 +235,8 @@ impl HelperDpmcProtocol for HelperDpmc {
                 h_company_beta.clear();
                 let e_company = {
                     let t = self.ec_cipher.to_points(&company);
-                    company_psum.get(0..num_keys)
+                    company_psum
+                        .get(0..num_keys)
                         .unwrap()
                         .iter()
                         .zip_eq(company_psum.get(1..num_keys + 1).unwrap().iter())
@@ -412,10 +426,8 @@ impl HelperDpmcProtocol for HelperDpmc {
                 };
 
                 // Create a hashmap for all unique partner keys that are not in S_Partner
-                let mut unique_partner_ids:
-                    HashMap<String, Vec<(usize, usize)>> = HashMap::new();
+                let mut unique_partner_ids: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
                 for p in 0..set_diffs.len() {
-
                     // Get the first column.
                     let partner_keys = {
                         let tmp = {
@@ -431,8 +443,10 @@ impl HelperDpmcProtocol for HelperDpmc {
                         // if not in S_Partner
                         if !set_diffs[p].s_partner.contains(&key.to_string()) {
                             // if not already in the id map
-                            if !unique_partner_ids.contains_key( &key.to_string() ) {
-                                unique_partner_ids.insert(key.to_string(), vec![(idx, p)]);
+                            if let std::collections::hash_map::Entry::Vacant(e) =
+                                unique_partner_ids.entry(key.to_string())
+                            {
+                                e.insert(vec![(idx, p)]);
                             } else {
                                 let v = unique_partner_ids.get_mut(&key.to_string()).unwrap();
                                 if v.len() < num_of_matches {
@@ -445,21 +459,28 @@ impl HelperDpmcProtocol for HelperDpmc {
                 // Add each item of unique_partner_ids into id_map.
                 id_map.clear();
                 id_map.extend({
-                    let x = unique_partner_ids.iter_mut().map(|(key, v)| {
-                        v.resize(num_of_matches, (0, 0));
-                        v.iter()
-                        .map(|(idx, from_p)| (key.to_string(), *idx, true, *from_p))
-                        .collect::<Vec<_>>()
-                    }).collect::<Vec<_>>();
+                    let x = unique_partner_ids
+                        .iter_mut()
+                        .map(|(key, v)| {
+                            v.resize(num_of_matches, (0, 0));
+                            v.iter()
+                                .map(|(idx, from_p)| (key.to_string(), *idx, true, *from_p))
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>();
                     x.into_iter().flatten().collect::<Vec<_>>()
                 });
                 // Add all the remaining keys that company has but the partners don't.
                 id_map.extend({
-                    let x = sc_intersection.clone().iter().map(|key| {
-                        (0..num_of_matches)
-                        .map(|_| (key.to_string(), 0, false, 0))
-                        .collect::<Vec<_>>()
-                    }).collect::<Vec<_>>();
+                    let x = sc_intersection
+                        .clone()
+                        .iter()
+                        .map(|key| {
+                            (0..num_of_matches)
+                                .map(|_| (key.to_string(), 0, false, 0))
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>();
                     x.into_iter().flatten().collect::<Vec<_>>()
                 });
 
@@ -490,54 +511,54 @@ impl HelperDpmcProtocol for HelperDpmc {
                     .unwrap();
 
                 let (t_i, mut g_zi) = {
-                    let z_i = (0..id_map.len())
-                        .map(|_| gen_scalar())
-                        .collect::<Vec<_>>();
-                    let x = z_i.iter()
+                    let z_i = (0..id_map.len()).map(|_| gen_scalar()).collect::<Vec<_>>();
+                    let x = z_i
+                        .iter()
                         .map(|a| {
-                            let x =
-                                self.ec_cipher.to_bytes(&vec![a * *company_public_key]);
+                            let x = self.ec_cipher.to_bytes(&[a * *company_public_key]);
                             x[0].clone()
-                        }).collect::<Vec<_>>();
-                    let y = z_i.iter()
+                        })
+                        .collect::<Vec<_>>();
+                    let y = z_i
+                        .iter()
                         .map(|a| a * &RISTRETTO_BASEPOINT_TABLE)
                         .collect::<Vec<_>>();
                     (x, y)
                 };
 
                 let mut d_flat = {
-
-                    let p_mask_v = partners_data.
-                        iter()
-                        .map(|p_data| self.ec_cipher.to_points(&*p_data.g_zi))
+                    let p_mask_v = partners_data
+                        .iter()
+                        .map(|p_data| self.ec_cipher.to_points(&p_data.g_zi))
                         .collect::<Vec<_>>();
 
                     let mut v_p = Vec::<TPayload>::new();
                     for f_idx in (0..n_features).rev() {
                         let mask = (0..id_map.len())
-                            .map(|_| rng.sample(&range))
+                            .map(|_| rng.sample(range))
                             .collect::<Vec<u64>>();
                         let t = id_map
                             .iter()
                             .enumerate()
                             .map(|(i, (_, idx, exists, from_partner))| {
-                                let y =
-                                    if *exists {
-                                        if f_idx == 0 {
-                                            g_zi[i] = p_mask_v[*from_partner][*idx];
-                                        }
-                                        let partner_features = &partners_data[*from_partner].features;
-                                        if f_idx < partner_features.len() {
-                                            partner_features[f_idx][*idx] ^ mask[i]
-                                        } else {
-                                            // In case the data are not padded correctly,
-                                            // return secret shares of the first feature.
-                                            partner_features[0][*idx] ^ mask[i]
-                                        }
+                                let y = if *exists {
+                                    if f_idx == 0 {
+                                        g_zi[i] = p_mask_v[*from_partner][*idx];
+                                    }
+                                    let partner_features = &partners_data[*from_partner].features;
+                                    if f_idx < partner_features.len() {
+                                        partner_features[f_idx][*idx] ^ mask[i]
                                     } else {
-                                        let y = u64::from_le_bytes((t_i[i].buffer[0..8]).try_into().unwrap());
-                                        y ^ mask[i]
-                                    };
+                                        // In case the data are not padded correctly,
+                                        // return secret shares of the first feature.
+                                        partner_features[0][*idx] ^ mask[i]
+                                    }
+                                } else {
+                                    let y = u64::from_le_bytes(
+                                        (t_i[i].buffer[0..8]).try_into().unwrap(),
+                                    );
+                                    y ^ mask[i]
+                                };
                                 ByteBuffer {
                                     buffer: y.to_le_bytes().to_vec(),
                                 }
@@ -559,7 +580,7 @@ impl HelperDpmcProtocol for HelperDpmc {
                     },
                     ByteBuffer {
                         buffer: (n_features as u64).to_le_bytes().to_vec(),
-                    }
+                    },
                 ];
 
                 d_flat.extend(metadata);
@@ -586,7 +607,7 @@ impl HelperDpmcProtocol for HelperDpmc {
                     .max()
                     .unwrap();
 
-                let mut data: Vec<Vec<String>> = vec![vec!["NA".to_string()]; m_idx+1];
+                let mut data: Vec<Vec<String>> = vec![vec!["NA".to_string()]; m_idx + 1];
 
                 for i in 0..id_map.len() {
                     let (_, idx, flag, _) = id_map[i];
@@ -612,7 +633,7 @@ impl HelperDpmcProtocol for HelperDpmc {
                     .max()
                     .unwrap();
 
-                let mut data: Vec<Vec<String>> = vec![vec!["NA".to_string()]; m_idx+1];
+                let mut data: Vec<Vec<String>> = vec![vec!["NA".to_string()]; m_idx + 1];
 
                 for i in 0..id_map.len() {
                     let (_, idx, flag, _) = id_map[i];

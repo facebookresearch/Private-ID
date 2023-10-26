@@ -5,16 +5,17 @@ extern crate common;
 extern crate crypto;
 extern crate protocol;
 
-use tonic::{transport::Channel, Request, Response, Status};
-
 use common::timer;
 use crypto::prelude::TPayload;
-use rpc::proto::{
-    gen_dspmc_helper::{
-        dspmc_helper_client::DspmcHelperClient, Commitment, ServiceResponse,
-    },
-    streaming::{send_data, read_from_stream},
-};
+use rpc::proto::gen_dspmc_helper::dspmc_helper_client::DspmcHelperClient;
+use rpc::proto::gen_dspmc_helper::Commitment;
+use rpc::proto::gen_dspmc_helper::ServiceResponse;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::send_data;
+use tonic::transport::Channel;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
 
 pub async fn send(
     data: TPayload,
@@ -52,7 +53,10 @@ pub async fn recv(
 }
 
 pub async fn calculate_id_map(rpc: &mut DspmcHelperClient<Channel>) -> Result<(), Status> {
-    let _r = rpc.calculate_id_map(Request::new(Commitment {})).await?.into_inner();
+    let _r = rpc
+        .calculate_id_map(Request::new(Commitment {}))
+        .await?
+        .into_inner();
     Ok(())
 }
 
@@ -62,6 +66,9 @@ pub async fn reveal(rpc: &mut DspmcHelperClient<Channel>) -> Result<(), Status> 
 }
 
 pub async fn stop_service(rpc: &mut DspmcHelperClient<Channel>) -> Result<(), Status> {
-    let _r = rpc.stop_service(Request::new(Commitment {})).await?.into_inner();
+    let _r = rpc
+        .stop_service(Request::new(Commitment {}))
+        .await?
+        .into_inner();
     Ok(())
 }

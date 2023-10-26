@@ -5,16 +5,17 @@ extern crate common;
 extern crate crypto;
 extern crate protocol;
 
-use tonic::{transport::Channel, Request, Response, Status};
-
 use common::timer;
 use crypto::prelude::TPayload;
-use rpc::proto::{
-    gen_dspmc_company::{
-        dspmc_company_client::DspmcCompanyClient, Commitment, ServiceResponse,
-    },
-    streaming::{read_from_stream, send_data},
-};
+use rpc::proto::gen_dspmc_company::dspmc_company_client::DspmcCompanyClient;
+use rpc::proto::gen_dspmc_company::Commitment;
+use rpc::proto::gen_dspmc_company::ServiceResponse;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::send_data;
+use tonic::transport::Channel;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
 
 pub async fn send(
     data: TPayload,
@@ -52,6 +53,9 @@ pub async fn recv(
 }
 
 pub async fn calculate_id_map(rpc: &mut DspmcCompanyClient<Channel>) -> Result<(), Status> {
-    let _r = rpc.calculate_id_map(Request::new(Commitment {})).await?.into_inner();
+    let _r = rpc
+        .calculate_id_map(Request::new(Commitment {}))
+        .await?
+        .into_inner();
     Ok(())
 }

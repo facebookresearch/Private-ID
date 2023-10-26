@@ -7,21 +7,20 @@ extern crate clap;
 extern crate ctrlc;
 extern crate tonic;
 
-use clap::{App, Arg, ArgGroup};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::thread;
+use std::time;
+
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
 use log::info;
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    thread, time,
-};
 
 mod rpc_server_helper;
-use rpc::{
-    connect::create_server::create_server,
-    proto::gen_dspmc_helper::dspmc_helper_server,
-};
+use rpc::connect::create_server::create_server;
+use rpc::proto::gen_dspmc_helper::dspmc_helper_server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -50,8 +49,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("output-shares-path")
                 .takes_value(true)
                 .required(true)
-                .help("path to write shares of features.\n
-                      Feature will be written as {path}_partner_features.csv"),
+                .help(
+                    "path to write shares of features.\n
+                      Feature will be written as {path}_partner_features.csv",
+                ),
             Arg::with_name("no-tls")
                 .long("no-tls")
                 .takes_value(false)
@@ -127,8 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         error!("Output shares path not provided");
     }
 
-    let service =
-        rpc_server_helper::DspmcHelperService::new(output_keys_path, output_shares_path);
+    let service = rpc_server_helper::DspmcHelperService::new(output_keys_path, output_shares_path);
 
     let ks = service.killswitch.clone();
     let recv_thread = thread::spawn(move || {
@@ -146,9 +146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = host.unwrap().parse()?;
 
     server
-        .add_service(dspmc_helper_server::DspmcHelperServer::new(
-            service,
-        ))
+        .add_service(dspmc_helper_server::DspmcHelperServer::new(service))
         .serve_with_shutdown(addr, async {
             rx.await.ok();
         })

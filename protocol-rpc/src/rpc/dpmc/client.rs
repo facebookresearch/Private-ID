@@ -1,29 +1,26 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use clap::{App, Arg, ArgGroup};
-use log::{error, info};
 use std::convert::TryInto;
-use tonic::Request;
+
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
 use common::timer;
 use crypto::prelude::TPayload;
-use protocol::dpmc::{helper::HelperDpmc, traits::*};
-use rpc::{
-    connect::create_client::create_client,
-    proto::{
-        gen_dpmc_company::{
-            service_response::Ack as CompanyAck,
-            Init as CompanyInit,
-            ServiceResponse as CompanyServiceResponse
-        },
-        gen_dpmc_partner::{
-            service_response::Ack as PartnerAck,
-            Init as PartnerInit,
-            SendData as PartnerSendData,
-        },
-        RpcClient,
-    },
-};
+use log::error;
+use log::info;
+use protocol::dpmc::helper::HelperDpmc;
+use protocol::dpmc::traits::*;
+use rpc::connect::create_client::create_client;
+use rpc::proto::gen_dpmc_company::service_response::Ack as CompanyAck;
+use rpc::proto::gen_dpmc_company::Init as CompanyInit;
+use rpc::proto::gen_dpmc_company::ServiceResponse as CompanyServiceResponse;
+use rpc::proto::gen_dpmc_partner::service_response::Ack as PartnerAck;
+use rpc::proto::gen_dpmc_partner::Init as PartnerInit;
+use rpc::proto::gen_dpmc_partner::SendData as PartnerSendData;
+use rpc::proto::RpcClient;
+use tonic::Request;
 
 mod rpc_client_company;
 mod rpc_client_partner;
@@ -62,13 +59,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Arg::with_name("output-shares-path")
                 .long("output-shares-path")
                 .takes_value(true)
-                .help("path to write shares of features.\n
-                      Feature will be written as {path}_partner_features.csv"),
+                .help(
+                    "path to write shares of features.\n
+                      Feature will be written as {path}_partner_features.csv",
+                ),
             Arg::with_name("one-to-many")
                 .long("one-to-many")
                 .takes_value(true)
                 .required(false)
-                .help("By default, DPMC generates one-to-one matches. Use this\n
+                .help(
+                    "By default, DPMC generates one-to-one matches. Use this\n
                        flag to generate one(C)-to-many(P) matches.",
                 ),
             Arg::with_name("no-tls")
@@ -226,34 +226,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         for i in 0..partner_client_context.len() {
             // Send company public key
-            let _ =
-                match rpc_client_partner::send(
-                    company_public_key.clone(),
-                    "company_public_key".to_string(),
-                    &mut partner_client_context[i])
-                    .await?
-                    .into_inner()
-                    .ack
-                    .unwrap()
-                {
-                    PartnerAck::CompanyPublicKeyAck(x) => x,
-                    _ => panic!("wrong ack"),
-                };
+            let _ = match rpc_client_partner::send(
+                company_public_key.clone(),
+                "company_public_key".to_string(),
+                &mut partner_client_context[i],
+            )
+            .await?
+            .into_inner()
+            .ack
+            .unwrap()
+            {
+                PartnerAck::CompanyPublicKeyAck(x) => x,
+                _ => panic!("wrong ack"),
+            };
 
             // Send helper public key
-            let _ =
-                match rpc_client_partner::send(
-                    helper_public_key.clone(),
-                    "helper_public_key".to_string(),
-                    &mut partner_client_context[i])
-                    .await?
-                    .into_inner()
-                    .ack
-                    .unwrap()
-                {
-                    PartnerAck::HelperPublicKeyAck(x) => x,
-                    _ => panic!("wrong ack"),
-                };
+            let _ = match rpc_client_partner::send(
+                helper_public_key.clone(),
+                "helper_public_key".to_string(),
+                &mut partner_client_context[i],
+            )
+            .await?
+            .into_inner()
+            .ack
+            .unwrap()
+            {
+                PartnerAck::HelperPublicKeyAck(x) => x,
+                _ => panic!("wrong ack"),
+            };
         }
     }
 
@@ -273,11 +273,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
         let offset_len = u64::from_le_bytes(
-            h_company_beta.pop().unwrap().buffer.as_slice().try_into().unwrap(),
+            h_company_beta
+                .pop()
+                .unwrap()
+                .buffer
+                .as_slice()
+                .try_into()
+                .unwrap(),
         ) as usize;
         // flattened len
         let data_len = u64::from_le_bytes(
-            h_company_beta.pop().unwrap().buffer.as_slice().try_into().unwrap(),
+            h_company_beta
+                .pop()
+                .unwrap()
+                .buffer
+                .as_slice()
+                .try_into()
+                .unwrap(),
         ) as usize;
 
         let offset = h_company_beta
@@ -331,7 +343,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
         let xor_shares_len = u64::from_le_bytes(
-            h_partner_alpha_beta.pop().unwrap().buffer.as_slice().try_into().unwrap()
+            h_partner_alpha_beta
+                .pop()
+                .unwrap()
+                .buffer
+                .as_slice()
+                .try_into()
+                .unwrap(),
         ) as usize;
 
         let xor_shares = h_partner_alpha_beta
@@ -346,11 +364,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // deserialize ragged array
         let num_partner_keys = u64::from_le_bytes(
-            h_partner_alpha_beta.pop().unwrap().buffer.as_slice().try_into().unwrap(),
+            h_partner_alpha_beta
+                .pop()
+                .unwrap()
+                .buffer
+                .as_slice()
+                .try_into()
+                .unwrap(),
         ) as usize;
         // flattened len
         let data_len = u64::from_le_bytes(
-            h_partner_alpha_beta.pop().unwrap().buffer.as_slice().try_into().unwrap(),
+            h_partner_alpha_beta
+                .pop()
+                .unwrap()
+                .buffer
+                .as_slice()
+                .try_into()
+                .unwrap(),
         ) as usize;
 
         let offset = h_partner_alpha_beta
@@ -364,7 +394,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Perform 1/alpha, where alpha = partner.alpha.
         // Then decrypt XOR secret shares and compute features and mask.
         helper_protocol.remove_partner_scalar_from_p_and_set_shares(
-            h_partner_alpha_beta, offset, enc_alpha_t.buffer, vec![p_scalar_times_g], xor_shares
+            h_partner_alpha_beta,
+            offset,
+            enc_alpha_t.buffer,
+            vec![p_scalar_times_g],
+            xor_shares,
         )?;
     }
 
@@ -385,14 +419,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let v_d_prime = helper_protocol.calculate_features_xor_shares()?;
 
     // 13. Set XOR share of features for company
-    let _ = rpc_client_company::calculate_features_xor_shares(
-        v_d_prime,
-        &mut company_client_context,
-    )
-    .await?
-    .into_inner()
-    .ack
-    .unwrap();
+    let _ =
+        rpc_client_company::calculate_features_xor_shares(v_d_prime, &mut company_client_context)
+            .await?
+            .into_inner()
+            .ack
+            .unwrap();
 
     // 14. Print Company's ID spine and save partners shares
     rpc_client_company::reveal(&mut company_client_context).await?;
@@ -405,7 +437,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 16. Print Helper's feature shares
     match output_shares_path {
-        Some(p) => helper_protocol.save_features_shares(&String::from(p)).unwrap(),
+        Some(p) => helper_protocol
+            .save_features_shares(&String::from(p))
+            .unwrap(),
         None => error!("Output features path not set. Can't output shares"),
     };
 

@@ -3,11 +3,10 @@
 
 extern crate crypto;
 
-use crate::{
-    dspmc::ProtocolError,
-    shared::TFeatures,
-};
 use crypto::prelude::TPayload;
+
+use crate::dspmc::ProtocolError;
+use crate::shared::TFeatures;
 
 pub trait PartnerDspmcProtocol {
     fn get_encrypted_keys(&self) -> Result<TPayload, ProtocolError>;
@@ -15,7 +14,11 @@ pub trait PartnerDspmcProtocol {
 }
 
 pub trait ShufflerDspmcProtocol {
-    fn set_p_cs_v_cs(&self, v_cs_bytes: TPayload, p_cs_bytes: TPayload) -> Result<(), ProtocolError>;
+    fn set_p_cs_v_cs(
+        &self,
+        v_cs_bytes: TPayload,
+        p_cs_bytes: TPayload,
+    ) -> Result<(), ProtocolError>;
     fn gen_permutations(&self) -> Result<(TPayload, TPayload), ProtocolError>;
     fn get_blinded_vprime(&self) -> Result<TPayload, ProtocolError>;
     fn compute_v2prime_ct1ct2(
@@ -41,7 +44,11 @@ pub trait CompanyDspmcProtocol {
     fn get_ct1_ct2(&self) -> Result<TPayload, ProtocolError>;
     fn get_p_cs_v_cs(&self) -> Result<TPayload, ProtocolError>;
     fn get_u1(&self) -> Result<TPayload, ProtocolError>;
-    fn calculate_features_xor_shares(&self, features: TFeatures, g_zi: TPayload) -> Result<(), ProtocolError>;
+    fn calculate_features_xor_shares(
+        &self,
+        features: TFeatures,
+        g_zi: TPayload,
+    ) -> Result<(), ProtocolError>;
     fn write_company_to_id_map(&self) -> Result<(), ProtocolError>;
     fn print_id_map(&self);
     fn save_id_map(&self, path: &str) -> Result<(), ProtocolError>;

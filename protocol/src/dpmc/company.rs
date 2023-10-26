@@ -3,24 +3,29 @@
 
 extern crate csv;
 
-use itertools::Itertools;
-use std::{
-    collections::{ HashMap, VecDeque },
-    convert::TryInto,
-    path::Path,
-    sync::{Arc, RwLock},
-};
-use crypto::{
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    prelude::*,
-};
-use common::{
-    permutations::{gen_permute_pattern, permute, undo_permute},
-    timer,
-};
-use super::{load_data_keys, serialize_helper, writer_helper, ProtocolError};
-use crate::{dpmc::traits::CompanyDpmcProtocol, shared::TFeatures,};
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::convert::TryInto;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
 
+use common::permutations::gen_permute_pattern;
+use common::permutations::permute;
+use common::permutations::undo_permute;
+use common::timer;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
+use itertools::Itertools;
+
+use super::load_data_keys;
+use super::serialize_helper;
+use super::writer_helper;
+use super::ProtocolError;
+use crate::dpmc::traits::CompanyDpmcProtocol;
+use crate::shared::TFeatures;
 
 #[derive(Debug)]
 struct PartnerData {
@@ -63,13 +68,12 @@ impl CompanyDpmc {
     }
 
     pub fn get_company_public_key(&self) -> Result<TPayload, ProtocolError> {
-        Ok(self.ec_cipher.to_bytes(&vec![self.keypair_pk]))
+        Ok(self.ec_cipher.to_bytes(&[self.keypair_pk]))
     }
 
     pub fn load_data(&self, path: &str, input_with_headers: bool) {
         load_data_keys(self.plaintext.clone(), path, input_with_headers);
     }
-
 }
 
 impl Default for CompanyDpmc {
@@ -96,9 +100,7 @@ impl CompanyDpmcProtocol for CompanyDpmc {
 
                 // Unflatten
                 let pdata = {
-                    let t = self
-                        .ec_cipher
-                        .to_points_encrypt(&data, &self.private_beta);
+                    let t = self.ec_cipher.to_points_encrypt(&data, &self.private_beta);
 
                     psum.get(0..num_keys)
                         .unwrap()
@@ -110,11 +112,11 @@ impl CompanyDpmcProtocol for CompanyDpmc {
 
                 t.qps("deserialize_exp", pdata.len());
 
-                partners_queue.push_back(PartnerData{
-                    enc_alpha_t: enc_alpha_t,
-                    scalar_g: scalar_g,
+                partners_queue.push_back(PartnerData {
+                    enc_alpha_t,
+                    scalar_g,
                     partner_enc_shares: xor_shares,
-                    e_partner: pdata
+                    e_partner: pdata,
                 });
 
                 Ok(())
@@ -122,7 +124,7 @@ impl CompanyDpmcProtocol for CompanyDpmc {
             _ => {
                 error!("Cannot load e_partner");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot load e_partner".to_string(),
+                    "cannot load e_partner".to_string(),
                 ))
             }
         }
@@ -148,7 +150,9 @@ impl CompanyDpmcProtocol for CompanyDpmc {
                     let (d_flat, offset, metadata) = serialize_helper(d);
 
                     // Encrypt
-                    let x = self.ec_cipher.hash_encrypt(d_flat.as_slice(), &self.private_beta);
+                    let x = self
+                        .ec_cipher
+                        .hash_encrypt(d_flat.as_slice(), &self.private_beta);
 
                     (x, offset, metadata)
                 };
@@ -157,11 +161,14 @@ impl CompanyDpmcProtocol for CompanyDpmc {
                 {
                     let psum = offset
                         .iter()
-                        .map(|b| u64::from_le_bytes(b.buffer.as_slice().try_into().unwrap()) as usize)
+                        .map(|b| {
+                            u64::from_le_bytes(b.buffer.as_slice().try_into().unwrap()) as usize
+                        })
                         .collect::<Vec<_>>();
 
                     let num_keys = psum.len() - 1;
-                    let mut x = psum.get(0..num_keys)
+                    let mut x = psum
+                        .get(0..num_keys)
                         .unwrap()
                         .iter()
                         .zip_eq(psum.get(1..num_keys + 1).unwrap().iter())
@@ -222,13 +229,17 @@ impl CompanyDpmcProtocol for CompanyDpmc {
                 d_flat.extend(offset);
 
                 // Append encrypted key alpha
-                d_flat.push(ByteBuffer{ buffer: enc_a_t.to_vec(), } );
+                d_flat.push(ByteBuffer {
+                    buffer: enc_a_t.to_vec(),
+                });
 
-                d_flat.push(ByteBuffer{ buffer: scalar_g.to_vec(), } );
+                d_flat.push(ByteBuffer {
+                    buffer: scalar_g.to_vec(),
+                });
 
                 // Append offsets array
                 d_flat.extend(enc_shares.clone());
-                d_flat.push(ByteBuffer{
+                d_flat.push(ByteBuffer {
                     buffer: (enc_shares.len() as u64).to_le_bytes().to_vec(),
                 });
 
@@ -246,7 +257,7 @@ impl CompanyDpmcProtocol for CompanyDpmc {
     fn calculate_features_xor_shares(
         &self,
         partner_features: TFeatures,
-        p_mask_d: TPayload
+        p_mask_d: TPayload,
     ) -> Result<(), ProtocolError> {
         match self.partner_shares.clone().write() {
             Ok(mut shares) => {
@@ -256,18 +267,17 @@ impl CompanyDpmcProtocol for CompanyDpmc {
                 let mask = p_mask
                     .iter()
                     .map(|x| {
-                        let t = self.ec_cipher.to_bytes(&vec![x * &self.keypair_sk]);
+                        let t = self.ec_cipher.to_bytes(&[x * self.keypair_sk]);
                         u64::from_le_bytes((t[0].buffer[0..8]).try_into().unwrap())
                     })
                     .collect::<Vec<_>>();
 
                 for f_idx in 0..n_features {
-                    let s =
-                        partner_features[f_idx]
-                            .iter()
-                            .zip_eq(mask.iter())
-                            .map(|(x1, x2)| *x1 ^ *x2)
-                            .collect::<Vec<_>>();
+                    let s = partner_features[f_idx]
+                        .iter()
+                        .zip_eq(mask.iter())
+                        .map(|(x1, x2)| *x1 ^ *x2)
+                        .collect::<Vec<_>>();
                     shares.insert(f_idx, s);
                 }
 
@@ -294,10 +304,7 @@ impl CompanyDpmcProtocol for CompanyDpmc {
 
                 // Get the first column.
                 let company_keys = {
-                    let tmp = company_ragged
-                        .iter()
-                        .map(|s| s[0])
-                        .collect::<Vec<_>>();
+                    let tmp = company_ragged.iter().map(|s| s[0]).collect::<Vec<_>>();
                     self.ec_cipher.to_bytes(tmp.as_slice())
                 };
 
@@ -314,7 +321,7 @@ impl CompanyDpmcProtocol for CompanyDpmc {
             _ => {
                 error!("Cannot create id_map");
                 Err(ProtocolError::ErrorDeserialization(
-                    "cannot create id_map".to_string()
+                    "cannot create id_map".to_string(),
                 ))
             }
         }

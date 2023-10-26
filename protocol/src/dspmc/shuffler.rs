@@ -3,35 +3,25 @@
 
 extern crate csv;
 
-use crypto::{
-    eccipher::{ECCipher, ECRistrettoParallel, gen_scalar},
-    prelude::*,
-};
+use std::convert::TryInto;
+use std::sync::Arc;
+use std::sync::RwLock;
+
+use common::permutations::gen_permute_pattern;
+use common::permutations::permute;
+use common::timer;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
 use itertools::Itertools;
+use rand::distributions::Uniform;
+use rand::Rng;
 
-use crate::{
-    dspmc::traits::ShufflerDspmcProtocol,
-    shared::TFeatures,
-};
-
-use common::{
-    permutations::{gen_permute_pattern, permute},
-    timer,
-};
-
-use rand::{
-    distributions::Uniform,
-    Rng,
-};
-
-use std::{
-    convert::TryInto,
-    sync::{Arc, RwLock},
-};
-
-use super::{
-    serialize_helper, ProtocolError
-};
+use super::serialize_helper;
+use super::ProtocolError;
+use crate::dspmc::traits::ShufflerDspmcProtocol;
+use crate::shared::TFeatures;
 
 pub struct ShufflerDspmc {
     company_public_key: Arc<RwLock<(TPoint, TPoint)>>,
@@ -39,9 +29,9 @@ pub struct ShufflerDspmc {
     ec_cipher: ECRistrettoParallel,
     p_cs: Arc<RwLock<Vec<usize>>>,
     v_cs: Arc<RwLock<Vec<u64>>>,
-    perms: Arc<RwLock<(Vec<usize>, Vec<usize>)>>,   // (p_sc, p_sd)
-    blinds: Arc<RwLock<(Vec<u64>, Vec<u64>)>>,      // (v_sc, v_sd)
-    xor_shares_v1: Arc<RwLock<TFeatures>>,          // v'
+    perms: Arc<RwLock<(Vec<usize>, Vec<usize>)>>, // (p_sc, p_sd)
+    blinds: Arc<RwLock<(Vec<u64>, Vec<u64>)>>,    // (v_sc, v_sd)
+    xor_shares_v1: Arc<RwLock<TFeatures>>,        // v'
     ct1_dprime: Arc<RwLock<Vec<Vec<TPoint>>>>,
     ct2_dprime: Arc<RwLock<Vec<Vec<TPoint>>>>,
 }
@@ -62,8 +52,9 @@ impl ShufflerDspmc {
         }
     }
 
-    pub fn set_company_public_key(&self,
-        company_public_key: TPayload
+    pub fn set_company_public_key(
+        &self,
+        company_public_key: TPayload,
     ) -> Result<(), ProtocolError> {
         let pk = self.ec_cipher.to_points(&company_public_key);
         // Check that two keys are sent
@@ -71,10 +62,10 @@ impl ShufflerDspmc {
 
         match self.company_public_key.clone().write() {
             Ok(mut company_pk) => {
-                (*company_pk).0 = pk[0];
-                (*company_pk).1 = pk[1];
-                assert_eq!(((*company_pk).0).is_identity(), false);
-                assert_eq!(((*company_pk).1).is_identity(), false);
+                company_pk.0 = pk[0];
+                company_pk.1 = pk[1];
+                assert!(!(company_pk.0).is_identity());
+                assert!(!(company_pk.1).is_identity());
                 Ok(())
             }
             _ => {
@@ -86,9 +77,7 @@ impl ShufflerDspmc {
         }
     }
 
-    pub fn set_helper_public_key(&self,
-        helper_public_key: TPayload
-    ) -> Result<(), ProtocolError> {
+    pub fn set_helper_public_key(&self, helper_public_key: TPayload) -> Result<(), ProtocolError> {
         let pk = self.ec_cipher.to_points(&helper_public_key);
         // Check that one key is sent
         assert_eq!(pk.len(), 1);
@@ -107,7 +96,6 @@ impl ShufflerDspmc {
             }
         }
     }
-
 }
 
 impl Default for ShufflerDspmc {
@@ -117,27 +105,22 @@ impl Default for ShufflerDspmc {
 }
 
 impl ShufflerDspmcProtocol for ShufflerDspmc {
-
     fn set_p_cs_v_cs(
         &self,
         v_cs_bytes: TPayload,
         p_cs_bytes: TPayload,
     ) -> Result<(), ProtocolError> {
-        match (self.p_cs.clone().write(), self.v_cs.clone().write(),) {
+        match (self.p_cs.clone().write(), self.v_cs.clone().write()) {
             (Ok(mut p_cs), Ok(mut v_cs)) => {
                 let t = timer::Timer::new_silent("set p_cs, v_cs");
                 *v_cs = v_cs_bytes
                     .iter()
-                    .map(|x| {
-                        u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap())
-                    })
+                    .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()))
                     .collect::<Vec<_>>();
 
                 *p_cs = p_cs_bytes
                     .iter()
-                    .map(|x| {
-                        u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()) as usize
-                    })
+                    .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()) as usize)
                     .collect::<Vec<_>>();
 
                 t.qps("deserialize_exp", p_cs_bytes.len());
@@ -146,7 +129,7 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
             _ => {
                 error!("Cannot load p_cs, v_cs");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot load p_cs, v_cs".to_string(),
+                    "cannot load p_cs, v_cs".to_string(),
                 ))
             }
         }
@@ -170,36 +153,44 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
                 perms.1.extend(gen_permute_pattern(data_len));
 
                 blinds.0 = (0..data_len)
-                    .map(|_| rng.sample(&range))
+                    .map(|_| rng.sample(range))
                     .collect::<Vec<u64>>();
                 blinds.1 = (0..data_len)
-                    .map(|_| rng.sample(&range))
+                    .map(|_| rng.sample(range))
                     .collect::<Vec<u64>>();
 
-                let mut p_sc_v_sc = perms.0.iter()
+                let mut p_sc_v_sc = perms
+                    .0
+                    .iter()
                     .map(|e| ByteBuffer {
-                        buffer: (*e as u64).to_le_bytes().to_vec(),
+                        buffer: (*e).to_le_bytes().to_vec(),
                     })
                     .collect::<Vec<ByteBuffer>>();
-                let v_sc_bytes = blinds.0.iter()
+                let v_sc_bytes = blinds
+                    .0
+                    .iter()
                     .map(|e| ByteBuffer {
-                        buffer: (*e as u64).to_le_bytes().to_vec(),
+                        buffer: (*e).to_le_bytes().to_vec(),
                     })
                     .collect::<Vec<ByteBuffer>>();
                 p_sc_v_sc.extend(v_sc_bytes);
 
-                let mut p_sd_v_sd = perms.1.iter()
+                let mut p_sd_v_sd = perms
+                    .1
+                    .iter()
                     .map(|e| ByteBuffer {
                         buffer: (*e as u64).to_le_bytes().to_vec(),
                     })
                     .collect::<Vec<ByteBuffer>>();
-                let v_sd_bytes = blinds.1.iter()
+                let v_sd_bytes = blinds
+                    .1
+                    .iter()
                     .map(|e| ByteBuffer {
                         buffer: (*e as u64).to_le_bytes().to_vec(),
                     })
                     .collect::<Vec<ByteBuffer>>();
                 p_sd_v_sd.extend(v_sd_bytes);
-                p_sd_v_sd.push(ByteBuffer{
+                p_sd_v_sd.push(ByteBuffer {
                     buffer: (data_len as u64).to_le_bytes().to_vec(),
                 });
 
@@ -232,8 +223,17 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
             self.ct1_dprime.clone().write(),
             self.ct2_dprime.clone().write(),
         ) {
-            (Ok(p_cs), Ok(v_cs), Ok(perms), Ok(blinds), Ok(company_pk),
-            Ok(helper_pk), Ok(mut v_p), Ok(mut ct1_dprime), Ok(mut ct2_dprime)) => {
+            (
+                Ok(p_cs),
+                Ok(v_cs),
+                Ok(perms),
+                Ok(blinds),
+                Ok(company_pk),
+                Ok(helper_pk),
+                Ok(mut v_p),
+                Ok(mut ct1_dprime),
+                Ok(mut ct2_dprime),
+            ) => {
                 // This is an array of exclusive-inclusive prefix sum - hence
                 // number of keys is one less than length
                 let num_keys = psum.len() - 1;
@@ -266,49 +266,42 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
                 // Compute p_sd(p_sc(p_cs( u2 ) xor v_cs) xor v_sc) xor v_sd
                 (*v_p).clear();
                 for f_idx in (0..n_features).rev() {
-                    permute(p_cs.as_slice(), &mut u2[f_idx]);   // p_cs
+                    permute(p_cs.as_slice(), &mut u2[f_idx]); // p_cs
                     let mut x_2 = u2[f_idx]
                         .iter()
                         .zip_eq(v_cs.iter())
                         .map(|(s, v_cs)| *s ^ *v_cs)
                         .collect::<Vec<_>>();
 
-                    permute(perms.0.as_slice(), &mut x_2);      // p_sc
+                    permute(perms.0.as_slice(), &mut x_2); // p_sc
                     let mut t_1 = x_2
                         .iter()
                         .zip_eq(blinds.0.iter())
                         .map(|(s, v_sc)| *s ^ *v_sc)
                         .collect::<Vec<_>>();
 
-                    permute(perms.1.as_slice(), &mut t_1);       // p_sd
-                    (*v_p).push(t_1
-                        .iter()
-                        .zip_eq(blinds.1.iter())
-                        .map(|(s, v_sd)| *s ^ *v_sd)
-                        .collect::<Vec<_>>()
+                    permute(perms.1.as_slice(), &mut t_1); // p_sd
+                    (*v_p).push(
+                        t_1.iter()
+                            .zip_eq(blinds.1.iter())
+                            .map(|(s, v_sd)| *s ^ *v_sd)
+                            .collect::<Vec<_>>(),
                     );
                 }
 
                 // Re-randomize ct1'' and ct2'' and flatten
                 let (mut ct1_dprime_flat, ct2_dprime_flat, ct_offset) = {
                     let r_i = (0..n_rows)
-                        .map(|x| x)
                         .collect::<Vec<_>>()
                         .iter()
                         .map(|_| gen_scalar())
                         .collect::<Vec<_>>();
                     // company_pk^r
                     // with EC: company_pk * r
-                    let pkc_r = r_i
-                        .iter()
-                        .map(|x| *x * ((*company_pk).0))
-                        .collect::<Vec<_>>();
+                    let pkc_r = r_i.iter().map(|x| *x * (company_pk.0)).collect::<Vec<_>>();
                     // helper_pk^r
                     // with EC: helper_pk * r
-                    let pkd_r = r_i
-                        .iter()
-                        .map(|x| *x * (*helper_pk))
-                        .collect::<Vec<_>>();
+                    let pkd_r = r_i.iter().map(|x| *x * (*helper_pk)).collect::<Vec<_>>();
 
                     permute(perms.0.as_slice(), &mut ct1_prime); // p_sc
                     permute(perms.0.as_slice(), &mut ct2_prime); // p_sc
@@ -320,18 +313,14 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
                     *ct1_dprime = ct1_prime
                         .iter()
                         .zip_eq(pkc_r.iter())
-                        .map(|(s, t)| {
-                            (*s).iter().map(|si| *si + *t).collect::<Vec<_>>()
-                        })
+                        .map(|(s, t)| (*s).iter().map(|si| *si + *t).collect::<Vec<_>>())
                         .collect::<Vec<_>>();
                     // ct2' = ct2'' * helper_pk^r
                     // with EC: ct2' = ct2'' + helper_pk*r
                     *ct2_dprime = ct2_prime
                         .iter()
                         .zip_eq(pkd_r.iter())
-                        .map(|(s, t)| {
-                            (*s).iter().map(|si| *si + *t).collect::<Vec<_>>()
-                        })
+                        .map(|(s, t)| (*s).iter().map(|si| *si + *t).collect::<Vec<_>>())
                         .collect::<Vec<_>>();
                     let (ct1_dprime_flat, _ct1_offset) = {
                         let (d_flat, mut offset, metadata) = serialize_helper(ct1_dprime.clone());
@@ -367,27 +356,21 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
             self.company_public_key.clone().read(),
             self.xor_shares_v1.clone().read(),
         ) {
-            (Ok(company_pk), Ok(v_p),) => {
+            (Ok(company_pk), Ok(v_p)) => {
                 let t = timer::Timer::new_silent("get_blinded_vprime");
 
                 let n_rows = v_p[0].len();
                 let n_features = v_p.len();
 
-                let z_i = (0..n_rows)
-                    .map(|_| gen_scalar())
-                    .collect::<Vec<_>>();
+                let z_i = (0..n_rows).map(|_| gen_scalar()).collect::<Vec<_>>();
 
                 let mut d_flat = {
                     let r_i = {
                         let y_zi = {
-                            let t = z_i
-                                .iter()
-                                .map(|x| *x * (*company_pk).0)
-                                .collect::<Vec<_>>();
+                            let t = z_i.iter().map(|x| *x * company_pk.0).collect::<Vec<_>>();
                             self.ec_cipher.to_bytes(&t)
                         };
-                        y_zi
-                            .iter()
+                        y_zi.iter()
                             .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()))
                             .collect::<Vec<u64>>()
                     };
@@ -396,7 +379,6 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
 
                     for f_idx in (0..n_features).rev() {
                         let t = (0..n_rows)
-                            .map(|x| x)
                             .collect::<Vec<_>>()
                             .iter()
                             .map(|i| {
@@ -429,7 +411,7 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
                     },
                     ByteBuffer {
                         buffer: (n_features as u64).to_le_bytes().to_vec(),
-                    }
+                    },
                 ];
                 d_flat.extend(metadata);
 
@@ -444,5 +426,4 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
             }
         }
     }
-
 }

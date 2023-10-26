@@ -7,26 +7,24 @@ extern crate clap;
 extern crate ctrlc;
 extern crate tonic;
 
-use clap::{App, Arg, ArgGroup};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::thread;
+use std::time;
+
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
 use log::info;
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    thread, time,
-};
 
-mod rpc_server_partner;
 mod rpc_client_company;
+mod rpc_server_partner;
 
-use rpc::{
-    connect::{ create_server::create_server, create_client::create_client, },
-    proto::{
-        gen_dspmc_partner::dspmc_partner_server,
-        RpcClient,
-    },
-};
+use rpc::connect::create_client::create_client;
+use rpc::connect::create_server::create_server;
+use rpc::proto::gen_dspmc_partner::dspmc_partner_server;
+use rpc::proto::RpcClient;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -97,15 +95,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .takes_value(true)
                 .help("Override TLS domain for SSL cert (if host is IP)"),
         ])
-        .groups(&[
-            ArgGroup::with_name("tls")
-                .args(&["no-tls", "tls-dir", "tls-key"])
-                .required(true),
-        ])
+        .groups(&[ArgGroup::with_name("tls")
+            .args(&["no-tls", "tls-dir", "tls-key"])
+            .required(true)])
         .get_matches();
 
     let input_keys_path = matches.value_of("input-keys").unwrap_or("input_keys.csv");
-    let input_features_path = matches.value_of("input-features").unwrap_or("input_features.csv");
+    let input_features_path = matches
+        .value_of("input-features")
+        .unwrap_or("input_features.csv");
     let input_with_headers = matches.is_present("input-with-headers");
 
     let no_tls = matches.is_present("no-tls");
@@ -145,8 +143,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Input path for keys: {}", input_keys_path);
     info!("Input path for features: {}", input_features_path);
 
-    let service =
-        rpc_server_partner::DspmcPartnerService::new(input_keys_path, input_features_path, input_with_headers, company_client_context);
+    let service = rpc_server_partner::DspmcPartnerService::new(
+        input_keys_path,
+        input_features_path,
+        input_with_headers,
+        company_client_context,
+    );
 
     let ks = service.killswitch.clone();
     let recv_thread = thread::spawn(move || {
@@ -164,7 +166,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = host.unwrap().parse()?;
 
     server
-        .add_service(dspmc_partner_server::DspmcPartnerServer::new(service,))
+        .add_service(dspmc_partner_server::DspmcPartnerServer::new(service))
         .serve_with_shutdown(addr, async {
             rx.await.ok();
         })

@@ -3,36 +3,28 @@
 
 extern crate csv;
 
+use std::collections::HashMap;
+use std::convert::TryInto;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
+
+use common::permutations::gen_permute_pattern;
+use common::permutations::permute;
+use common::timer;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
 use itertools::Itertools;
-use std::{
-    collections::{ HashMap },
-    convert::TryInto,
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use rand::distributions::Uniform;
+use rand::prelude::*;
+use rand::Rng;
 
-use crypto::{
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    prelude::*,
-};
-
-use common::{
-    permutations::{gen_permute_pattern, permute},
-    timer,
-};
-
-use rand::{
-    distributions::Uniform,
-    prelude::*,
-    Rng,
-};
-
-use crate::{
-    dspmc::traits::HelperDspmcProtocol,
-    shared::TFeatures,
-};
-
-use super::{writer_helper, ProtocolError};
+use super::writer_helper;
+use super::ProtocolError;
+use crate::dspmc::traits::HelperDspmcProtocol;
+use crate::shared::TFeatures;
 
 #[derive(Debug)]
 pub struct HelperDspmc {
@@ -40,15 +32,15 @@ pub struct HelperDspmc {
     keypair_pk: TPoint,
     ec_cipher: ECRistrettoParallel,
     company_public_key: Arc<RwLock<(TPoint, TPoint)>>,
-    xor_shares_v2: Arc<RwLock<TFeatures>>,                     // v2 = v xor v1 -- The shuffler has v1
-    enc_company: Arc<RwLock<Vec<Vec<TPoint>>>>,     // H(C)^c
-    enc_partners: Arc<RwLock<Vec<Vec<TPoint>>>>,    // H(P)^c
-    features: Arc<RwLock<TFeatures>>,               // v''' from shuffler
+    xor_shares_v2: Arc<RwLock<TFeatures>>, // v2 = v xor v1 -- The shuffler has v1
+    enc_company: Arc<RwLock<Vec<Vec<TPoint>>>>, // H(C)^c
+    enc_partners: Arc<RwLock<Vec<Vec<TPoint>>>>, // H(P)^c
+    features: Arc<RwLock<TFeatures>>,      // v''' from shuffler
     p_cd: Arc<RwLock<Vec<usize>>>,
     v_cd: Arc<RwLock<Vec<u64>>>,
     p_sd: Arc<RwLock<Vec<usize>>>,
     v_sd: Arc<RwLock<Vec<u64>>>,
-    shuffler_gz: Arc<RwLock<Vec<ByteBuffer>>>,      // h = g^z from shuffler
+    shuffler_gz: Arc<RwLock<Vec<ByteBuffer>>>, // h = g^z from shuffler
     s_company: Arc<RwLock<Vec<ByteBuffer>>>,
     s_partner: Arc<RwLock<Vec<ByteBuffer>>>,
     id_map: Arc<RwLock<Vec<(String, usize, bool)>>>,
@@ -80,11 +72,12 @@ impl HelperDspmc {
     }
 
     pub fn get_helper_public_key(&self) -> Result<TPayload, ProtocolError> {
-        Ok(self.ec_cipher.to_bytes(&vec![self.keypair_pk]))
+        Ok(self.ec_cipher.to_bytes(&[self.keypair_pk]))
     }
 
-    pub fn set_company_public_key(&self,
-        company_public_key: TPayload
+    pub fn set_company_public_key(
+        &self,
+        company_public_key: TPayload,
     ) -> Result<(), ProtocolError> {
         let pk = self.ec_cipher.to_points(&company_public_key);
         // Check that two keys are sent
@@ -92,10 +85,10 @@ impl HelperDspmc {
 
         match self.company_public_key.clone().write() {
             Ok(mut company_pk) => {
-                (*company_pk).0 = pk[0];
-                (*company_pk).1 = pk[1];
-                assert_eq!(((*company_pk).0).is_identity(), false);
-                assert_eq!(((*company_pk).1).is_identity(), false);
+                company_pk.0 = pk[0];
+                company_pk.1 = pk[1];
+                assert!(!(company_pk.0).is_identity());
+                assert!(!(company_pk.1).is_identity());
                 Ok(())
             }
             _ => {
@@ -106,7 +99,6 @@ impl HelperDspmc {
             }
         }
     }
-
 }
 
 impl Default for HelperDspmc {
@@ -115,9 +107,7 @@ impl Default for HelperDspmc {
     }
 }
 
-
 impl HelperDspmcProtocol for HelperDspmc {
-
     fn set_ct3p_cd_v_cd(
         &self,
         mut data: TPayload,
@@ -134,21 +124,22 @@ impl HelperDspmcProtocol for HelperDspmc {
                 let t = timer::Timer::new_silent("set v''");
                 for _ in 0..num_partners {
                     // Data in form [(ct3, metadata), (ct3, metadata), ... ]
-                    let n_features =
-                        u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-                    let n_rows =
-                        u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
+                    let n_features = u64::from_le_bytes(
+                        data.pop().unwrap().buffer.as_slice().try_into().unwrap(),
+                    ) as usize;
+                    let n_rows = u64::from_le_bytes(
+                        data.pop().unwrap().buffer.as_slice().try_into().unwrap(),
+                    ) as usize;
 
-                    let ct3 = data
-                        .drain((data.len() - 1)..)
-                        .collect::<Vec<_>>();
+                    let ct3 = data.drain((data.len() - 1)..).collect::<Vec<_>>();
 
                     // PRG seed = scalar * PK_helper
                     let seed = {
                         let x = self.ec_cipher.to_points_encrypt(&ct3, &self.keypair_sk);
                         &self.ec_cipher.to_bytes(&x)[0].buffer
                     };
-                    let seed_array: [u8; 32] = seed.as_slice().try_into().expect("incorrect length");
+                    let seed_array: [u8; 32] =
+                        seed.as_slice().try_into().expect("incorrect length");
                     let mut rng = StdRng::from_seed(seed_array);
 
                     // Merge features from all partners together. Example:
@@ -165,7 +156,6 @@ impl HelperDspmcProtocol for HelperDspmc {
                     // Merged: [[10, 20, 30, 40], [11, 21, 31, 41], [12, 22, 32, 42]]
                     for f_idx in 0..n_features {
                         let t = (0..n_rows)
-                            .map(|x| x)
                             .collect::<Vec<_>>()
                             .iter()
                             .map(|_| rng.gen::<u64>())
@@ -180,16 +170,12 @@ impl HelperDspmcProtocol for HelperDspmc {
 
                 *v_cd = v_cd_bytes
                     .iter()
-                    .map(|x| {
-                        u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap())
-                    })
+                    .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()))
                     .collect::<Vec<_>>();
 
                 *p_cd = p_cd_bytes
                     .iter()
-                    .map(|x| {
-                        u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()) as usize
-                    })
+                    .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()) as usize)
                     .collect::<Vec<_>>();
 
                 t.qps("deserialize_exp", xor_shares_v2.len());
@@ -199,7 +185,7 @@ impl HelperDspmcProtocol for HelperDspmc {
             _ => {
                 error!("Cannot load xor_shares_v2");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot load xor_shares_v2".to_string(),
+                    "cannot load xor_shares_v2".to_string(),
                 ))
             }
         }
@@ -214,7 +200,7 @@ impl HelperDspmcProtocol for HelperDspmc {
             self.features.clone().write(),
             self.shuffler_gz.clone().write(),
         ) {
-            (Ok(mut features), Ok(mut shuffler_gz),) => {
+            (Ok(mut features), Ok(mut shuffler_gz)) => {
                 let t = timer::Timer::new_silent("set_encrypted_vprime");
 
                 features.clear();
@@ -230,7 +216,7 @@ impl HelperDspmcProtocol for HelperDspmc {
             _ => {
                 error!("Cannot load encrypted_vprime");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot load encrypted_vprime".to_string(),
+                    "cannot load encrypted_vprime".to_string(),
                 ))
             }
         }
@@ -241,25 +227,18 @@ impl HelperDspmcProtocol for HelperDspmc {
         v_sd_bytes: TPayload,
         p_sd_bytes: TPayload,
     ) -> Result<(), ProtocolError> {
-        match (
-            self.p_sd.clone().write(),
-            self.v_sd.clone().write(),
-        ) {
+        match (self.p_sd.clone().write(), self.v_sd.clone().write()) {
             (Ok(mut p_sd), Ok(mut v_sd)) => {
                 let t = timer::Timer::new_silent("set set_p_sd_v_sd");
 
                 *v_sd = v_sd_bytes
                     .iter()
-                    .map(|x| {
-                        u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap())
-                    })
+                    .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()))
                     .collect::<Vec<_>>();
 
                 *p_sd = p_sd_bytes
                     .iter()
-                    .map(|x| {
-                        u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()) as usize
-                    })
+                    .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()) as usize)
                     .collect::<Vec<_>>();
 
                 t.qps("deserialize_exp", (*p_sd).len());
@@ -269,16 +248,13 @@ impl HelperDspmcProtocol for HelperDspmc {
             _ => {
                 error!("Cannot load set_p_sd_v_sd");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot load set_p_sd_v_sd".to_string(),
+                    "cannot load set_p_sd_v_sd".to_string(),
                 ))
             }
         }
     }
 
-    fn set_u1(
-        &self,
-        mut u1: TFeatures,
-    ) -> Result<(), ProtocolError> {
+    fn set_u1(&self, mut u1: TFeatures) -> Result<(), ProtocolError> {
         match (
             self.p_sd.clone().read(),
             self.v_sd.clone().read(),
@@ -291,7 +267,7 @@ impl HelperDspmcProtocol for HelperDspmc {
 
                 xor_shares_v2.clear();
                 for f_idx in 0..n_features {
-                    permute(p_sd.as_slice(), &mut u1[f_idx]);   // p_sc
+                    permute(p_sd.as_slice(), &mut u1[f_idx]); // p_sc
                     let t = u1[f_idx]
                         .iter()
                         .zip_eq(v_sd.iter())
@@ -306,7 +282,7 @@ impl HelperDspmcProtocol for HelperDspmc {
             _ => {
                 error!("Cannot load set_u1");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot load set_u1".to_string(),
+                    "cannot load set_u1".to_string(),
                 ))
             }
         }
@@ -328,7 +304,7 @@ impl HelperDspmcProtocol for HelperDspmc {
             self.enc_company.clone().write(),
             self.enc_partners.clone().write(),
         ) {
-            (Ok(mut enc_company), Ok(mut enc_partners),) => {
+            (Ok(mut enc_company), Ok(mut enc_partners)) => {
                 let t = timer::Timer::new_silent("set set_encrypted_keys");
 
                 // Unflatten and convert to points
@@ -348,7 +324,8 @@ impl HelperDspmcProtocol for HelperDspmc {
                         .map(|(s2, s1)| *s2 - *s1)
                         .collect::<Vec<_>>();
 
-                    ct_psum.get(0..num_ct_keys)
+                    ct_psum
+                        .get(0..num_ct_keys)
                         .unwrap()
                         .iter()
                         .zip_eq(ct_psum.get(1..num_ct_keys + 1).unwrap().iter())
@@ -375,7 +352,7 @@ impl HelperDspmcProtocol for HelperDspmc {
             _ => {
                 error!("Cannot load set_encrypted_keys");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot load set_encrypted_keys".to_string(),
+                    "cannot load set_encrypted_keys".to_string(),
                 ))
             }
         }
@@ -402,19 +379,13 @@ impl HelperDspmcProtocol for HelperDspmc {
             (Ok(enc_partners), Ok(enc_company), Ok(s_partner), Ok(s_company), Ok(mut id_map)) => {
                 // Get the first column.
                 let partner_keys = {
-                    let tmp = enc_partners
-                        .iter()
-                        .map(|s| s[0])
-                        .collect::<Vec<_>>();
+                    let tmp = enc_partners.iter().map(|s| s[0]).collect::<Vec<_>>();
                     self.ec_cipher.to_bytes(tmp.as_slice())
                 };
 
                 // Get the first column.
                 let company_keys = {
-                    let tmp = enc_company
-                        .iter()
-                        .map(|s| s[0])
-                        .collect::<Vec<_>>();
+                    let tmp = enc_company.iter().map(|s| s[0]).collect::<Vec<_>>();
                     self.ec_cipher.to_bytes(tmp.as_slice())
                 };
 
@@ -437,15 +408,16 @@ impl HelperDspmcProtocol for HelperDspmc {
                     if id_hashmap.contains_key(&key.to_string()) {
                         continue;
                     }
-                    if company_keys_map.contains_key(&key.to_string()) ||
-                        !s_partner_map.contains_key(&key.to_string()) {
-                        id_hashmap.insert(key.to_string(), (idx as usize, true));
+                    if company_keys_map.contains_key(&key.to_string())
+                        || !s_partner_map.contains_key(&key.to_string())
+                    {
+                        id_hashmap.insert(key.to_string(), (idx, true));
                     }
                 }
 
                 // Add all the remaining keys that company has but the partner doesn't.
                 for (idx, key) in s_company.iter().enumerate() {
-                    id_hashmap.insert(key.to_string(), (idx as usize, false));
+                    id_hashmap.insert(key.to_string(), (idx, false));
                 }
 
                 id_map.clear();
@@ -468,7 +440,7 @@ impl HelperDspmcProtocol for HelperDspmc {
             self.s_company.clone().write(),
             self.s_partner.clone().write(),
         ) {
-            (Ok(e_company), Ok(mut e_partner), Ok(mut s_company), Ok(mut s_partner),) => {
+            (Ok(e_company), Ok(mut e_partner), Ok(mut s_company), Ok(mut s_partner)) => {
                 // let t = timer::Timer::new_silent("helper calculate_set_diff");
 
                 let s_c = e_company.iter().map(|e| e[0]).collect::<Vec<_>>();
@@ -526,7 +498,7 @@ impl HelperDspmcProtocol for HelperDspmc {
                             // if the match occurred not in the first column,
                             // make sure the spine keys will be the same.
                             if idx > 0 {
-                                e[0] = e_company[m_idx][0].clone();
+                                e[0] = e_company[m_idx][0];
                             }
                             e_c_valid[m_idx] = false;
                             e_p_match_idx.push(i);
@@ -568,7 +540,7 @@ impl HelperDspmcProtocol for HelperDspmc {
                 s_company.clear();
 
                 if !t.is_empty() {
-                    s_company.extend(self.ec_cipher.to_bytes(t.as_slice()),);
+                    s_company.extend(self.ec_cipher.to_bytes(t.as_slice()));
                 }
                 // t.qps("s_company", s_company.len());
 
@@ -619,7 +591,7 @@ impl HelperDspmcProtocol for HelperDspmc {
                     },
                     ByteBuffer {
                         buffer: (n_features as u64).to_le_bytes().to_vec(),
-                    }
+                    },
                 ];
                 d_flat.extend(metadata);
 
@@ -643,14 +615,15 @@ impl HelperDspmcProtocol for HelperDspmc {
             self.id_map.clone().read(),
             self.company_public_key.clone().read(),
             self.helper_shares.clone().write(),
-        ) {(
-            Ok(partner_features),
-            Ok(xor_shares_v2),
-            Ok(shuffler_gz),
-            Ok(id_map),
-            Ok(company_pk),
-            Ok(mut shares),
-        ) => {
+        ) {
+            (
+                Ok(partner_features),
+                Ok(xor_shares_v2),
+                Ok(shuffler_gz),
+                Ok(id_map),
+                Ok(company_pk),
+                Ok(mut shares),
+            ) => {
                 let t = timer::Timer::new_silent("helper calculate_features_xor_shares");
                 let mut rng = rand::thread_rng();
                 let range = Uniform::new(0_u64, u64::MAX);
@@ -658,16 +631,16 @@ impl HelperDspmcProtocol for HelperDspmc {
                 let n_features = partner_features.len();
 
                 let (t_i, mut g_zi) = {
-                    let z_i = (0..id_map.len())
-                        .map(|_| gen_scalar())
-                        .collect::<Vec<_>>();
-                    let x = z_i.iter()
+                    let z_i = (0..id_map.len()).map(|_| gen_scalar()).collect::<Vec<_>>();
+                    let x = z_i
+                        .iter()
                         .map(|a| {
-                            let x =
-                                self.ec_cipher.to_bytes(&vec![a * (*company_pk).0]);
+                            let x = self.ec_cipher.to_bytes(&[a * company_pk.0]);
                             x[0].clone()
-                        }).collect::<Vec<_>>();
-                    let y = z_i.iter()
+                        })
+                        .collect::<Vec<_>>();
+                    let y = z_i
+                        .iter()
                         .map(|a| a * &RISTRETTO_BASEPOINT_TABLE)
                         .collect::<Vec<_>>();
                     (x, y)
@@ -676,30 +649,33 @@ impl HelperDspmcProtocol for HelperDspmc {
                 let mut d_flat = {
                     let mut v_p = Vec::<TPayload>::new();
 
-                    let shuffler_gz_points = self.ec_cipher.to_points(&*shuffler_gz);
+                    let shuffler_gz_points = self.ec_cipher.to_points(&shuffler_gz);
 
                     for f_idx in (0..n_features).rev() {
                         let mask = (0..id_map.len())
-                            .map(|_| rng.sample(&range))
+                            .map(|_| rng.sample(range))
                             .collect::<Vec<u64>>();
                         let t = id_map
                             .iter()
                             .enumerate()
                             .map(|(i, (_, idx, exists))| {
-                                let y =
-                                    if *exists {
-                                        if f_idx == 0 {
-                                            // If exists, overwrite g_z' with g_z from shuffler.
-                                            g_zi[i] = shuffler_gz_points[*idx];
-                                        }
-                                        // v'' xor v''' xor mask = v'' xor v' xor r xor mask =
-                                        // v xor r xor mask
-                                        xor_shares_v2[f_idx][*idx] ^ partner_features[f_idx][*idx] ^ mask[i]
-                                    } else {
-                                        // If it doesn't exist, r xor mask
-                                        let y = u64::from_le_bytes((t_i[i].buffer[0..8]).try_into().unwrap());
-                                        y ^ mask[i]
-                                    };
+                                let y = if *exists {
+                                    if f_idx == 0 {
+                                        // If exists, overwrite g_z' with g_z from shuffler.
+                                        g_zi[i] = shuffler_gz_points[*idx];
+                                    }
+                                    // v'' xor v''' xor mask = v'' xor v' xor r xor mask =
+                                    // v xor r xor mask
+                                    xor_shares_v2[f_idx][*idx]
+                                        ^ partner_features[f_idx][*idx]
+                                        ^ mask[i]
+                                } else {
+                                    // If it doesn't exist, r xor mask
+                                    let y = u64::from_le_bytes(
+                                        (t_i[i].buffer[0..8]).try_into().unwrap(),
+                                    );
+                                    y ^ mask[i]
+                                };
                                 ByteBuffer {
                                     buffer: y.to_le_bytes().to_vec(),
                                 }
@@ -721,7 +697,7 @@ impl HelperDspmcProtocol for HelperDspmc {
                     },
                     ByteBuffer {
                         buffer: (n_features as u64).to_le_bytes().to_vec(),
-                    }
+                    },
                 ];
 
                 d_flat.extend(metadata);
@@ -748,7 +724,7 @@ impl HelperDspmcProtocol for HelperDspmc {
                     .max()
                     .unwrap();
 
-                let mut data: Vec<Vec<String>> = vec![vec!["NA".to_string()]; m_idx+1];
+                let mut data: Vec<Vec<String>> = vec![vec!["NA".to_string()]; m_idx + 1];
 
                 for i in 0..id_map.len() {
                     let (_, idx, flag) = id_map[i];
@@ -774,7 +750,7 @@ impl HelperDspmcProtocol for HelperDspmc {
                     .max()
                     .unwrap();
 
-                let mut data: Vec<Vec<String>> = vec![vec!["NA".to_string()]; m_idx+1];
+                let mut data: Vec<Vec<String>> = vec![vec!["NA".to_string()]; m_idx + 1];
 
                 for i in 0..id_map.len() {
                     let (_, idx, flag) = id_map[i];

@@ -1,23 +1,37 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use std::{sync::{atomic::{AtomicBool, Ordering}, Arc,},};
-use tonic::{Code, Request, Response, Status, Streaming, transport::Channel};
-use crypto::spoint::ByteBuffer;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use common::timer;
-use protocol::dpmc::{
-    partner::PartnerDpmc, traits::PartnerDpmcProtocol,
-};
-use rpc::proto::{
-    common::Payload,
-    gen_dpmc_partner::{
-        dpmc_partner_server::DpmcPartner, service_response::*,
-        Commitment, CommitmentAck, Init, InitAck, SendData, SendDataAck,
-        ServiceResponse, CompanyPublicKeyAck, HelperPublicKeyAck
-    },
-    gen_dpmc_company::dpmc_company_client::DpmcCompanyClient,
-    streaming::{read_from_stream, write_to_stream, send_data, TPayloadStream},
-};
+use crypto::spoint::ByteBuffer;
+use protocol::dpmc::partner::PartnerDpmc;
+use protocol::dpmc::traits::PartnerDpmcProtocol;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_dpmc_company::dpmc_company_client::DpmcCompanyClient;
+use rpc::proto::gen_dpmc_partner::dpmc_partner_server::DpmcPartner;
+use rpc::proto::gen_dpmc_partner::service_response::*;
+use rpc::proto::gen_dpmc_partner::Commitment;
+use rpc::proto::gen_dpmc_partner::CommitmentAck;
+use rpc::proto::gen_dpmc_partner::CompanyPublicKeyAck;
+use rpc::proto::gen_dpmc_partner::HelperPublicKeyAck;
+use rpc::proto::gen_dpmc_partner::Init;
+use rpc::proto::gen_dpmc_partner::InitAck;
+use rpc::proto::gen_dpmc_partner::SendData;
+use rpc::proto::gen_dpmc_partner::SendDataAck;
+use rpc::proto::gen_dpmc_partner::ServiceResponse;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::send_data;
+use rpc::proto::streaming::write_to_stream;
+use rpc::proto::streaming::TPayloadStream;
+use tonic::transport::Channel;
+use tonic::Code;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct DpmcPartnerService {
     protocol: PartnerDpmc,
@@ -55,14 +69,20 @@ impl DpmcPartner for DpmcPartnerService {
             .label("server")
             .extra_label("init")
             .build();
-        self.protocol
-            .load_data(&self.input_keys_path, &self.input_features_path, self.input_with_headers);
+        self.protocol.load_data(
+            &self.input_keys_path,
+            &self.input_features_path,
+            self.input_with_headers,
+        );
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::InitAck(InitAck {})),
         }))
     }
 
-    async fn send_data_to_company(&self, _: Request<SendData>) -> Result<Response<ServiceResponse>, Status> {
+    async fn send_data_to_company(
+        &self,
+        _: Request<SendData>,
+    ) -> Result<Response<ServiceResponse>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("init")
@@ -75,11 +95,13 @@ impl DpmcPartner for DpmcPartnerService {
         let xor_shares = self.protocol.get_features_xor_shares().unwrap();
         let xor_shares_len = xor_shares.len();
         h_partner_alpha.extend(xor_shares);
-        h_partner_alpha.push(
-            ByteBuffer{ buffer: (xor_shares_len as u64).to_le_bytes().to_vec(), }
-        );
+        h_partner_alpha.push(ByteBuffer {
+            buffer: (xor_shares_len as u64).to_le_bytes().to_vec(),
+        });
 
-        _ = company_client_contxt.send_u_partner(send_data(h_partner_alpha)).await;
+        _ = company_client_contxt
+            .send_u_partner(send_data(h_partner_alpha))
+            .await;
 
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::SendDataAck(SendDataAck {})),
@@ -88,7 +110,7 @@ impl DpmcPartner for DpmcPartnerService {
 
     async fn recv_partner_public_key(
         &self,
-        _: Request<ServiceResponse>
+        _: Request<ServiceResponse>,
     ) -> Result<Response<Self::RecvPartnerPublicKeyStream>, Status> {
         let _ = timer::Builder::new()
             .label("server")
@@ -138,7 +160,10 @@ impl DpmcPartner for DpmcPartnerService {
             .map_err(|_| Status::internal("error writing"))
     }
 
-    async fn stop_service(&self, _: Request<Commitment>) -> Result<Response<CommitmentAck>, Status> {
+    async fn stop_service(
+        &self,
+        _: Request<Commitment>,
+    ) -> Result<Response<CommitmentAck>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("stop")

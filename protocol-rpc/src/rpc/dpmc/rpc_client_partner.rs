@@ -5,15 +5,15 @@ extern crate common;
 extern crate crypto;
 extern crate protocol;
 
-use tonic::{transport::Channel, Request, Response, Status};
-
 use crypto::prelude::TPayload;
-use rpc::proto::{
-    gen_dpmc_partner::{
-        dpmc_partner_client::DpmcPartnerClient, Commitment, ServiceResponse,
-    },
-    streaming::send_data,
-};
+use rpc::proto::gen_dpmc_partner::dpmc_partner_client::DpmcPartnerClient;
+use rpc::proto::gen_dpmc_partner::Commitment;
+use rpc::proto::gen_dpmc_partner::ServiceResponse;
+use rpc::proto::streaming::send_data;
+use tonic::transport::Channel;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
 
 pub async fn send(
     data: TPayload,
@@ -28,6 +28,9 @@ pub async fn send(
 }
 
 pub async fn stop_service(rpc: &mut DpmcPartnerClient<Channel>) -> Result<(), Status> {
-    let _r = rpc.stop_service(Request::new(Commitment {})).await?.into_inner();
+    let _r = rpc
+        .stop_service(Request::new(Commitment {}))
+        .await?
+        .into_inner();
     Ok(())
 }

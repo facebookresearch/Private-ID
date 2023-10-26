@@ -8,27 +8,33 @@ extern crate protocol;
 extern crate tokio;
 extern crate tonic;
 
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
-use tonic::{Request, Response, Status, Streaming, transport::Channel};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use common::timer;
-use protocol::dspmc::{
-    partner::PartnerDspmc, traits::PartnerDspmcProtocol,
-};
-use rpc::proto::{
-    common::Payload,
-    gen_dspmc_partner::{
-        dspmc_partner_server::DspmcPartner, service_response::*,
-        Commitment, CommitmentAck, Init, InitAck, SendData, SendDataAck,
-        ServiceResponse, CompanyPublicKeyAck, HelperPublicKeyAck
-    },
-    gen_dspmc_company::dspmc_company_client::DspmcCompanyClient,
-    streaming::{read_from_stream, send_data},
-};
+use protocol::dspmc::partner::PartnerDspmc;
+use protocol::dspmc::traits::PartnerDspmcProtocol;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_dspmc_company::dspmc_company_client::DspmcCompanyClient;
+use rpc::proto::gen_dspmc_partner::dspmc_partner_server::DspmcPartner;
+use rpc::proto::gen_dspmc_partner::service_response::*;
+use rpc::proto::gen_dspmc_partner::Commitment;
+use rpc::proto::gen_dspmc_partner::CommitmentAck;
+use rpc::proto::gen_dspmc_partner::CompanyPublicKeyAck;
+use rpc::proto::gen_dspmc_partner::HelperPublicKeyAck;
+use rpc::proto::gen_dspmc_partner::Init;
+use rpc::proto::gen_dspmc_partner::InitAck;
+use rpc::proto::gen_dspmc_partner::SendData;
+use rpc::proto::gen_dspmc_partner::SendDataAck;
+use rpc::proto::gen_dspmc_partner::ServiceResponse;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::send_data;
+use tonic::transport::Channel;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct DspmcPartnerService {
     protocol: PartnerDspmc,
@@ -59,20 +65,25 @@ impl DspmcPartnerService {
 
 #[tonic::async_trait]
 impl DspmcPartner for DspmcPartnerService {
-
     async fn initialize(&self, _: Request<Init>) -> Result<Response<ServiceResponse>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("init")
             .build();
-        self.protocol
-            .load_data(&self.input_keys_path, &self.input_features_path, self.input_with_headers);
+        self.protocol.load_data(
+            &self.input_keys_path,
+            &self.input_features_path,
+            self.input_with_headers,
+        );
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::InitAck(InitAck {})),
         }))
     }
 
-    async fn send_data_to_company(&self, _: Request<SendData>) -> Result<Response<ServiceResponse>, Status> {
+    async fn send_data_to_company(
+        &self,
+        _: Request<SendData>,
+    ) -> Result<Response<ServiceResponse>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("init")
@@ -88,7 +99,9 @@ impl DspmcPartner for DspmcPartnerService {
         ct1_ct2.extend(xor_shares);
 
         // ct2 + ct1 + offset + XOR shares + metadata + ct3
-        _ = company_client_contxt.send_u_partner(send_data(ct1_ct2)).await;
+        _ = company_client_contxt
+            .send_u_partner(send_data(ct1_ct2))
+            .await;
 
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::SendDataAck(SendDataAck {})),
@@ -133,7 +146,10 @@ impl DspmcPartner for DspmcPartnerService {
             .map_err(|_| Status::internal("error writing"))
     }
 
-    async fn stop_service(&self, _: Request<Commitment>) -> Result<Response<CommitmentAck>, Status> {
+    async fn stop_service(
+        &self,
+        _: Request<Commitment>,
+    ) -> Result<Response<CommitmentAck>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("stop")

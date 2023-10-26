@@ -1,17 +1,29 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-extern crate base64;
+use std::convert::TryInto;
+use std::sync::Arc;
+use std::sync::RwLock;
 
-use crypto::{
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    prelude::*,
-};
-use common::{timer, permutations::{gen_permute_pattern, permute},};
-use rayon::iter::{ParallelDrainRange, ParallelIterator};
-use std::{convert::TryInto, sync::{Arc, RwLock}};
-use super::{load_data_keys, load_data_features, serialize_helper, ProtocolError};
-use crate::{dpmc::traits::PartnerDpmcProtocol, shared::TFeatures};
+use base64::engine::general_purpose;
+use base64::Engine as _;
+use common::permutations::gen_permute_pattern;
+use common::permutations::permute;
+use common::timer;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
+use fernet::Fernet;
+use rayon::iter::ParallelDrainRange;
+use rayon::iter::ParallelIterator;
+
+use super::load_data_features;
+use super::load_data_keys;
+use super::serialize_helper;
+use super::ProtocolError;
+use crate::dpmc::traits::PartnerDpmcProtocol;
+use crate::shared::TFeatures;
 
 pub struct PartnerDpmc {
     keypair_sk: Scalar,
@@ -67,10 +79,13 @@ impl PartnerDpmc {
     }
 
     pub fn get_partner_public_key(&self) -> Result<TPayload, ProtocolError> {
-        Ok(self.ec_cipher.to_bytes(&vec![self.keypair_pk]))
+        Ok(self.ec_cipher.to_bytes(&[self.keypair_pk]))
     }
 
-    pub fn set_company_public_key(&self, company_public_key: TPayload) -> Result<(), ProtocolError> {
+    pub fn set_company_public_key(
+        &self,
+        company_public_key: TPayload,
+    ) -> Result<(), ProtocolError> {
         let pk = self.ec_cipher.to_points(&company_public_key);
         // Check that one key is sent
         assert_eq!(pk.len(), 1);
@@ -78,7 +93,7 @@ impl PartnerDpmc {
         match self.company_public_key.clone().write() {
             Ok(mut company_pk) => {
                 *company_pk = pk[0];
-                assert_eq!((*company_pk).is_identity(), false);
+                assert!(!(*company_pk).is_identity());
                 Ok(())
             }
             _ => {
@@ -96,16 +111,18 @@ impl PartnerDpmc {
         assert_eq!(pk.len(), 1);
         match (
             self.helper_public_key.clone().write(),
-            self.aes_key.clone().write()
+            self.aes_key.clone().write(),
         ) {
             (Ok(mut helper_pk), Ok(mut aes_key)) => {
                 *helper_pk = pk[0];
-                assert_eq!((*helper_pk).is_identity(), false);
+                assert!(!(*helper_pk).is_identity());
 
                 *aes_key = {
-                    let x = self.ec_cipher.to_bytes(&vec![self.partner_scalar * (*helper_pk)]);
+                    let x = self
+                        .ec_cipher
+                        .to_bytes(&[self.partner_scalar * (*helper_pk)]);
                     let aes_key_bytes = x[0].buffer.clone();
-                    base64::encode_config(&aes_key_bytes, base64::URL_SAFE)
+                    general_purpose::URL_SAFE.encode(aes_key_bytes)
                 };
                 Ok(())
             }
@@ -117,7 +134,6 @@ impl PartnerDpmc {
             }
         }
     }
-
 }
 
 impl Default for PartnerDpmc {
@@ -151,7 +167,8 @@ impl PartnerDpmcProtocol for PartnerDpmc {
                     // Encrypt
                     (
                         // Blind the keys by encrypting
-                        self.ec_cipher.hash_encrypt_to_bytes(d_flat.as_slice(), &self.keypair_sk),
+                        self.ec_cipher
+                            .hash_encrypt_to_bytes(d_flat.as_slice(), &self.keypair_sk),
                         offset,
                     )
                 };
@@ -161,16 +178,16 @@ impl PartnerDpmcProtocol for PartnerDpmc {
                 // Append offsets array
                 d_flat.extend(offset);
 
-                let fernet = fernet::Fernet::new(&aes_key).unwrap();
+                let fernet = Fernet::new(&aes_key).unwrap();
                 let ctxt = fernet.encrypt(self.keypair_sk.to_bytes().clone().as_slice());
                 // Append encrypted key alpha
                 d_flat.push(ByteBuffer {
-                    buffer: ctxt.as_bytes().to_vec()
+                    buffer: ctxt.as_bytes().to_vec(),
                 });
 
-                let p_scalar_times_g = self.ec_cipher.to_bytes(
-                    &vec![&self.partner_scalar * &RISTRETTO_BASEPOINT_TABLE]
-                );
+                let p_scalar_times_g = self
+                    .ec_cipher
+                    .to_bytes(&[&self.partner_scalar * &RISTRETTO_BASEPOINT_TABLE]);
                 d_flat.extend(p_scalar_times_g);
 
                 Ok(d_flat)
@@ -202,13 +219,11 @@ impl PartnerDpmcProtocol for PartnerDpmc {
                     permute(permutation.as_slice(), &mut permuted_pdata[i]);
                 }
 
-                let z_i =
-                    (0..n_rows)
-                        .map(|x| x)
-                        .collect::<Vec<_>>()
-                        .iter()
-                        .map(|_| gen_scalar())
-                        .collect::<Vec<_>>();
+                let z_i = (0..n_rows)
+                    .collect::<Vec<_>>()
+                    .iter()
+                    .map(|_| gen_scalar())
+                    .collect::<Vec<_>>();
 
                 let mut d_flat = {
                     let r_i = {
@@ -219,8 +234,7 @@ impl PartnerDpmcProtocol for PartnerDpmc {
                                 .collect::<Vec<_>>();
                             self.ec_cipher.to_bytes(&t)
                         };
-                        y_zi
-                            .iter()
+                        y_zi.iter()
                             .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()))
                             .collect::<Vec<u64>>()
                     };
@@ -238,7 +252,7 @@ impl PartnerDpmcProtocol for PartnerDpmc {
                                     buffer: z.to_le_bytes().to_vec(),
                                 }
                             })
-                           .collect::<Vec<_>>();
+                            .collect::<Vec<_>>();
                         v_p.push(t);
                     }
 
@@ -262,18 +276,21 @@ impl PartnerDpmcProtocol for PartnerDpmc {
                     },
                     ByteBuffer {
                         buffer: (n_features as u64).to_le_bytes().to_vec(),
-                    }
+                    },
                 ];
                 d_flat.extend(metadata);
 
                 let e_d_flat = {
-                    let fernet = fernet::Fernet::new(&(*aes_key.clone())).unwrap();
-                    d_flat.par_drain(..).map(|x| {
-                        let ctxt = fernet.encrypt(x.buffer.as_slice());
-                        ByteBuffer {
-                            buffer: ctxt.as_bytes().to_vec()
-                        }
-                    }).collect::<Vec<_>>()
+                    let fernet = Fernet::new(&aes_key.clone()).unwrap();
+                    d_flat
+                        .par_drain(..)
+                        .map(|x| {
+                            let ctxt = fernet.encrypt(x.buffer.as_slice());
+                            ByteBuffer {
+                                buffer: ctxt.as_bytes().to_vec(),
+                            }
+                        })
+                        .collect::<Vec<_>>()
                 };
                 t.qps("e_d_flat", e_d_flat.len());
 

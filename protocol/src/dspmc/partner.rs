@@ -3,28 +3,24 @@
 
 extern crate csv;
 
-use crypto::{
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    prelude::*,
-};
-
-use crate::{
-    dspmc::traits::PartnerDspmcProtocol,
-    shared::TFeatures,
-};
-use rand::prelude::*;
+use std::convert::TryInto;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 use common::timer;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
 use itertools::Itertools;
+use rand::prelude::*;
 
-use std::{
-    convert::TryInto,
-    sync::{Arc, RwLock},
-};
-
-use super::{
-    load_data_keys, load_data_features, serialize_helper, ProtocolError
-};
+use super::load_data_features;
+use super::load_data_keys;
+use super::serialize_helper;
+use super::ProtocolError;
+use crate::dspmc::traits::PartnerDspmcProtocol;
+use crate::shared::TFeatures;
 
 pub struct PartnerDspmc {
     company_public_key: Arc<RwLock<(TPoint, TPoint)>>,
@@ -68,17 +64,20 @@ impl PartnerDspmc {
         self.plaintext_keys.clone().read().unwrap().len()
     }
 
-    pub fn set_company_public_key(&self, company_public_key: TPayload) -> Result<(), ProtocolError> {
+    pub fn set_company_public_key(
+        &self,
+        company_public_key: TPayload,
+    ) -> Result<(), ProtocolError> {
         let pk = self.ec_cipher.to_points(&company_public_key);
         // Check that two keys are sent
         assert_eq!(pk.len(), 2);
 
         match self.company_public_key.clone().write() {
             Ok(mut company_pk) => {
-                (*company_pk).0 = pk[0];
-                (*company_pk).1 = pk[1];
-                assert_eq!(((*company_pk).0).is_identity(), false);
-                assert_eq!(((*company_pk).1).is_identity(), false);
+                company_pk.0 = pk[0];
+                company_pk.1 = pk[1];
+                assert!(!(company_pk.0).is_identity());
+                assert!(!(company_pk.1).is_identity());
                 Ok(())
             }
             _ => {
@@ -108,7 +107,6 @@ impl PartnerDspmc {
             }
         }
     }
-
 }
 
 impl Default for PartnerDspmc {
@@ -140,22 +138,15 @@ impl PartnerDspmcProtocol for PartnerDspmc {
                     // with EC: company_pk * r
                     let (ct1, pkd_r) = {
                         let r_i = (0..d_flat.len())
-                            .map(|x| x)
                             .collect::<Vec<_>>()
                             .iter()
                             .map(|_| gen_scalar())
                             .collect::<Vec<_>>();
                         let ct1_bytes = {
-                            let t1 = r_i
-                                .iter()
-                                .map(|x| *x * (*company_pk).0)
-                                .collect::<Vec<_>>();
+                            let t1 = r_i.iter().map(|x| *x * company_pk.0).collect::<Vec<_>>();
                             self.ec_cipher.to_bytes(&t1)
                         };
-                        let pkd_r = r_i
-                            .iter()
-                            .map(|x| *x * (*helper_pk))
-                            .collect::<Vec<_>>();
+                        let pkd_r = r_i.iter().map(|x| *x * (*helper_pk)).collect::<Vec<_>>();
                         (ct1_bytes, pkd_r)
                     };
 
@@ -165,12 +156,7 @@ impl PartnerDspmcProtocol for PartnerDspmc {
                         .map(|(s, t)| *s + *t)
                         .collect::<Vec<_>>();
 
-                    (
-                        self.ec_cipher.to_bytes(ct2.as_slice()),
-                        ct1,
-                        offset,
-                    )
-
+                    (self.ec_cipher.to_bytes(ct2.as_slice()), ct1, offset)
                 };
 
                 // Append ct1
@@ -198,7 +184,7 @@ impl PartnerDspmcProtocol for PartnerDspmc {
             self.helper_public_key.clone().read(),
         ) {
             (Ok(pdata), Ok(helper_pk)) => {
-            let t = timer::Timer::new_silent("get_features_xor_shares");
+                let t = timer::Timer::new_silent("get_features_xor_shares");
                 let n_rows = pdata[0].len();
                 let n_features = pdata.len();
 
@@ -206,11 +192,9 @@ impl PartnerDspmcProtocol for PartnerDspmc {
                 // PRG seed = scalar * PK_helper
                 let (seed, ct3) = {
                     let x = gen_scalar();
-                    let ct3 = self.ec_cipher.to_bytes(
-                        &vec![&x * &RISTRETTO_BASEPOINT_TABLE]
-                    );
+                    let ct3 = self.ec_cipher.to_bytes(&[&x * &RISTRETTO_BASEPOINT_TABLE]);
                     let seed: [u8; 32] = {
-                        let t = self.ec_cipher.to_bytes(&vec![&x * (*helper_pk)]);
+                        let t = self.ec_cipher.to_bytes(&[x * (*helper_pk)]);
                         t[0].buffer.as_slice().try_into().expect("incorrect length")
                     };
                     (seed, ct3)
@@ -220,7 +204,6 @@ impl PartnerDspmcProtocol for PartnerDspmc {
                 let mut v2 = TFeatures::new();
                 for _ in 0..n_features {
                     let t = (0..n_rows)
-                        .map(|x| x)
                         .collect::<Vec<_>>()
                         .iter()
                         .map(|_| rng.gen::<u64>())
@@ -242,7 +225,7 @@ impl PartnerDspmcProtocol for PartnerDspmc {
                                     buffer: z.to_le_bytes().to_vec(),
                                 }
                             })
-                           .collect::<Vec<_>>();
+                            .collect::<Vec<_>>();
                         v_p.push(t);
                     }
 
@@ -255,7 +238,7 @@ impl PartnerDspmcProtocol for PartnerDspmc {
                     },
                     ByteBuffer {
                         buffer: (n_features as u64).to_le_bytes().to_vec(),
-                    }
+                    },
                 ];
                 d_flat.extend(metadata);
                 d_flat.extend(ct3);

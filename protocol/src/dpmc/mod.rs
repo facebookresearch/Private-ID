@@ -3,8 +3,14 @@
 
 extern crate csv;
 
-use std::{collections::HashSet, sync::{Arc, RwLock}, error::Error, fmt};
-use common::{files, timer};
+use std::collections::HashSet;
+use std::error::Error;
+use std::fmt;
+use std::sync::Arc;
+use std::sync::RwLock;
+
+use common::files;
+use common::timer;
 use crypto::prelude::*;
 
 #[derive(Debug)]
@@ -34,8 +40,10 @@ fn load_data_keys(plaintext: Arc<RwLock<Vec<Vec<String>>>>, path: &str, input_wi
     if let Ok(mut data) = plaintext.write() {
         data.clear();
         let mut line_it = lines.drain(..);
-        // Strip the header for now
-        if input_with_headers && line_it.next().is_some() {}
+        // Strip the header
+        if input_with_headers {
+            line_it.next();
+        }
 
         let mut t = HashSet::<Vec<String>>::new();
         // Filter out zero length strings - these will come from ragged
@@ -91,7 +99,11 @@ fn load_data_features(plaintext: Arc<RwLock<Vec<Vec<u64>>>>, path: &str) {
     t.qps("text read", n_rows);
 }
 
-fn writer_helper_dpmc(data: &[Vec<String>], id_map: &[(String, usize, bool, usize)], path: Option<String>) {
+fn writer_helper_dpmc(
+    data: &[Vec<String>],
+    id_map: &[(String, usize, bool, usize)],
+    path: Option<String>,
+) {
     let mut device = match path {
         Some(path) => {
             let wr = csv::WriterBuilder::new()

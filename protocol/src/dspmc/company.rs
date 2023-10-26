@@ -3,35 +3,31 @@
 
 extern crate csv;
 
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::convert::TryInto;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::RwLock;
+
+use common::permutations::gen_permute_pattern;
+use common::permutations::permute;
+use common::permutations::undo_permute;
+use common::timer;
+use crypto::eccipher::gen_scalar;
+use crypto::eccipher::ECCipher;
+use crypto::eccipher::ECRistrettoParallel;
+use crypto::prelude::*;
 use itertools::Itertools;
-use std::{
-    collections::{ HashMap, VecDeque },
-    convert::TryInto,
-    path::Path,
-    sync::{Arc, RwLock},
-};
+use rand::distributions::Uniform;
+use rand::Rng;
 
-use crypto::{
-    eccipher::{gen_scalar, ECCipher, ECRistrettoParallel},
-    prelude::*,
-};
-
-use common::{
-    permutations::{gen_permute_pattern, permute, undo_permute},
-    timer,
-};
-
-use rand::{
-    distributions::Uniform,
-    Rng,
-};
-
-use crate::{
-    dspmc::traits::CompanyDspmcProtocol,
-    shared::TFeatures,
-};
-
-use super::{load_data_keys, serialize_helper, writer_helper, ProtocolError};
+use super::load_data_keys;
+use super::serialize_helper;
+use super::writer_helper;
+use super::ProtocolError;
+use crate::dspmc::traits::CompanyDspmcProtocol;
+use crate::shared::TFeatures;
 
 #[derive(Debug)]
 struct PartnerData {
@@ -52,8 +48,8 @@ pub struct CompanyDspmc {
     u1: Arc<RwLock<Vec<TPayload>>>,
     plaintext: Arc<RwLock<Vec<Vec<String>>>>,
     permutation: Arc<RwLock<Vec<usize>>>,
-    perms: Arc<RwLock<(Vec<usize>, Vec<usize>)>>,   // (p_3, p_4)
-    blinds: Arc<RwLock<(Vec<u64>, Vec<u64>)>>,      // (v_cd, v_cs)
+    perms: Arc<RwLock<(Vec<usize>, Vec<usize>)>>, // (p_3, p_4)
+    blinds: Arc<RwLock<(Vec<u64>, Vec<u64>)>>,    // (v_cd, v_cs)
     enc_company: Arc<RwLock<Vec<Vec<TPoint>>>>,
     partners_queue: Arc<RwLock<VecDeque<PartnerData>>>,
     id_map: Arc<RwLock<Vec<(String, usize, bool)>>>,
@@ -66,7 +62,10 @@ impl CompanyDspmc {
         let x2 = gen_scalar();
         CompanyDspmc {
             keypair_sk: (x1, x2),
-            keypair_pk: (&x1 * &RISTRETTO_BASEPOINT_TABLE, &x2 * &RISTRETTO_BASEPOINT_TABLE),
+            keypair_pk: (
+                &x1 * &RISTRETTO_BASEPOINT_TABLE,
+                &x2 * &RISTRETTO_BASEPOINT_TABLE,
+            ),
             helper_public_key: Arc::new(RwLock::default()),
             ec_cipher: ECRistrettoParallel::default(),
             ct1: Arc::new(RwLock::default()),
@@ -85,7 +84,9 @@ impl CompanyDspmc {
     }
 
     pub fn get_company_public_key(&self) -> Result<TPayload, ProtocolError> {
-        Ok(self.ec_cipher.to_bytes(&vec![self.keypair_pk.0, self.keypair_pk.1]))
+        Ok(self
+            .ec_cipher
+            .to_bytes(&vec![self.keypair_pk.0, self.keypair_pk.1]))
     }
 
     pub fn load_data(&self, path: &str, input_with_headers: bool) {
@@ -110,10 +111,10 @@ impl CompanyDspmc {
                 perms.1.extend(gen_permute_pattern(data_len));
 
                 blinds.0 = (0..data_len)
-                    .map(|_| rng.sample(&range))
+                    .map(|_| rng.sample(range))
                     .collect::<Vec<u64>>();
                 blinds.1 = (0..data_len)
-                    .map(|_| rng.sample(&range))
+                    .map(|_| rng.sample(range))
                     .collect::<Vec<u64>>();
             }
             _ => {}
@@ -137,7 +138,6 @@ impl CompanyDspmc {
             }
         }
     }
-
 }
 
 impl Default for CompanyDspmc {
@@ -147,7 +147,6 @@ impl Default for CompanyDspmc {
 }
 
 impl CompanyDspmcProtocol for CompanyDspmc {
-
     fn set_encrypted_partner_keys_and_shares(
         &self,
         ct1: TPayload,
@@ -162,8 +161,7 @@ impl CompanyDspmcProtocol for CompanyDspmc {
             self.ct2.clone().write(),
             self.v1.clone().write(),
         ) {
-            (Ok(mut partners_queue), Ok(mut all_ct1),
-             Ok(mut all_ct2), Ok(mut all_v1)) => {
+            (Ok(mut partners_queue), Ok(mut all_ct1), Ok(mut all_ct2), Ok(mut all_v1)) => {
                 let t = timer::Timer::new_silent("load_ct2");
                 // This is an array of exclusive-inclusive prefix sum - hence
                 // number of keys is one less than length
@@ -209,17 +207,17 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                     }
                 }
 
-                partners_queue.push_back(PartnerData{
+                partners_queue.push_back(PartnerData {
                     scalar_g: ct3,
-                    n_rows: n_rows,
-                    n_features: n_features,
+                    n_rows,
+                    n_features,
                 });
                 Ok(())
             }
             _ => {
                 error!("Cannot load ct2");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot load ct2".to_string(),
+                    "cannot load ct2".to_string(),
                 ))
             }
         }
@@ -228,7 +226,10 @@ impl CompanyDspmcProtocol for CompanyDspmc {
     // Get dataset C with company keys and encrypt them to H(C)^c
     //  With Elliptic curves: H(C)*c
     fn get_company_keys(&self) -> Result<TPayload, ProtocolError> {
-        match (self.plaintext.clone().read(), self.enc_company.clone().write(),) {
+        match (
+            self.plaintext.clone().read(),
+            self.enc_company.clone().write(),
+        ) {
             (Ok(pdata), Ok(mut enc_company)) => {
                 let t = timer::Timer::new_silent("x_company");
 
@@ -237,7 +238,9 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                     let (d_flat, offset, metadata) = serialize_helper(pdata.to_vec());
 
                     // Hash Encrypt - H(C)^c
-                    let enc = self.ec_cipher.hash_encrypt(d_flat.as_slice(), &self.keypair_sk.0);
+                    let enc = self
+                        .ec_cipher
+                        .hash_encrypt(d_flat.as_slice(), &self.keypair_sk.0);
 
                     (enc, offset, metadata)
                 };
@@ -246,11 +249,14 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                 {
                     let psum = offset
                         .iter()
-                        .map(|b| u64::from_le_bytes(b.buffer.as_slice().try_into().unwrap()) as usize)
+                        .map(|b| {
+                            u64::from_le_bytes(b.buffer.as_slice().try_into().unwrap()) as usize
+                        })
                         .collect::<Vec<_>>();
 
                     let num_keys = psum.len() - 1;
-                    let mut x = psum.get(0..num_keys)
+                    let mut x = psum
+                        .get(0..num_keys)
                         .unwrap()
                         .iter()
                         .zip_eq(psum.get(1..num_keys + 1).unwrap().iter())
@@ -289,8 +295,8 @@ impl CompanyDspmcProtocol for CompanyDspmc {
 
     // Get dataset ct1 and ct2'
     fn get_ct1_ct2(&self) -> Result<TPayload, ProtocolError> {
-        match (self.ct1.clone().read(), self.ct2.clone().read(),) {
-            (Ok(ct1), Ok(ct2),) => {
+        match (self.ct1.clone().read(), self.ct2.clone().read()) {
+            (Ok(ct1), Ok(ct2)) => {
                 let t = timer::Timer::new_silent("x_company");
 
                 // Re-randomize ct1'' and ct2'' and flatten
@@ -309,7 +315,7 @@ impl CompanyDspmcProtocol for CompanyDspmc {
 
                         let d_flat_c = d_flat
                             .iter()
-                            .map(|x| *x * (&self.keypair_sk.0))
+                            .map(|x| *x * (self.keypair_sk.0))
                             .collect::<Vec<_>>();
 
                         (self.ec_cipher.to_bytes(d_flat_c.as_slice()), offset)
@@ -350,35 +356,39 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                     let n_rows = partner_data.n_rows;
                     let n_features = partner_data.n_features;
 
-                    res.push(ByteBuffer{ buffer: ct3 });
+                    res.push(ByteBuffer { buffer: ct3 });
                     let metadata = vec![
                         ByteBuffer {
                             buffer: (n_rows as u64).to_le_bytes().to_vec(),
                         },
                         ByteBuffer {
                             buffer: (n_features as u64).to_le_bytes().to_vec(),
-                        }
+                        },
                     ];
                     res.extend(metadata);
                 }
-                res.push(ByteBuffer{
+                res.push(ByteBuffer {
                     buffer: (num_partners as u64).to_le_bytes().to_vec(),
                 });
 
-                let p_cd_bytes = perms.0.iter()
+                let p_cd_bytes = perms
+                    .0
+                    .iter()
                     .map(|e| ByteBuffer {
-                        buffer: (*e as u64).to_le_bytes().to_vec(),
+                        buffer: (*e).to_le_bytes().to_vec(),
                     })
                     .collect::<Vec<ByteBuffer>>();
-                let v_cd_bytes = blinds.0.iter()
+                let v_cd_bytes = blinds
+                    .0
+                    .iter()
                     .map(|e| ByteBuffer {
-                        buffer: (*e as u64).to_le_bytes().to_vec(),
+                        buffer: (*e).to_le_bytes().to_vec(),
                     })
                     .collect::<Vec<ByteBuffer>>();
                 let data_len = p_cd_bytes.len();
                 res.extend(p_cd_bytes);
                 res.extend(v_cd_bytes);
-                res.push(ByteBuffer{
+                res.push(ByteBuffer {
                     buffer: (data_len as u64).to_le_bytes().to_vec(),
                 });
 
@@ -395,19 +405,25 @@ impl CompanyDspmcProtocol for CompanyDspmc {
 
     fn get_p_cs_v_cs(&self) -> Result<TPayload, ProtocolError> {
         match (
-            self.perms.clone().read(), self.blinds.clone().read(),
-            self.ct1.clone().write(), self.ct2.clone().write(),
+            self.perms.clone().read(),
+            self.blinds.clone().read(),
+            self.ct1.clone().write(),
+            self.ct2.clone().write(),
             self.helper_public_key.clone().read(),
         ) {
             (Ok(perms), Ok(blinds), Ok(mut ct1), Ok(mut ct2), Ok(helper_pk)) => {
                 let mut res = vec![];
 
-                let p_cs_bytes = perms.1.iter()
+                let p_cs_bytes = perms
+                    .1
+                    .iter()
                     .map(|e| ByteBuffer {
                         buffer: (*e as u64).to_le_bytes().to_vec(),
                     })
                     .collect::<Vec<ByteBuffer>>();
-                let v_cs_bytes = blinds.1.iter()
+                let v_cs_bytes = blinds
+                    .1
+                    .iter()
                     .map(|e| ByteBuffer {
                         buffer: (*e as u64).to_le_bytes().to_vec(),
                     })
@@ -419,7 +435,6 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                 // Re-randomize ct1 and ct2 to ct1' and ct2'
                 let (ct1_prime_flat, ct2_prime_flat, ct_offset) = {
                     let r_i = (0..data_len)
-                        .map(|x| x)
                         .collect::<Vec<_>>()
                         .iter()
                         .map(|_| gen_scalar())
@@ -428,14 +443,11 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                     // with EC: company_pk * r
                     let pkc_r = r_i
                         .iter()
-                        .map(|x| *x * (&self.keypair_pk.0))
+                        .map(|x| *x * (self.keypair_pk.0))
                         .collect::<Vec<_>>();
                     // helper_pk^r
                     // with EC: helper_pk * r
-                    let pkd_r = r_i
-                        .iter()
-                        .map(|x| *x * (*helper_pk))
-                        .collect::<Vec<_>>();
+                    let pkd_r = r_i.iter().map(|x| *x * (*helper_pk)).collect::<Vec<_>>();
 
                     permute(perms.0.as_slice(), &mut ct1); // p_cd
                     permute(perms.0.as_slice(), &mut ct2); // p_cd
@@ -447,18 +459,14 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                     let ct1_prime = ct1
                         .iter()
                         .zip_eq(pkc_r.iter())
-                        .map(|(s, t)| {
-                            (*s).iter().map(|si| *si + *t).collect::<Vec<_>>()
-                        })
+                        .map(|(s, t)| (*s).iter().map(|si| *si + *t).collect::<Vec<_>>())
                         .collect::<Vec<_>>();
                     // ct2' = p_4(p_3(ct2)) * helper_pk^r
                     // with EC: ct2' = p_4(p_3(ct2)) + helper_pk*r
                     let ct2_prime = ct2
                         .iter()
                         .zip_eq(pkd_r.iter())
-                        .map(|(s, t)| {
-                            (*s).iter().map(|si| *si + *t).collect::<Vec<_>>()
-                        })
+                        .map(|(s, t)| (*s).iter().map(|si| *si + *t).collect::<Vec<_>>())
                         .collect::<Vec<_>>();
 
                     let (ct1_prime_flat, _ct1_offset) = {
@@ -503,21 +511,22 @@ impl CompanyDspmcProtocol for CompanyDspmc {
         psum: Vec<usize>,
     ) -> Result<(), ProtocolError> {
         match (
-            self.ct1.clone().write(), self.ct2.clone().write(),
-            self.perms.clone().read(), self.blinds.clone().read(),
-            self.v1.clone().write(), self.u1.clone().write()
+            self.ct1.clone().write(),
+            self.ct2.clone().write(),
+            self.perms.clone().read(),
+            self.blinds.clone().read(),
+            self.v1.clone().write(),
+            self.u1.clone().write(),
         ) {
-            (
-                Ok(mut ct1), Ok(mut ct2), Ok(perms),
-                Ok(blinds), Ok(mut v1), Ok(mut u1)
-            ) => {
+            (Ok(mut ct1), Ok(mut ct2), Ok(perms), Ok(blinds), Ok(mut v1), Ok(mut u1)) => {
                 let t = timer::Timer::new_silent("set set_p_sc_v_sc_ct1ct2dprime");
                 let num_keys = v_sc_bytes.len();
                 // Remove the previous data and replace them with the (doubly) re-randomized
                 ct1.clear();
                 ct2.clear();
                 // Unflatten and convert to points
-                *ct1 = { // ct1'' (doubly re-randomized ct1)
+                *ct1 = {
+                    // ct1'' (doubly re-randomized ct1)
                     let t = self.ec_cipher.to_points(&ct1_dprime_flat);
 
                     psum.get(0..num_keys)
@@ -528,7 +537,8 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                         .collect::<Vec<Vec<_>>>()
                 };
                 // Unflatten and convert to points
-                *ct2 = { // ct2'' (doubly re-randomized ct2)
+                *ct2 = {
+                    // ct2'' (doubly re-randomized ct2)
                     let t = self.ec_cipher.to_points(&ct2_dprime_flat);
 
                     psum.get(0..num_keys)
@@ -541,46 +551,43 @@ impl CompanyDspmcProtocol for CompanyDspmc {
 
                 let p_sc = p_sc_bytes
                     .iter()
-                    .map(|x| {
-                        u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()) as usize
-                    })
+                    .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()) as usize)
                     .collect::<Vec<_>>();
                 let v_sc = v_sc_bytes
                     .iter()
-                    .map(|x| {
-                        u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap())
-                    })
+                    .map(|x| u64::from_le_bytes((x.buffer[0..8]).try_into().unwrap()))
                     .collect::<Vec<_>>();
 
                 let n_features = v1.len();
                 // Compute u1 = p_sc( p_cs( p_cd(v_1) xor v_cd) xor v_cs) xor v_sc
                 (*u1).clear();
                 for f_idx in (0..n_features).rev() {
-                    permute(perms.0.as_slice(), &mut v1[f_idx]);    // p_cd
+                    permute(perms.0.as_slice(), &mut v1[f_idx]); // p_cd
                     let mut u2 = v1[f_idx]
                         .iter()
-                        .zip_eq(blinds.0.iter())                    // v_cd
+                        .zip_eq(blinds.0.iter()) // v_cd
                         .map(|(s, v_cd)| *s ^ *v_cd)
                         .collect::<Vec<_>>();
 
-                    permute(perms.1.as_slice(), &mut u2);           // p_cs
+                    permute(perms.1.as_slice(), &mut u2); // p_cs
                     let mut t1 = u2
                         .iter()
-                        .zip_eq(blinds.1.iter())                    // v_cs
+                        .zip_eq(blinds.1.iter()) // v_cs
                         .map(|(s, v_cs)| *s ^ *v_cs)
                         .collect::<Vec<_>>();
 
-                    permute(p_sc.as_slice(), &mut t1);              // p_sc
-                    (*u1).push(t1
-                        .iter()
-                        .zip_eq(v_sc.iter())
-                        .map(|(s, v_sc)| {                          // v_sc
-                            let y = *s ^ *v_sc;
-                            ByteBuffer {
-                                buffer: y.to_le_bytes().to_vec(),
-                            }
-                        })
-                        .collect::<Vec<_>>()
+                    permute(p_sc.as_slice(), &mut t1); // p_sc
+                    (*u1).push(
+                        t1.iter()
+                            .zip_eq(v_sc.iter())
+                            .map(|(s, v_sc)| {
+                                // v_sc
+                                let y = *s ^ *v_sc;
+                                ByteBuffer {
+                                    buffer: y.to_le_bytes().to_vec(),
+                                }
+                            })
+                            .collect::<Vec<_>>(),
                     );
                 }
 
@@ -590,7 +597,7 @@ impl CompanyDspmcProtocol for CompanyDspmc {
             _ => {
                 error!("Cannot flatten ct1'' and ct2''");
                 Err(ProtocolError::ErrorDeserialization(
-                        "cannot flatten ct1'' and ct2''".to_string(),
+                    "cannot flatten ct1'' and ct2''".to_string(),
                 ))
             }
         }
@@ -612,7 +619,7 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                     },
                     ByteBuffer {
                         buffer: (n_features as u64).to_le_bytes().to_vec(),
-                    }
+                    },
                 ];
                 d_flat.extend(metadata);
 
@@ -641,7 +648,7 @@ impl CompanyDspmcProtocol for CompanyDspmc {
                 let r = g_zi_pt
                     .iter()
                     .map(|x| {
-                        let t = self.ec_cipher.to_bytes(&vec![x * &self.keypair_sk.0]);
+                        let t = self.ec_cipher.to_bytes(&[x * self.keypair_sk.0]);
                         u64::from_le_bytes((t[0].buffer[0..8]).try_into().unwrap())
                     })
                     .collect::<Vec<_>>();
@@ -678,10 +685,7 @@ impl CompanyDspmcProtocol for CompanyDspmc {
 
                 // Get the first column.
                 let company_keys = {
-                    let tmp = company_ragged
-                        .iter()
-                        .map(|s| s[0])
-                        .collect::<Vec<_>>();
+                    let tmp = company_ragged.iter().map(|s| s[0]).collect::<Vec<_>>();
                     self.ec_cipher.to_bytes(tmp.as_slice())
                 };
 
@@ -698,7 +702,7 @@ impl CompanyDspmcProtocol for CompanyDspmc {
             _ => {
                 error!("Cannot create id_map");
                 Err(ProtocolError::ErrorDeserialization(
-                    "cannot create id_map".to_string()
+                    "cannot create id_map".to_string(),
                 ))
             }
         }

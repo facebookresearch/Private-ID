@@ -3,15 +3,15 @@
 
 extern crate csv;
 
-use common::{files, timer};
+use std::collections::HashSet;
+use std::error::Error;
+use std::fmt;
+use std::sync::Arc;
+use std::sync::RwLock;
+
+use common::files;
+use common::timer;
 use crypto::prelude::*;
-
-use std::{
-    collections::HashSet,
-    sync::{Arc, RwLock},
-};
-
-use std::{error::Error, fmt};
 
 #[derive(Debug)]
 pub enum ProtocolError {
@@ -40,8 +40,10 @@ fn load_data_keys(plaintext: Arc<RwLock<Vec<Vec<String>>>>, path: &str, input_wi
     if let Ok(mut data) = plaintext.write() {
         data.clear();
         let mut line_it = lines.drain(..);
-        // Strip the header for now
-        if input_with_headers && line_it.next().is_some() {}
+        // Strip the header
+        if input_with_headers {
+            line_it.next();
+        }
 
         let mut t = HashSet::<Vec<String>>::new();
         // Filter out zero length strings - these will come from ragged
@@ -173,7 +175,7 @@ fn serialize_helper<T>(data: Vec<Vec<T>>) -> (Vec<T>, TPayload, TPayload) {
 }
 
 pub mod company;
-pub mod shuffler;
 pub mod helper;
 pub mod partner;
+pub mod shuffler;
 pub mod traits;

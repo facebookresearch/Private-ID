@@ -8,35 +8,42 @@ extern crate protocol;
 extern crate tokio;
 extern crate tonic;
 
-use std::{
-    borrow::BorrowMut,
-    convert::TryInto,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
-use tonic::{Code, Request, Response, Status, Streaming, transport::Channel};
+use std::borrow::BorrowMut;
+use std::convert::TryInto;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use common::timer;
-use protocol::{
-    dspmc::{company::CompanyDspmc, traits::CompanyDspmcProtocol},
-    shared::TFeatures,
-};
-use rpc::proto::{
-    common::Payload,
-    gen_dspmc_company::{
-        dspmc_company_server::DspmcCompany, service_response::*,
-        Commitment, CommitmentAck, Init, InitAck, SendData,
-        SendDataAck, ServiceResponse, UPartnerAck,
-        RecvShares, RecvSharesAck, HelperPublicKeyAck
-    },
-    gen_dspmc_helper::{
-        dspmc_helper_client::DspmcHelperClient,
-        ServiceResponse as HelperServiceResponse,
-    },
-    streaming::{read_from_stream, write_to_stream, send_data, TPayloadStream},
-};
+use protocol::dspmc::company::CompanyDspmc;
+use protocol::dspmc::traits::CompanyDspmcProtocol;
+use protocol::shared::TFeatures;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_dspmc_company::dspmc_company_server::DspmcCompany;
+use rpc::proto::gen_dspmc_company::service_response::*;
+use rpc::proto::gen_dspmc_company::Commitment;
+use rpc::proto::gen_dspmc_company::CommitmentAck;
+use rpc::proto::gen_dspmc_company::HelperPublicKeyAck;
+use rpc::proto::gen_dspmc_company::Init;
+use rpc::proto::gen_dspmc_company::InitAck;
+use rpc::proto::gen_dspmc_company::RecvShares;
+use rpc::proto::gen_dspmc_company::RecvSharesAck;
+use rpc::proto::gen_dspmc_company::SendData;
+use rpc::proto::gen_dspmc_company::SendDataAck;
+use rpc::proto::gen_dspmc_company::ServiceResponse;
+use rpc::proto::gen_dspmc_company::UPartnerAck;
+use rpc::proto::gen_dspmc_helper::dspmc_helper_client::DspmcHelperClient;
+use rpc::proto::gen_dspmc_helper::ServiceResponse as HelperServiceResponse;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::send_data;
+use rpc::proto::streaming::write_to_stream;
+use rpc::proto::streaming::TPayloadStream;
+use tonic::transport::Channel;
+use tonic::Code;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct DspmcCompanyService {
     protocol: CompanyDspmc,
@@ -86,7 +93,10 @@ impl DspmcCompany for DspmcCompanyService {
         }))
     }
 
-    async fn send_ct3_p_cd_v_cd_to_helper(&self, _: Request<SendData>) -> Result<Response<ServiceResponse>, Status> {
+    async fn send_ct3_p_cd_v_cd_to_helper(
+        &self,
+        _: Request<SendData>,
+    ) -> Result<Response<ServiceResponse>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("send_ct3_p_cd_v_cd_to_helper")
@@ -97,14 +107,19 @@ impl DspmcCompany for DspmcCompanyService {
         // Send ct3 from all partners to helper. - company acts as a client to helper.
         let partners_ct3 = self.protocol.get_all_ct3_p_cd_v_cd().unwrap();
         let mut helper_client_contxt = self.helper_client_context.clone();
-        _ = helper_client_contxt.send_ct3_p_cd_v_cd(send_data(partners_ct3)).await;
+        _ = helper_client_contxt
+            .send_ct3_p_cd_v_cd(send_data(partners_ct3))
+            .await;
 
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::SendDataAck(SendDataAck {})),
         }))
     }
 
-    async fn send_u1_to_helper(&self, _: Request<SendData>) -> Result<Response<ServiceResponse>, Status> {
+    async fn send_u1_to_helper(
+        &self,
+        _: Request<SendData>,
+    ) -> Result<Response<ServiceResponse>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("send_u1_to_helper")
@@ -120,7 +135,10 @@ impl DspmcCompany for DspmcCompanyService {
         }))
     }
 
-    async fn send_encrypted_keys_to_helper(&self, _: Request<SendData>) -> Result<Response<ServiceResponse>, Status> {
+    async fn send_encrypted_keys_to_helper(
+        &self,
+        _: Request<SendData>,
+    ) -> Result<Response<ServiceResponse>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("send_encrypted_keys_to_helper")
@@ -134,14 +152,19 @@ impl DspmcCompany for DspmcCompanyService {
 
         let mut helper_client_contxt = self.helper_client_context.clone();
         // X, offset, metadata, ct1, ct2, offset, metadata
-        _ = helper_client_contxt.send_encrypted_keys(send_data(enc_keys)).await;
+        _ = helper_client_contxt
+            .send_encrypted_keys(send_data(enc_keys))
+            .await;
 
         Ok(Response::new(ServiceResponse {
             ack: Some(Ack::SendDataAck(SendDataAck {})),
         }))
     }
 
-    async fn recv_shares_from_helper(&self, _: Request<RecvShares>) -> Result<Response<ServiceResponse>, Status> {
+    async fn recv_shares_from_helper(
+        &self,
+        _: Request<RecvShares>,
+    ) -> Result<Response<ServiceResponse>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("recv_shares_from_helper")
@@ -149,16 +172,26 @@ impl DspmcCompany for DspmcCompanyService {
 
         let mut helper_client_contxt = self.helper_client_context.clone();
         let request = Request::new(HelperServiceResponse {
-            ack: Some(rpc::proto::gen_dspmc_helper::service_response::Ack::UPartnerAck(rpc::proto::gen_dspmc_helper::UPartnerAck {})),
+            ack: Some(
+                rpc::proto::gen_dspmc_helper::service_response::Ack::UPartnerAck(
+                    rpc::proto::gen_dspmc_helper::UPartnerAck {},
+                ),
+            ),
         });
-        let mut strm = helper_client_contxt.recv_xor_shares(request).await?.into_inner();
+        let mut strm = helper_client_contxt
+            .recv_xor_shares(request)
+            .await?
+            .into_inner();
         let mut data = read_from_stream(&mut strm).await?;
 
         let num_features =
             u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
         let num_rows =
             u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-        let g_zi = data.drain(num_features * num_rows..).map(|x| x).collect::<Vec<_>>();
+        let g_zi = data
+            .drain(num_features * num_rows..)
+            .map(|x| x)
+            .collect::<Vec<_>>();
 
         let mut features = TFeatures::new();
         for i in (0..num_features).rev() {
@@ -177,7 +210,8 @@ impl DspmcCompany for DspmcCompanyService {
             None => self.protocol.print_id_map(),
         }
 
-        let resp = self.protocol
+        let resp = self
+            .protocol
             .save_features_shares(&self.output_shares_path.clone().unwrap())
             .map(|_| {
                 Response::new(ServiceResponse {
@@ -193,20 +227,24 @@ impl DspmcCompany for DspmcCompanyService {
         resp
     }
 
-    async fn calculate_id_map(&self, _: Request<Commitment>) -> Result<Response<CommitmentAck>, Status> {
+    async fn calculate_id_map(
+        &self,
+        _: Request<Commitment>,
+    ) -> Result<Response<CommitmentAck>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("calculate_id_map")
             .build();
         self.protocol
             .write_company_to_id_map()
-            .map(|_| {
-                Response::new(CommitmentAck {})
-            })
+            .map(|_| Response::new(CommitmentAck {}))
             .map_err(|_| Status::new(Code::Aborted, "cannot init the protocol for partner"))
     }
 
-    async fn recv_company_public_key(&self, _: Request<ServiceResponse>) -> Result<Response<Self::RecvCompanyPublicKeyStream>, Status> {
+    async fn recv_company_public_key(
+        &self,
+        _: Request<ServiceResponse>,
+    ) -> Result<Response<Self::RecvCompanyPublicKeyStream>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("recv_company_public_key")
@@ -255,13 +293,11 @@ impl DspmcCompany for DspmcCompanyService {
             .build();
         let mut data = read_from_stream(request.into_inner().borrow_mut()).await?;
 
-        let offset_len = u64::from_le_bytes(
-            data.pop().unwrap().buffer.as_slice().try_into().unwrap(),
-        ) as usize;
+        let offset_len =
+            u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
         // flattened len
-        let data_len = u64::from_le_bytes(
-            data.pop().unwrap().buffer.as_slice().try_into().unwrap(),
-        ) as usize;
+        let data_len =
+            u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
         let num_keys = offset_len - 1;
 
         let offset = data
@@ -270,16 +306,10 @@ impl DspmcCompany for DspmcCompanyService {
             .collect::<Vec<_>>();
         assert_eq!(offset_len, offset.len());
 
-        let ct2_dprime_flat = data
-            .drain((data.len()-data_len)..)
-            .collect::<Vec<_>>();
-        let ct1_dprime_flat = data
-            .drain((data.len()-data_len)..)
-            .collect::<Vec<_>>();
+        let ct2_dprime_flat = data.drain((data.len() - data_len)..).collect::<Vec<_>>();
+        let ct1_dprime_flat = data.drain((data.len() - data_len)..).collect::<Vec<_>>();
 
-        let v_sc_bytes = data
-            .drain((data.len()-num_keys)..)
-            .collect::<Vec<_>>();
+        let v_sc_bytes = data.drain((data.len() - num_keys)..).collect::<Vec<_>>();
         data.shrink_to_fit(); // p_sc
 
         self.protocol
@@ -340,7 +370,13 @@ impl DspmcCompany for DspmcCompanyService {
         assert_eq!(offset_len, offset.len());
 
         self.protocol
-            .set_encrypted_partner_keys_and_shares(ct1.to_vec(), ct2.to_vec(), offset, ct3.buffer, xor_features)
+            .set_encrypted_partner_keys_and_shares(
+                ct1.to_vec(),
+                ct2.to_vec(),
+                offset,
+                ct3.buffer,
+                xor_features,
+            )
             .map(|_| {
                 Response::new(ServiceResponse {
                     ack: Some(Ack::UPartnerAck(UPartnerAck {})),
@@ -367,6 +403,4 @@ impl DspmcCompany for DspmcCompanyService {
             })
             .map_err(|_| Status::internal("error writing"))
     }
-
-
 }

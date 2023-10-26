@@ -1,26 +1,34 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    borrow::BorrowMut,
-    convert::TryInto,
-    sync::{atomic::{AtomicBool, Ordering}, Arc},
-};
-use tonic::{Code, Request, Response, Status, Streaming};
+use std::borrow::BorrowMut;
+use std::convert::TryInto;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use common::timer;
-use protocol::{
-    dpmc::{company::CompanyDpmc, traits::CompanyDpmcProtocol},
-    shared::TFeatures,
-};
-use rpc::proto::{
-    common::Payload,
-    gen_dpmc_company::{
-        dpmc_company_server::DpmcCompany, service_response::*,
-        Commitment, CommitmentAck, Init, InitAck, ServiceResponse,
-        UPartnerAck, CalculateFeaturesXorSharesAck,
-    },
-    streaming::{read_from_stream, write_to_stream, TPayloadStream},
-};
+use protocol::dpmc::company::CompanyDpmc;
+use protocol::dpmc::traits::CompanyDpmcProtocol;
+use protocol::shared::TFeatures;
+use rpc::proto::common::Payload;
+use rpc::proto::gen_dpmc_company::dpmc_company_server::DpmcCompany;
+use rpc::proto::gen_dpmc_company::service_response::*;
+use rpc::proto::gen_dpmc_company::CalculateFeaturesXorSharesAck;
+use rpc::proto::gen_dpmc_company::Commitment;
+use rpc::proto::gen_dpmc_company::CommitmentAck;
+use rpc::proto::gen_dpmc_company::Init;
+use rpc::proto::gen_dpmc_company::InitAck;
+use rpc::proto::gen_dpmc_company::ServiceResponse;
+use rpc::proto::gen_dpmc_company::UPartnerAck;
+use rpc::proto::streaming::read_from_stream;
+use rpc::proto::streaming::write_to_stream;
+use rpc::proto::streaming::TPayloadStream;
+use tonic::Code;
+use tonic::Request;
+use tonic::Response;
+use tonic::Status;
+use tonic::Streaming;
 
 pub struct DpmcCompanyService {
     protocol: CompanyDpmc,
@@ -67,16 +75,17 @@ impl DpmcCompany for DpmcCompanyService {
         }))
     }
 
-    async fn calculate_id_map(&self, _: Request<Commitment>) -> Result<Response<CommitmentAck>, Status> {
+    async fn calculate_id_map(
+        &self,
+        _: Request<Commitment>,
+    ) -> Result<Response<CommitmentAck>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("calculate_id_map")
             .build();
         self.protocol
             .write_company_to_id_map()
-            .map(|_| {
-                Response::new(CommitmentAck {})
-            })
+            .map(|_| Response::new(CommitmentAck {}))
             .map_err(|_| Status::new(Code::Aborted, "cannot init the protocol for partner"))
     }
 
@@ -94,7 +103,10 @@ impl DpmcCompany for DpmcCompanyService {
             u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
         let num_rows =
             u64::from_le_bytes(data.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
-        let mask = data.drain(num_features * num_rows..).map(|x| x).collect::<Vec<_>>();
+        let mask = data
+            .drain(num_features * num_rows..)
+            .map(|x| x)
+            .collect::<Vec<_>>();
         let mut t = TFeatures::new();
 
         for i in (0..num_features).rev() {
@@ -109,13 +121,18 @@ impl DpmcCompany for DpmcCompanyService {
             .calculate_features_xor_shares(t, mask)
             .map(|_| {
                 Response::new(ServiceResponse {
-                    ack: Some(Ack::CalculateFeaturesXorSharesAck(CalculateFeaturesXorSharesAck {})),
+                    ack: Some(Ack::CalculateFeaturesXorSharesAck(
+                        CalculateFeaturesXorSharesAck {},
+                    )),
                 })
             })
             .map_err(|_| Status::internal("error calculating XOR shares"))
     }
 
-    async fn recv_company_public_key(&self, _: Request<ServiceResponse>) -> Result<Response<Self::RecvCompanyPublicKeyStream>, Status> {
+    async fn recv_company_public_key(
+        &self,
+        _: Request<ServiceResponse>,
+    ) -> Result<Response<Self::RecvCompanyPublicKeyStream>, Status> {
         let _ = timer::Builder::new()
             .label("server")
             .extra_label("recv_company_public_key")
@@ -189,7 +206,13 @@ impl DpmcCompany for DpmcCompanyService {
         assert_eq!(offset_len, offset.len());
 
         self.protocol
-            .set_encrypted_partner_keys_and_shares(data, offset, enc_alpha_t.buffer, p_scalar_g.buffer, xor_shares)
+            .set_encrypted_partner_keys_and_shares(
+                data,
+                offset,
+                enc_alpha_t.buffer,
+                p_scalar_g.buffer,
+                xor_shares,
+            )
             .map(|_| {
                 Response::new(ServiceResponse {
                     ack: Some(Ack::UPartnerAck(UPartnerAck {})),
@@ -208,11 +231,10 @@ impl DpmcCompany for DpmcCompanyService {
             None => self.protocol.print_id_map(),
         }
 
-        let resp = self.protocol
+        let resp = self
+            .protocol
             .save_features_shares(&self.output_shares_path.clone().unwrap())
-            .map(|_| {
-                Response::new(CommitmentAck {})
-            })
+            .map(|_| Response::new(CommitmentAck {}))
             .map_err(|_| Status::internal("error saving feature shares"));
         {
             debug!("Setting up flag for graceful down");

@@ -106,7 +106,9 @@ where
     it.map(|x| {
         x.unwrap()
             .iter()
-            .map(|z| u64::from_str(z.trim()).unwrap_or_else(|_| panic!("Cannot format {} as u64", z)))
+            .map(|z| {
+                u64::from_str(z.trim()).unwrap_or_else(|_| panic!("Cannot format {} as u64", z))
+            })
             .collect::<Vec<u64>>()
     })
     .collect::<Vec<Vec<u64>>>()

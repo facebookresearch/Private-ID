@@ -1,42 +1,35 @@
 //  Copyright (c) Facebook, Inc. and its affiliates.
 //  SPDX-License-Identifier: Apache-2.0
 
-use clap::{App, Arg, ArgGroup};
-use log::info;
 use std::convert::TryInto;
-use tonic::Request;
 
+use clap::App;
+use clap::Arg;
+use clap::ArgGroup;
 use common::timer;
 use crypto::prelude::TPayload;
-use protocol::dspmc::{shuffler::ShufflerDspmc, traits::*};
+use log::info;
+use protocol::dspmc::shuffler::ShufflerDspmc;
+use protocol::dspmc::traits::*;
 use protocol::shared::TFeatures;
-use rpc::{
-    connect::create_client::create_client,
-    proto::{
-        gen_dspmc_company::{
-            service_response::Ack as CompanyAck,
-            Init as CompanyInit,
-            ServiceResponse as CompanyServiceResponse,
-            SendData as CompanySendData,
-            RecvShares as CompanyRecvShares,
-        },
-        gen_dspmc_partner::{
-            service_response::Ack as PartnerAck,
-            Init as PartnerInit,
-            SendData as PartnerSendData,
-        },
-        gen_dspmc_helper::{
-            service_response::Ack as HelperAck,
-            ServiceResponse as HelperServiceResponse,
-            SendDataAck
-        },
-        RpcClient,
-    },
-};
+use rpc::connect::create_client::create_client;
+use rpc::proto::gen_dspmc_company::service_response::Ack as CompanyAck;
+use rpc::proto::gen_dspmc_company::Init as CompanyInit;
+use rpc::proto::gen_dspmc_company::RecvShares as CompanyRecvShares;
+use rpc::proto::gen_dspmc_company::SendData as CompanySendData;
+use rpc::proto::gen_dspmc_company::ServiceResponse as CompanyServiceResponse;
+use rpc::proto::gen_dspmc_helper::service_response::Ack as HelperAck;
+use rpc::proto::gen_dspmc_helper::SendDataAck;
+use rpc::proto::gen_dspmc_helper::ServiceResponse as HelperServiceResponse;
+use rpc::proto::gen_dspmc_partner::service_response::Ack as PartnerAck;
+use rpc::proto::gen_dspmc_partner::Init as PartnerInit;
+use rpc::proto::gen_dspmc_partner::SendData as PartnerSendData;
+use rpc::proto::RpcClient;
+use tonic::Request;
 
 mod rpc_client_company;
-mod rpc_client_partner;
 mod rpc_client_helper;
+mod rpc_client_partner;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -112,9 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ArgGroup::with_name("tls")
                 .args(&["no-tls", "tls-dir", "tls-key"])
                 .required(true),
-            ArgGroup::with_name("out")
-                .args(&["stdout"])
-                .required(true),
+            ArgGroup::with_name("out").args(&["stdout"]).required(true),
         ])
         .get_matches();
 
@@ -228,24 +219,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
         shuffler_protocol.set_company_public_key(company_public_key.clone())?;
 
-        let helper_public_key_ack =
-            match rpc_client_helper::send(
-                company_public_key.clone(),
-                "company_public_key".to_string(),
-                &mut helper_client_context)
-                .await?
-                .into_inner()
-                .ack
-                .unwrap()
-            {
-                HelperAck::CompanyPublicKeyAck(x) => x,
-                _ => panic!("wrong ack"),
-            };
+        let helper_public_key_ack = match rpc_client_helper::send(
+            company_public_key.clone(),
+            "company_public_key".to_string(),
+            &mut helper_client_context,
+        )
+        .await?
+        .into_inner()
+        .ack
+        .unwrap()
+        {
+            HelperAck::CompanyPublicKeyAck(x) => x,
+            _ => panic!("wrong ack"),
+        };
 
         let mut helper_public_key = TPayload::new();
         let _ = rpc_client_helper::recv(
             HelperServiceResponse {
-                ack: Some(HelperAck::CompanyPublicKeyAck(helper_public_key_ack.clone())),
+                ack: Some(HelperAck::CompanyPublicKeyAck(
+                    helper_public_key_ack.clone(),
+                )),
             },
             "helper_public_key".to_string(),
             &mut helper_public_key,
@@ -255,50 +248,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         shuffler_protocol.set_helper_public_key(helper_public_key.clone())?;
 
         // Send helper public key to Company
-        let _ =
-            match rpc_client_company::send(
-                helper_public_key.clone(),
-                "helper_public_key".to_string(),
-                &mut company_client_context)
-                .await?
-                .into_inner()
-                .ack
-                .unwrap()
-            {
-                CompanyAck::HelperPublicKeyAck(x) => x,
-                _ => panic!("wrong ack"),
-            };
+        let _ = match rpc_client_company::send(
+            helper_public_key.clone(),
+            "helper_public_key".to_string(),
+            &mut company_client_context,
+        )
+        .await?
+        .into_inner()
+        .ack
+        .unwrap()
+        {
+            CompanyAck::HelperPublicKeyAck(x) => x,
+            _ => panic!("wrong ack"),
+        };
 
         for i in 0..partner_client_context.len() {
             // Send company public key to partners
-            let _ =
-                match rpc_client_partner::send(
-                    company_public_key.clone(),
-                    "company_public_key".to_string(),
-                    &mut partner_client_context[i])
-                    .await?
-                    .into_inner()
-                    .ack
-                    .unwrap()
-                {
-                    PartnerAck::CompanyPublicKeyAck(x) => x,
-                    _ => panic!("wrong ack"),
-                };
+            let _ = match rpc_client_partner::send(
+                company_public_key.clone(),
+                "company_public_key".to_string(),
+                &mut partner_client_context[i],
+            )
+            .await?
+            .into_inner()
+            .ack
+            .unwrap()
+            {
+                PartnerAck::CompanyPublicKeyAck(x) => x,
+                _ => panic!("wrong ack"),
+            };
 
             // Send helper public key to partners
-            let _ =
-                match rpc_client_partner::send(
-                    helper_public_key.clone(),
-                    "helper_public_key".to_string(),
-                    &mut partner_client_context[i])
-                    .await?
-                    .into_inner()
-                    .ack
-                    .unwrap()
-                {
-                    PartnerAck::HelperPublicKeyAck(x) => x,
-                    _ => panic!("wrong ack"),
-                };
+            let _ = match rpc_client_partner::send(
+                helper_public_key.clone(),
+                "helper_public_key".to_string(),
+                &mut partner_client_context[i],
+            )
+            .await?
+            .into_inner()
+            .ack
+            .unwrap()
+            {
+                PartnerAck::HelperPublicKeyAck(x) => x,
+                _ => panic!("wrong ack"),
+            };
         }
     }
 
@@ -350,13 +343,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await?;
 
-    let offset_len = u64::from_le_bytes(
-        v4_p4.pop().unwrap().buffer.as_slice().try_into().unwrap(),
-    ) as usize;
+    let offset_len =
+        u64::from_le_bytes(v4_p4.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
     // flattened len
-    let data_len = u64::from_le_bytes(
-        v4_p4.pop().unwrap().buffer.as_slice().try_into().unwrap(),
-    ) as usize;
+    let data_len =
+        u64::from_le_bytes(v4_p4.pop().unwrap().buffer.as_slice().try_into().unwrap()) as usize;
     let num_keys = offset_len - 1;
     let offset = v4_p4
         .drain((num_keys * 2 + data_len * 2)..)
@@ -364,16 +355,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>();
     assert_eq!(offset_len, offset.len());
 
-    let ct2_prime_flat = v4_p4
-        .drain((v4_p4.len()-data_len)..)
-        .collect::<Vec<_>>();
-    let ct1_prime_flat = v4_p4
-        .drain((v4_p4.len()-data_len)..)
-        .collect::<Vec<_>>();
+    let ct2_prime_flat = v4_p4.drain((v4_p4.len() - data_len)..).collect::<Vec<_>>();
+    let ct1_prime_flat = v4_p4.drain((v4_p4.len() - data_len)..).collect::<Vec<_>>();
 
-    let v_cs_bytes = v4_p4
-        .drain((v4_p4.len()-num_keys)..)
-        .collect::<Vec<_>>();
+    let v_cs_bytes = v4_p4.drain((v4_p4.len() - num_keys)..).collect::<Vec<_>>();
     v4_p4.shrink_to_fit();
 
     shuffler_protocol.set_p_cs_v_cs(v_cs_bytes, v4_p4)?;
@@ -401,7 +386,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .drain(i * num_rows..)
             .map(|x| u64::from_le_bytes(x.buffer.as_slice().try_into().unwrap()))
             .collect::<Vec<_>>();
-            u2.push(x);
+        u2.push(x);
     }
 
     // 10. Generete shuffler permutations
@@ -411,39 +396,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 11. Compute x_2 = p_cs(u2) xor v_cs
     // Compute v_2' = p_sd(p_sc(x_2) xor v_sd) xor v_sd
     // Return rerandomized ct1' and ct2' as ct1'' and ct2''
-    let ct1_ct2_dprime = shuffler_protocol.compute_v2prime_ct1ct2(
-        u2, ct1_prime_flat, ct2_prime_flat, offset
-    ).unwrap();
+    let ct1_ct2_dprime = shuffler_protocol
+        .compute_v2prime_ct1ct2(u2, ct1_prime_flat, ct2_prime_flat, offset)
+        .unwrap();
 
     // v_sc, p_sc, ct1_dprime_flat, ct2_dprime_flat, ct_offset
     let mut p_sc_v_sc_ct1_ct2_dprime = p_sc_v_sc;
     p_sc_v_sc_ct1_ct2_dprime.extend(ct1_ct2_dprime);
 
     // 12. Send v_sc, p_sc, ct1'', ct2'' to C
-    let _company_p_sc_v_sc_ack =
-        match rpc_client_company::send(p_sc_v_sc_ct1_ct2_dprime,
-            "p_sc_v_sc_ct1_ct2_dprime".to_string(), &mut company_client_context)
-            .await?
-            .into_inner()
-            .ack
-            .unwrap()
-        {
-            CompanyAck::UPartnerAck(x) => x,
-            _ => panic!("wrong ack"),
-        };
+    let _company_p_sc_v_sc_ack = match rpc_client_company::send(
+        p_sc_v_sc_ct1_ct2_dprime,
+        "p_sc_v_sc_ct1_ct2_dprime".to_string(),
+        &mut company_client_context,
+    )
+    .await?
+    .into_inner()
+    .ack
+    .unwrap()
+    {
+        CompanyAck::UPartnerAck(x) => x,
+        _ => panic!("wrong ack"),
+    };
 
     // 13. Send p_sd, v_sd to helper (D)
-    let _ =
-        match rpc_client_helper::send(p_sd_v_sd, "p_sd_v_sd".to_string(),
-            &mut helper_client_context)
-            .await?
-            .into_inner()
-            .ack
-            .unwrap()
-        {
-            HelperAck::UPartnerAck(x) => x,
-            _ => panic!("wrong ack"),
-        };
+    let _ = match rpc_client_helper::send(
+        p_sd_v_sd,
+        "p_sd_v_sd".to_string(),
+        &mut helper_client_context,
+    )
+    .await?
+    .into_inner()
+    .ack
+    .unwrap()
+    {
+        HelperAck::UPartnerAck(x) => x,
+        _ => panic!("wrong ack"),
+    };
 
     // 14. Send request to company to send u1 to Helper
     // u1 = p_sc( p_cs( p_cd(v_1) xor v_cd) xor v_cs) xor v_sc
@@ -465,17 +454,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let blinded_vprime = shuffler_protocol.get_blinded_vprime().unwrap();
 
     // 15. Send blinded v' and g^z to helper (D)
-    let _helper_vprime_ack =
-        match rpc_client_helper::send(blinded_vprime, "encrypted_vprime".to_string(),
-            &mut helper_client_context)
-            .await?
-            .into_inner()
-            .ack
-            .unwrap()
-        {
-            HelperAck::UPartnerAck(x) => x,
-            _ => panic!("wrong ack"),
-        };
+    let _helper_vprime_ack = match rpc_client_helper::send(
+        blinded_vprime,
+        "encrypted_vprime".to_string(),
+        &mut helper_client_context,
+    )
+    .await?
+    .into_inner()
+    .ack
+    .unwrap()
+    {
+        HelperAck::UPartnerAck(x) => x,
+        _ => panic!("wrong ack"),
+    };
 
     // 16. Send request to company to send ct1, ct2', and X to Helper
     //  ct2' = ct2^c

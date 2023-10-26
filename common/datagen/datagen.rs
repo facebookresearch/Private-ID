@@ -169,14 +169,17 @@ fn main() {
 
     let fn_a = format!("{}/input_{}_size_{}_cols_{}.csv", dir, "a", size, cols);
     let fn_b = format!("{}/input_{}_size_{}_cols_{}.csv", dir, "b", size, cols);
-    let fn_b_features = format!("{}/input_{}_size_{}_cols_{}_features.csv", dir, "b", size, cols);
+    let fn_b_features = format!(
+        "{}/input_{}_size_{}_cols_{}_features.csv",
+        dir, "b", size, cols
+    );
 
     info!("Generating output of size {}", size);
     info!("Player a output: {}", fn_a);
     info!("Player b output: {}", fn_b);
     info!("Player b features: {}", fn_b_features);
 
-    let intrsct = size / 2 as usize;
+    let intrsct = size / 2_usize;
     let size_player = size - intrsct;
     let data = gen::random_data(size_player, size_player, intrsct);
     info!("Data generation done, writing to files");
