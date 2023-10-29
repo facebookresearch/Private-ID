@@ -1,0 +1,231 @@
+version: '3.0'
+
+services:
+
+# Datagen
+
+  datagen:
+    container_name: 'datagen'
+    profiles: ['private-id', 'dpmc', 'dspmc']
+    build:
+      context: .
+    entrypoint:
+      - '/opt/private-id/bin/datagen'
+    command: '--size ${ENV_VARIABLE_FOR_SIZE:-10} --cols 1 --features -d /etc/example/'
+    volumes:
+      - './common/datagen:/etc/example/'
+
+# Private-ID
+
+  private-id-server:
+    container_name: 'private-id-server'
+    profiles: ['private-id']
+    depends_on:
+      datagen:
+        condition: service_completed_successfully
+    build:
+      context: .
+    entrypoint: '/opt/private-id/bin/private-id-server'
+    command: >-
+      --host 0.0.0.0:10009
+      --input /etc/example/private-id/company.csv
+      --stdout
+      --no-tls
+    environment:
+      - 'RUST_LOG=info'
+    volumes:
+      - './common/datagen/input_a_size_${ENV_VARIABLE_FOR_SIZE:-10}_cols_1.csv:/etc/example/private-id/company.csv'
+
+  private-id-client:
+    container_name: 'private-id-client'
+    profiles: ['private-id']
+    depends_on:
+      datagen:
+        condition: service_completed_successfully
+      private-id-server:
+        condition: service_started
+    build:
+      context: .
+    entrypoint: '/opt/private-id/bin/private-id-client'
+    command: >-
+      --company company-host:10009
+      --input /etc/example/private-id/partner.csv
+      --stdout
+      --no-tls
+    environment:
+      - 'RUST_LOG=info'
+    links:
+      - 'private-id-server:company-host'
+    volumes:
+      - './common/datagen/input_b_size_${ENV_VARIABLE_FOR_SIZE:-10}_cols_1.csv:/etc/example/private-id/partner.csv'
+
+# DPMC
+
+  dpmc-company-server:
+    container_name: 'dpmc-company-server'
+    profiles: ['dpmc']
+    depends_on:
+      datagen:
+        condition: service_completed_successfully
+    build:
+      context: .
+    entrypoint: '/opt/private-id/bin/dpmc-company-server'
+    command: >-
+      --host 0.0.0.0:10010
+      --input /etc/example/dpmc/company.csv
+      --stdout
+      --output-shares-path /etc/example/dpmc/output_company
+      --no-tls
+    environment:
+      - 'RUST_LOG=info'
+    volumes:
+      - './common/datagen/input_a_size_${ENV_VARIABLE_FOR_SIZE:-10}_cols_1.csv:/etc/example/dpmc/company.csv'
+
+  dpmc-partner-server:
+    container_name: 'dpmc-partner-server'
+    profiles: ['dpmc']
+    depends_on:
+      datagen:
+        condition: service_completed_successfully
+      dpmc-company-server:
+        condition: service_started
+    build:
+      context: .
+    entrypoint: '/opt/private-id/bin/dpmc-partner-server'
+    command: >-
+      --host 0.0.0.0:10020
+      --company company-host:10010
+      --input-keys /etc/example/dpmc/partner_1.csv
+      --input-features /etc/example/dpmc/partner_1_features.csv
+      --no-tls
+    environment:
+      - 'RUST_LOG=info'
+    links:
+      - 'dpmc-company-server:company-host'
+    volumes:
+      - './common/datagen/input_b_size_${ENV_VARIABLE_FOR_SIZE:-10}_cols_1.csv:/etc/example/dpmc/partner_1.csv'
+      - './common/datagen/input_b_size_${ENV_VARIABLE_FOR_SIZE:-10}_cols_1_features.csv:/etc/example/dpmc/partner_1_features.csv'
+
+  dpmc-helper:
+    container_name: 'dpmc-helper'
+    profiles: ['dpmc']
+    depends_on:
+      datagen:
+        condition: service_completed_successfully
+      dpmc-company-server:
+        condition: service_started
+      dpmc-partner-server:
+        condition: service_started
+    build:
+      context: .
+    entrypoint: '/opt/private-id/bin/dpmc-helper'
+    command: >-
+      --company company-host:10010
+      --partners partner-host:10020
+      --stdout --output-shares-path /etc/example/dpmc/output_partner
+      --no-tls
+    environment:
+      - 'RUST_LOG=info'
+    links:
+      - 'dpmc-company-server:company-host'
+      - 'dpmc-partner-server:partner-host'
+    volumes:
+      - './etc/example/dpmc/:/etc/example/dpmc/'
+
+# DsPMC
+
+  dspmc-helper-server:
+    container_name: 'dspmc-helper-server'
+    profiles: ['dspmc']
+    depends_on:
+      datagen:
+        condition: service_completed_successfully
+    build:
+      context: .
+    entrypoint: '/opt/private-id/bin/dspmc-helper-server'
+    command: >-
+      --host 0.0.0.0:10030
+      --stdout
+      --output-shares-path /etc/example/dspmc/output_helper
+      --no-tls
+    environment:
+      - 'RUST_LOG=info'
+    volumes:
+      - './etc/example/dspmc/:/etc/example/dspmc/'
+
+  dspmc-company-server:
+    container_name: 'dspmc-company-server'
+    profiles: ['dspmc']
+    depends_on:
+      datagen:
+        condition: service_completed_successfully
+      dspmc-helper-server:
+        condition: service_started
+    build:
+      context: .
+    entrypoint: '/opt/private-id/bin/dspmc-company-server'
+    command: >-
+      --host 0.0.0.0:10010
+      --helper helper-host:10030
+      --input /etc/example/dspmc/company.csv
+      --stdout
+      --output-shares-path /etc/example/dspmc/output_company --no-tls
+    environment:
+      - 'RUST_LOG=info'
+    links:
+      - 'dspmc-helper-server:helper-host'
+    volumes:
+      - './common/datagen/input_a_size_${ENV_VARIABLE_FOR_SIZE:-10}_cols_1.csv:/etc/example/dspmc/company.csv'
+
+  dspmc-partner-server:
+    container_name: 'dspmc-partner-server'
+    profiles: ['dspmc']
+    depends_on:
+      datagen:
+        condition: service_completed_successfully
+      dspmc-company-server:
+        condition: service_started
+    build:
+      context: .
+    entrypoint: '/opt/private-id/bin/dspmc-partner-server'
+    command: >-
+      --host 0.0.0.0:10020
+      --company company-host:10010
+      --input-keys /etc/example/dspmc/partner_1.csv
+      --input-features /etc/example/dspmc/partner_1_features.csv
+      --no-tls
+    environment:
+      - 'RUST_LOG=info'
+    links:
+      - 'dspmc-company-server:company-host'
+    volumes:
+      - './common/datagen/input_b_size_${ENV_VARIABLE_FOR_SIZE:-10}_cols_1.csv:/etc/example/dspmc/partner_1.csv'
+      - './common/datagen/input_b_size_${ENV_VARIABLE_FOR_SIZE:-10}_cols_1_features.csv:/etc/example/dspmc/partner_1_features.csv'
+
+  dspmc-shuffler:
+    container_name: 'dspmc-shuffler'
+    profiles: ['dspmc']
+    depends_on:
+      datagen:
+        condition: service_completed_successfully
+      dspmc-company-server:
+        condition: service_started
+      dspmc-helper-server:
+        condition: service_started
+      dspmc-partner-server:
+        condition: service_started
+    build:
+      context: .
+    entrypoint: '/opt/private-id/bin/dspmc-shuffler'
+    command: >-
+      --company company-host:10010
+      --helper helper-host:10030
+      --partners partner-host:10020
+      --stdout
+      --no-tls
+    environment:
+      - 'RUST_LOG=info'
+    links:
+      - 'dspmc-helper-server:helper-host'
+      - 'dspmc-company-server:company-host'
+      - 'dspmc-partner-server:partner-host'

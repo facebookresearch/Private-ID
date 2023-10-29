@@ -1,18 +1,29 @@
 # Private-ID
 
-Private-ID is a collection of algorithms to match records between two parties, while preserving the privacy of these records. We present two algorithms to do this---one of which does an outer join between parties and another does a inner join and then generates additive shares that can then be input to a Multi Party Compute system like [CrypTen](https://github.com/facebookresearch/CrypTen). Please refer to our [paper](https://eprint.iacr.org/2020/599.pdf) for more details. The MultiKey Private-ID [paper](https://eprint.iacr.org/2021/770.pdf) and the Delegated Private-ID [paper](https://eprint.iacr.org/2023/012.pdf) extend Private-ID.
+Private-ID is a collection of algorithms to match records between two or parties, while preserving the privacy of these records. We present multiple algorithms to do this---one of which does an outer join between parties, and others do inner or left join and then generate additive shares that can then be input to a Multi Party Compute system like [CrypTen](https://github.com/facebookresearch/CrypTen). Please refer to our [paper](https://eprint.iacr.org/2020/599.pdf) for more details. The MultiKey Private-ID [paper](https://eprint.iacr.org/2021/770.pdf) and the Delegated Private-ID [paper](https://eprint.iacr.org/2023/012.pdf) extend Private-ID.
 
 ## Build
 
-Private-ID is implemented in Rust to take advantage of the languages security features and to leverage the encryption libraries that we depend on. It should compile with the nightly Rust toolchain.
+Private-ID is implemented in Rust to take advantage of the language's security features and to leverage the encryption libraries that we depend on. It should compile with the nightly Rust toolchain.
 
 The following should build and run the unit tests for the building blocks used by the protocols
 
-- `cargo build --release`, `cargo test`
+```bash
+cargo build --release
+cargo test --release
+```
 
-Each protocol involves two parties and they have to be run in its own shell environment. We call one party Company and another party Partner.
+Each protocol involves two (or more) parties and they have to be run in their own shell environment. We call one party Company and another party Partner. Some protocols also involve additional parties such as the Helper and the Shuffler.
 
-Run the script at etc/example/generate_cert.sh to generate dummy_certs directroy if you want to test protocol with tls on local.
+Run the script at etc/example/generate_cert.sh to generate dummy_certs directory if you want to test protocol with TLS on local.
+
+### Build & Run With Docker Compose
+The following, run each party in a different container:
+* Private-ID: `docker compose --profile private-id up`
+* Delegated Private Matching for Compute (DPMC): `docker compose --profile dpmc up`
+* Delegated Private Matching for Compute with Secure Shuffling (DSPMC): `docker compose --profile dspmc up`
+
+By default, this will create datasets of 10 items each. To run with bigger datasets set the `ENV_VARIABLE_FOR_SIZE` environment variable. For example: `ENV_VARIABLE_FOR_SIZE=100 docker compose --profile dpmc up` will run DPMC with datasets of 100 items each.
 
 ## Private-ID
 
@@ -60,7 +71,7 @@ env RUST_LOG=info cargo run --release --bin private-id-multi-key-client -- \
 
 ## PS3I
 
-This protocol does an inner join based on email addresses as keys and then generates additive share of a feature associated with that email address. The shares are generated in the designated output files as 64 bit numbers
+This protocol does an inner join based on email addresses as keys and then generates additive share of a feature associated with that email address. The shares are generated in the designated output files as 64-bit numbers
 
 To run Company:
 ```bash
@@ -82,7 +93,7 @@ env RUST_LOG=info cargo run --release --bin cross-psi-client -- \
 
 ## PS3I XOR
 
-This protocol does an inner join based on email addresses as keys and then generates XOR share of a feature associated with that email address. The shares are generated in the designated output files as 64 bit numbers
+This protocol does an inner join based on email addresses as keys and then generates XOR share of a feature associated with that email address. The shares are generated in the designated output files as 64-bit numbers
 
 To run Company:
 ```bash
@@ -104,7 +115,7 @@ env RUST_LOG=info cargo run --release --bin cross-psi-xor-client -- \
 
 The `--output` option provides prefix for the output files that contain the shares. In this case, Company generates two files; `output_company_company_feature.csv` and `output_company_partner_feature.csv`. They contain Company's share of company and parter features respectively. Similarly Partner generates two files; `output_partner_company_feature.csv` and `output_partner_partner_feature.csv`. They contain Partner's share of company and partner features respectively.
 
-Thus `output_company_company_feature.csv` and `output_partner_company_feature.csv` are XOR shares of Company's features. Similarly `output_partner_company_feature.csv` and `output_partner_partner_feature.csv` are XOR shares of Partner's features.
+Thus `output_company_company_feature.csv` and `output_partner_company_feature.csv` are XOR shares of Company's features. Similarly, `output_partner_company_feature.csv` and `output_partner_partner_feature.csv` are XOR shares of Partner's features.
 
 ### Private Join and Compute
 This is an implementation of Google's [Private Join and Compute](https://github.com/google/private-join-and-compute) protocol, that does a inner join based on email addresses and computes a sum of the corresponding feature for the Partner.
@@ -153,7 +164,7 @@ The output will be ElGamal encrypted Universal IDs assigned to each entry in the
 
 ## Delegated Private Matching for Compute (DPMC)
 
-We extend the Multi-key Private-ID protocol to multiple partners. Please refer to our [paper](TODO) for more details.
+We extend the Multi-key Private-ID protocol to multiple partners. Please refer to our [paper](https://eprint.iacr.org/2023/012) for more details.
 
 To run Company:
 ```bash
@@ -310,17 +321,20 @@ To cite Private-ID in academic papers, please use the following BibTeX entries.
 
 ## Delegated Private-ID
 ```
-@Misc{EPRINT:MMTSBC23,
+@Article{PoPETS:MMTSBC23,
   author = "Dimitris Mouris and
     Daniel Masny and
     Ni Trieu and
     Shubho Sengupta and
     Prasad Buddhavarapu and
     Benjamin M Case",
-  title = "Delegated Private Matching for Compute",
-  year = 2023,
-  howpublished = "Cryptology ePrint Archive, Report 2023/012",
-  note = "\url{https://eprint.iacr.org/2023/012}",
+  title =   "{Delegated Private Matching for Compute}",
+  volume =  2024,
+  month =   Jul,
+  year =    2024,
+  journal = "{Proceedings on Privacy Enhancing Technologies}",
+  number =  2,
+  pages =   "1--24",
 }
 ```
 
