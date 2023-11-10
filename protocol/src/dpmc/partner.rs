@@ -5,8 +5,6 @@ use std::convert::TryInto;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use base64::engine::general_purpose;
-use base64::Engine as _;
 use common::permutations::gen_permute_pattern;
 use common::permutations::permute;
 use common::timer;
@@ -122,7 +120,7 @@ impl PartnerDpmc {
                         .ec_cipher
                         .to_bytes(&[self.partner_scalar * (*helper_pk)]);
                     let aes_key_bytes = x[0].buffer.clone();
-                    general_purpose::URL_SAFE.encode(aes_key_bytes)
+                    base64::encode_config(aes_key_bytes, base64::URL_SAFE)
                 };
                 Ok(())
             }
