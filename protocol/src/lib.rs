@@ -8,6 +8,8 @@ extern crate log;
 
 pub mod cross_psi;
 pub mod cross_psi_xor;
+pub mod dpmc;
+pub mod dspmc;
 pub mod fileio;
 pub mod pjc;
 pub mod private_id;

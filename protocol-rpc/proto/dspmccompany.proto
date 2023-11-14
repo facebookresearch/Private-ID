@@ -1,0 +1,68 @@
+//  Copyright (c) Facebook, Inc. and its affiliates.
+//  SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+package dspmccompany;
+
+import "common.proto";
+
+message Init {}
+message InitAck {}
+message SendData {}
+message SendDataAck {}
+message RecvShares {}
+message RecvSharesAck {}
+message UCompanyAck {}
+message ECompanyAck {}
+message UPartnerAck {}
+message VPartnerAck {}
+message SPartnerAck {}
+message SPrimePartnerAck {}
+message PartnerPublicKeyAck {}
+message HelperPublicKeyAck {}
+message CalculateIdMapAck {}
+message CalculateFeaturesXorSharesAck {}
+message Commitment {}
+message CommitmentAck {}
+
+message ServiceResponse {
+  oneof Ack {
+    Init init = 1;
+    InitAck init_ack = 2;
+    UCompanyAck u_company_ack = 3;
+    ECompanyAck e_company_ack = 5;
+    UPartnerAck u_partner_ack = 6;
+    VPartnerAck v_partner_ack = 7;
+    SPartnerAck s_partner_ack = 8;
+    SPrimePartnerAck s_prime_partner_ack = 9;
+    PartnerPublicKeyAck partner_public_key_ack = 10;
+    CalculateIdMapAck calculate_id_map_ack = 12;
+    CalculateFeaturesXorSharesAck calculate_features_xor_shares_ack = 13;
+    Commitment commitment = 14;
+    SendData send_data = 15;
+    SendDataAck send_data_ack = 16;
+    RecvShares recv_shares = 17;
+    RecvSharesAck recv_shares_ack = 18;
+    HelperPublicKeyAck helper_public_key_ack = 19;
+  }
+}
+
+service DspmcCompany {
+  rpc Initialize(Init) returns (ServiceResponse) {}
+  rpc SendCt3PCdVCdToHelper(SendData) returns (ServiceResponse) {}
+  rpc SendU1ToHelper(SendData) returns (ServiceResponse) {}
+  rpc SendEncryptedKeysToHelper(SendData) returns (ServiceResponse) {}
+
+  rpc SendHelperPublicKey(stream common.Payload) returns (ServiceResponse) {}
+  rpc SendPScVScCt1ct2dprime(stream common.Payload) returns (ServiceResponse) {}
+  rpc SendUPartner(stream common.Payload) returns (ServiceResponse) {}
+
+  rpc RecvCompanyPublicKey(ServiceResponse) returns (stream common.Payload) {}
+  rpc RecvSharesFromHelper(RecvShares) returns (ServiceResponse) {}
+  rpc RecvPCsVCs(ServiceResponse) returns (stream common.Payload) {}
+  rpc RecvUCompany(ServiceResponse) returns (stream common.Payload) {}
+
+  rpc CalculateIdMap(Commitment) returns (CommitmentAck) {}
+
+  // rpc Reveal(Commitment) returns (CommitmentAck) {}
+}

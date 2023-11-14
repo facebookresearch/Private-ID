@@ -1,0 +1,54 @@
+//  Copyright (c) Facebook, Inc. and its affiliates.
+//  SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+package dpmccompany;
+
+import "common.proto";
+
+message Init {}
+message InitAck {}
+message UCompanyAck {}
+message ECompanyAck {}
+message UPartnerAck {}
+message VPartnerAck {}
+message SPartnerAck {}
+message SPrimePartnerAck {}
+message PartnerPublicKeyAck {}
+message CalculateIdMapAck {}
+message CalculateFeaturesXorSharesAck {}
+message Commitment {}
+message CommitmentAck {}
+
+message ServiceResponse {
+  oneof Ack {
+    Init init = 1;
+    InitAck init_ack = 2;
+    UCompanyAck u_company_ack = 3;
+    ECompanyAck e_company_ack = 5;
+    UPartnerAck u_partner_ack = 6;
+    VPartnerAck v_partner_ack = 7;
+    SPartnerAck s_partner_ack = 8;
+    SPrimePartnerAck s_prime_partner_ack = 9;
+    PartnerPublicKeyAck partner_public_key_ack = 10;
+    CalculateIdMapAck calculate_id_map_ack = 12;
+    CalculateFeaturesXorSharesAck calculate_features_xor_shares_ack = 13;
+    Commitment commitment = 14;
+  }
+}
+
+service DpmcCompany {
+  rpc Initialize(Init) returns (ServiceResponse) {}
+  rpc RecvUCompany(ServiceResponse) returns (stream common.Payload) {}
+
+  rpc SendUPartner(stream common.Payload) returns (ServiceResponse) {}
+
+  rpc CalculateIdMap(Commitment) returns (CommitmentAck) {}
+  rpc CalculateFeaturesXorShares(stream common.Payload)
+      returns (ServiceResponse) {}
+
+  rpc RecvCompanyPublicKey(ServiceResponse) returns (stream common.Payload) {}
+  rpc RecvVPartner(ServiceResponse) returns (stream common.Payload) {}
+
+  rpc Reveal(Commitment) returns (CommitmentAck) {}
+}

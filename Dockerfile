@@ -27,8 +27,14 @@ cp bin/release/pjc-client exec && \
 cp bin/release/pjc-server exec && \
 cp bin/release/datagen exec && \
 cp bin/release/private-id-multi-key-server exec && \
-cp bin/release/private-id-multi-key-client exec
-
+cp bin/release/private-id-multi-key-client exec && \
+cp bin/release/dpmc-company-server exec && \
+cp bin/release/dpmc-helper exec && \
+cp bin/release/dpmc-partner-server exec && \
+cp bin/release/dspmc-company-server exec && \
+cp bin/release/dspmc-helper-server exec && \
+cp bin/release/dspmc-partner-server exec && \
+cp bin/release/dspmc-shuffler exec
 
 # thin container with binaries
 # base image is taken from here https://hub.docker.com/_/debian/

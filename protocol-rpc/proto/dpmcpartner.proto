@@ -1,0 +1,43 @@
+//  Copyright (c) Facebook, Inc. and its affiliates.
+//  SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+package dpmcpartner;
+
+import "common.proto";
+
+message Init {}
+message InitAck {}
+message SendData {}
+message SendDataAck {}
+message CompanyPublicKeyAck {}
+message IdMapIndicesAck {}
+message Commitment {}
+message CommitmentAck {}
+message HelperPublicKeyAck {}
+
+message ServiceResponse {
+  oneof Ack {
+    Init init = 1;
+    InitAck init_ack = 2;
+    CompanyPublicKeyAck company_public_key_ack = 3;
+    IdMapIndicesAck id_map_indices_ack = 4;
+    Commitment commitment = 5;
+    SendData send_data = 6;
+    SendDataAck send_data_ack = 7;
+    HelperPublicKeyAck helper_public_key_ack = 8;
+  }
+}
+
+service DpmcPartner {
+  rpc Initialize(Init) returns (ServiceResponse) {}
+  rpc SendDataToCompany(SendData) returns (ServiceResponse) {}
+
+  rpc RecvPartnerPublicKey(ServiceResponse) returns (stream common.Payload) {}
+
+  rpc SendCompanyPublicKey(stream common.Payload) returns (ServiceResponse) {}
+
+  rpc SendHelperPublicKey(stream common.Payload) returns (ServiceResponse) {}
+
+  rpc StopService(Commitment) returns (CommitmentAck) {}
+}
