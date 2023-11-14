@@ -192,7 +192,7 @@ impl PartnerDspmcProtocol for PartnerDspmc {
                 // PRG seed = scalar * PK_helper
                 let (seed, ct3) = {
                     let x = gen_scalar();
-                    let ct3 = self.ec_cipher.to_bytes(&[&x * &RISTRETTO_BASEPOINT_TABLE]);
+                    let ct3 = self.ec_cipher.to_bytes(&[&x * RISTRETTO_BASEPOINT_TABLE]);
                     let seed: [u8; 32] = {
                         let t = self.ec_cipher.to_bytes(&[x * (*helper_pk)]);
                         t[0].buffer.as_slice().try_into().expect("incorrect length")

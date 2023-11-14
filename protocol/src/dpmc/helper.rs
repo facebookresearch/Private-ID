@@ -60,7 +60,7 @@ impl HelperDpmc {
         let x = gen_scalar();
         HelperDpmc {
             keypair_sk: x,
-            keypair_pk: &x * &RISTRETTO_BASEPOINT_TABLE,
+            keypair_pk: &x * RISTRETTO_BASEPOINT_TABLE,
             company_public_key: Arc::new(RwLock::default()),
             ec_cipher: ECRistrettoParallel::default(),
             self_permutation: Arc::new(RwLock::default()),
@@ -168,7 +168,7 @@ impl HelperDpmcProtocol for HelperDpmc {
                 let alpha_t = {
                     let ctxt_str: String = String::from_utf8(enc_alpha_t.clone()).unwrap();
 
-                    Scalar::from_bits(
+                    Scalar::from_bytes_mod_order(
                         Fernet::new(&aes_key)
                             .unwrap()
                             .decrypt(&ctxt_str)
@@ -519,7 +519,7 @@ impl HelperDpmcProtocol for HelperDpmc {
                         .collect::<Vec<_>>();
                     let y = z_i
                         .iter()
-                        .map(|a| a * &RISTRETTO_BASEPOINT_TABLE)
+                        .map(|a| a * RISTRETTO_BASEPOINT_TABLE)
                         .collect::<Vec<_>>();
                     (x, y)
                 };

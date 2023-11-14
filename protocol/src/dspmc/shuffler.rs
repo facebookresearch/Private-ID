@@ -398,7 +398,7 @@ impl ShufflerDspmcProtocol for ShufflerDspmc {
                     let g_zi = {
                         let t = z_i
                             .iter()
-                            .map(|x| x * &RISTRETTO_BASEPOINT_TABLE)
+                            .map(|x| x * RISTRETTO_BASEPOINT_TABLE)
                             .collect::<Vec<_>>();
                         self.ec_cipher.to_bytes(&t)
                     };

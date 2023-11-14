@@ -120,6 +120,7 @@ impl ECCipher for ECRistrettoSequential {
             .iter()
             .map(|b| {
                 CompressedRistretto::from_slice(&b.buffer)
+                    .expect("Failed to construct compressed point")
                     .decompress()
                     .unwrap()
             })
@@ -131,6 +132,7 @@ impl ECCipher for ECRistrettoSequential {
             .iter()
             .map(|b| {
                 let p = CompressedRistretto::from_slice(&b.buffer)
+                    .expect("Failed to construct compressed point")
                     .decompress()
                     .unwrap();
                 p * pow
@@ -234,6 +236,7 @@ impl ECCipher for ECRistrettoParallel {
             .into_par_iter()
             .map(|item| {
                 CompressedRistretto::from_slice(&item.buffer)
+                    .expect("Failed to construct compressed point")
                     .decompress()
                     .unwrap()
             })
@@ -267,6 +270,7 @@ impl ECCipher for ECRistrettoParallel {
             .into_par_iter()
             .map(|item| {
                 let p = CompressedRistretto::from_slice(&item.buffer)
+                    .expect("Failed to construct compressed point")
                     .decompress()
                     .unwrap();
                 p * pow
