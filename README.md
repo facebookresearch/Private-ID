@@ -139,7 +139,7 @@ env RUST_LOG=info cargo run --release --bin pjc-client -- \
 ```
 
 ## SUMID
-This is an implmentation of 2-party version of Secure Universal ID protocol. This can work on multiple keys. In the current implementation, the merger party also assumes the role of one data party and the sharer party assumes the role of all the other data parties. The data parties are the `.csv` files show below
+This is an implementation of 2-party version of Secure Universal ID protocol. This can work on multiple keys. In the current implementation, the merger party also assumes the role of one data party and the sharer party assumes the role of all the other data parties. The data parties are the `.csv` files show below
 
 To run merger:
 ```bash
