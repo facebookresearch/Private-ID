@@ -63,8 +63,8 @@ impl CompanyDspmc {
         CompanyDspmc {
             keypair_sk: (x1, x2),
             keypair_pk: (
-                &x1 * &RISTRETTO_BASEPOINT_TABLE,
-                &x2 * &RISTRETTO_BASEPOINT_TABLE,
+                &x1 * RISTRETTO_BASEPOINT_TABLE,
+                &x2 * RISTRETTO_BASEPOINT_TABLE,
             ),
             helper_public_key: Arc::new(RwLock::default()),
             ec_cipher: ECRistrettoParallel::default(),

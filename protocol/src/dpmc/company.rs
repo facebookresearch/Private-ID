@@ -55,7 +55,7 @@ impl CompanyDpmc {
         let x = gen_scalar();
         CompanyDpmc {
             keypair_sk: x,
-            keypair_pk: &x * &RISTRETTO_BASEPOINT_TABLE,
+            keypair_pk: &x * RISTRETTO_BASEPOINT_TABLE,
             private_beta: gen_scalar(),
             ec_cipher: ECRistrettoParallel::default(),
             plaintext: Arc::new(RwLock::default()),

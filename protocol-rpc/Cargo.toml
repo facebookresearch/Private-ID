@@ -89,38 +89,33 @@ path = "src/rpc/dspmc/client.rs"
 name = "rpc"
 path = "src/lib.rs"
 
-[features]
-avx2 = ["crypto/avx2"]
-
 [dependencies]
 common = {path = "../common", version = "0.1.0"}
 crypto = {path = "../crypto", version = "0.1.0"}
 protocol = {path = "../protocol", version = "0.1.0"}
 
-log = "0.4"
-env_logger = "0.7.1"
-tonic = { version = "0.7.2", features = ["tls", "tls-roots", "prost"]}
-tokio = { version = "1.18.2", features = ["rt-multi-thread", "time", "fs", "macros", "net"] }
-tokio-stream = { version =  "0.1.8", features = ["net"] }
-tower = { version = "0.4.12" }
-prost = "0.10"
-futures =  { version = "0.3", features = ["thread-pool", "alloc"]}
-http = "0.2"
-url = "2.1.0"
 async-stream = "0.2"
-rayon = "1.8.0"
 bytes = "0.4"
 clap = "2.33.4"
 csv = "1.1.1"
-indicatif = "0.13.0"
 ctrlc = "3.2.3"
-retry = "0.5.1"
-bincode = "1.2.1"
+env_logger = "0.7.1"
+futures =  { version = "0.3", features = ["thread-pool", "alloc"]}
+http = "0.2"
 itertools = "0.9.0"
-tempfile = "3.2.0"
+log = "0.4"
 num-bigint = { version = "0.4", features = ["rand"] }
 num-traits = "0.2"
+prost = "0.10"
+rayon = "1.8.0"
 rcgen = "0.10.0"
+retry = "0.5.1"
+tempfile = "3.2.0"
+tokio = { version = "1.18.2", features = ["rt-multi-thread", "time", "fs", "macros", "net"] }
+tokio-stream = { version =  "0.1.8", features = ["net"] }
+tonic = { version = "0.7.2", features = ["tls", "tls-roots", "prost"]}
+tower = { version = "0.4.12" }
+url = "2.1.0"
 
 [build-dependencies]
 tonic-build = { version = "0.7.2" }

@@ -41,7 +41,7 @@ impl PartnerDpmc {
         let x = gen_scalar();
         PartnerDpmc {
             keypair_sk: x,
-            keypair_pk: &x * &RISTRETTO_BASEPOINT_TABLE,
+            keypair_pk: &x * RISTRETTO_BASEPOINT_TABLE,
             partner_scalar: gen_scalar(),
             company_public_key: Arc::new(RwLock::default()),
             helper_public_key: Arc::new(RwLock::default()),
@@ -185,7 +185,7 @@ impl PartnerDpmcProtocol for PartnerDpmc {
 
                 let p_scalar_times_g = self
                     .ec_cipher
-                    .to_bytes(&[&self.partner_scalar * &RISTRETTO_BASEPOINT_TABLE]);
+                    .to_bytes(&[&self.partner_scalar * RISTRETTO_BASEPOINT_TABLE]);
                 d_flat.extend(p_scalar_times_g);
 
                 Ok(d_flat)
@@ -261,7 +261,7 @@ impl PartnerDpmcProtocol for PartnerDpmc {
                     let g_zi = {
                         let t = z_i
                             .iter()
-                            .map(|x| x * &RISTRETTO_BASEPOINT_TABLE)
+                            .map(|x| x * RISTRETTO_BASEPOINT_TABLE)
                             .collect::<Vec<_>>();
                         self.ec_cipher.to_bytes(&t)
                     };

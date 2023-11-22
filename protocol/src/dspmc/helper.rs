@@ -52,7 +52,7 @@ impl HelperDspmc {
         let x = gen_scalar();
         HelperDspmc {
             keypair_sk: x,
-            keypair_pk: &x * &RISTRETTO_BASEPOINT_TABLE,
+            keypair_pk: &x * RISTRETTO_BASEPOINT_TABLE,
             ec_cipher: ECRistrettoParallel::default(),
             company_public_key: Arc::new(RwLock::default()),
             xor_shares_v2: Arc::new(RwLock::default()),
@@ -641,7 +641,7 @@ impl HelperDspmcProtocol for HelperDspmc {
                         .collect::<Vec<_>>();
                     let y = z_i
                         .iter()
-                        .map(|a| a * &RISTRETTO_BASEPOINT_TABLE)
+                        .map(|a| a * RISTRETTO_BASEPOINT_TABLE)
                         .collect::<Vec<_>>();
                     (x, y)
                 };

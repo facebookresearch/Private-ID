@@ -136,7 +136,7 @@ fn serialize_helper<T>(data: Vec<Vec<T>>) -> (Vec<T>, TPayload, TPayload) {
 
 fn gen_elgamal_keypair() -> (Scalar, TPoint) {
     let private_key = gen_scalar();
-    let public_key = &private_key * &RISTRETTO_BASEPOINT_TABLE;
+    let public_key = &private_key * RISTRETTO_BASEPOINT_TABLE;
 
     (private_key, public_key)
 }
@@ -173,7 +173,7 @@ fn elgamal_encrypt(data: Vec<TPoint>, public_key: &TPoint) -> (Vec<TPoint>, Vec<
 
     let c1 = r
         .iter()
-        .map(|x| x * &RISTRETTO_BASEPOINT_TABLE)
+        .map(|x| x * RISTRETTO_BASEPOINT_TABLE)
         .collect::<Vec<_>>();
 
     let c2 = data
