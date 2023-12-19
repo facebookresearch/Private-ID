@@ -1,6 +1,6 @@
 # Private-ID
 
-Private-ID is a collection of algorithms to match records between two or parties, while preserving the privacy of these records. We present multiple algorithms to do this---one of which does an outer join between parties, and others do inner or left join and then generate additive shares that can then be input to a Multi Party Compute system like [CrypTen](https://github.com/facebookresearch/CrypTen). Please refer to our [paper](https://eprint.iacr.org/2020/599.pdf) for more details. The MultiKey Private-ID [paper](https://eprint.iacr.org/2021/770.pdf) and the Delegated Private-ID [paper](https://eprint.iacr.org/2023/012.pdf) extend Private-ID.
+Private-ID is a collection of algorithms to match records between two or more parties, while preserving the privacy of these records. We present multiple algorithms to do this---one of which does an outer join between parties, and others do inner or left join and then generate additive shares that can then be input to a Multi Party Compute system like [CrypTen](https://github.com/facebookresearch/CrypTen). Please refer to our [paper](https://eprint.iacr.org/2020/599.pdf) for more details. The MultiKey Private-ID [paper](https://eprint.iacr.org/2021/770.pdf) and the Delegated Private-ID [paper](https://eprint.iacr.org/2023/012.pdf) extend Private-ID.
 
 ## Build
 
@@ -24,6 +24,8 @@ The following, run each party in a different container:
 * Delegated Private Matching for Compute with Secure Shuffling (DSPMC): `docker compose --profile dspmc up`
 
 By default, this will create datasets of 10 items each. To run with bigger datasets set the `ENV_VARIABLE_FOR_SIZE` environment variable. For example: `ENV_VARIABLE_FOR_SIZE=100 docker compose --profile dpmc up` will run DPMC with datasets of 100 items each.
+
+Note, to run on an ARM machine modify the Dockerfile and add `--platform=linux/amd64` to the two `FROM` lines (e.g., `FROM --platform=linux/amd64 rust:latest AS build`, `FROM --platform=linux/amd64 debian:stable-slim AS privateid`).
 
 ## Private-ID
 
@@ -113,7 +115,7 @@ env RUST_LOG=info cargo run --release --bin cross-psi-xor-client -- \
   --no-tls
 ```
 
-The `--output` option provides prefix for the output files that contain the shares. In this case, Company generates two files; `output_company_company_feature.csv` and `output_company_partner_feature.csv`. They contain Company's share of company and parter features respectively. Similarly Partner generates two files; `output_partner_company_feature.csv` and `output_partner_partner_feature.csv`. They contain Partner's share of company and partner features respectively.
+The `--output` option provides prefix for the output files that contain the shares. In this case, Company generates two files; `output_company_company_feature.csv` and `output_company_partner_feature.csv`. They contain Company's share of company and partner features respectively. Similarly, Partner generates two files; `output_partner_company_feature.csv` and `output_partner_partner_feature.csv`. They contain Partner's share of company and partner features respectively.
 
 Thus `output_company_company_feature.csv` and `output_partner_company_feature.csv` are XOR shares of Company's features. Similarly, `output_partner_company_feature.csv` and `output_partner_partner_feature.csv` are XOR shares of Partner's features.
 
@@ -139,7 +141,7 @@ env RUST_LOG=info cargo run --release --bin pjc-client -- \
 ```
 
 ## SUMID
-This is an implmentation of 2-party version of Secure Universal ID protocol. This can work on multiple keys. In the current implementation, the merger party also assumes the role of one data party and the sharer party assumes the role of all the other data parties. The data parties are the `.csv` files show below
+This is an implementation of 2-party version of Secure Universal ID protocol. This can work on multiple keys. In the current implementation, the merger party also assumes the role of one data party and the sharer party assumes the role of all the other data parties. The data parties are the `.csv` files show below
 
 To run merger:
 ```bash
@@ -205,9 +207,95 @@ env RUST_LOG=info cargo run --release --bin dpmc-helper -- \
   --no-tls
 ```
 
-The above will generate one-to-one matches. To enable one-to-many matches (one
-record from C will match to `M` P records), use the flag `--one-to-many M` in the
-`dpmc-helper` binary, where `M` is the number of matches.
+The above will generate one-to-one matches.
+
+To explain the results, we need to look at the inputs first:
+
+### Inputs
+
+Company Input:
+```bash
+email1
+email2
+email3
+email4
+```
+
+Partner 1 Input (IDs):
+```bash
+email1
+email7
+```
+
+Partner 1 Input (Associated Data):
+```bash
+10, 0
+50, 50
+```
+
+Partner 2 Input:
+```bash
+email1
+email4
+```
+
+Partner 2 Input (Associated Data):
+```bash
+20, 21
+30, 31
+```
+
+### Outputs
+
+Company:
+```bash
+2C124C57A040C6FEB396F101F84C3B8C6A466FA53C0FDED94E8F725F2E9704B,email4
+6695895CB82E629598547D93FA67403D4249B83A9944A21E53BBE3F9854F7140,email3
+CEE0A32A239B802558ABFD57EE87587B5FD15D64E73FD805D13A1303CDD5429,email2
+FEC9F87838BEEFFD3B689D13A538FB05767B2F9CDEE53903D22E67B91F,email1
+```
+
+Output Secret shares at `etc/example/dpmc/output_company_partner_features.csv`:
+```bash
+2123763108355018584,7917888405770470969
+7553524091763063603,12192982022453250030
+12025288841580037526,5628706741631442660
+12193188557740602958,3696238821401023600
+```
+
+Helper:
+```bash
+2C124C57A040C6FEB396F101F84C3B8C6A466FA53C0FDED94E8F725F2E9704B, Partner enc key at pos 0
+6695895CB82E629598547D93FA67403D4249B83A9944A21E53BBE3F9854F7140,NA
+CEE0A32A239B802558ABFD57EE87587B5FD15D64E73FD805D13A1303CDD5429,NA
+FEC9F87838BEEFFD3B689D13A538FB05767B2F9CDEE53903D22E67B91F, Partner enc key at pos 0
+```
+
+Output Secret shares at `etc/example/dpmc/output_partner_partner_features.csv`:
+```bash
+2123763108355018566,7917888405770470950
+7553524091763063603,12192982022453250030
+12025288841580037526,5628706741631442660
+12193188557740602948,3696238821401023600
+```
+
+Since DPMC focuses on left-join, wherever was a match in Company's dataset, we have secret shares
+of the partner's associated data, while wherever there was no match, we have secret shares of zero.
+
+Indeed, since `email1` and `email4` matched:
+```bash
+2123763108355018584 ^ 2123763108355018566 = 30,   7917888405770470969 ^ 7917888405770470950 = 31
+7553524091763063603 ^ 7553524091763063603 = 0,    12192982022453250030 ^ 12192982022453250030 = 0
+12025288841580037526 ^ 12025288841580037526 = 0,  5628706741631442660 ^ 5628706741631442660 = 0
+12193188557740602958 ^ 12193188557740602948 = 10, 3696238821401023600 ^ 3696238821401023600 = 0
+```
+Observe that `email1` matched with both partners but since this is one-to-one matching then the
+first match was only considered.
+
+### One-to-many matches
+
+To enable one-to-many matches (one record from C will match to `M` P records), use the flag
+`--one-to-many M` in the `dpmc-helper` binary, where `M` is the number of matches.
 
 For example, using the same scripts as above for company and partners, to run
 `1-2` matching, start the helper as follows:
@@ -222,7 +310,71 @@ env RUST_LOG=info cargo run --release --bin dpmc-helper -- \
   --no-tls
 ```
 
-## Delegated Private Matching for Compute with Secure Shuffling (DSPMC)
+### Outputs
+
+Company:
+```bash
+267549DEDFC9898B9ADB99278E86162155119ADBDCC1589F44E12EC66AD723,email2
+40C1E76B6F2CF94B1B86D31FD9FB5C62B9114C85FC2AAAB59A6A1379044323,email1
+44469BA5EBF28547491442BA88A996C91D2E5C1874BD56131FDE6FC2C19F95B,email4
+725FAAA4E9862E5983979C85E58AA59347FF2C5C1AE0CC89201B34711588E957,email3
+```
+
+Output Secret shares at `etc/example/dpmc/output_company_partner_features.csv`:
+```bash
+15639158529780438101,10355320774873656494
+13789343269605551875,7497287768912087672
+1103603035954233860,16491667106643692030
+16818785984424715268,17987764095998628258
+5216582505071635321,17033543400689351118
+9296137075950449950,6917021766104166842
+1775928733629157667,2173601871347247126
+10727446575062113091,6625868366339267723
+```
+
+Helper:
+```bash
+267549DEDFC9898B9ADB99278E86162155119ADBDCC1589F44E12EC66AD723, NA
+267549DEDFC9898B9ADB99278E86162155119ADBDCC1589F44E12EC66AD723, NA
+40C1E76B6F2CF94B1B86D31FD9FB5C62B9114C85FC2AAAB59A6A1379044323, Partner enc key at pos 0
+40C1E76B6F2CF94B1B86D31FD9FB5C62B9114C85FC2AAAB59A6A1379044323, Partner enc key at pos 1
+44469BA5EBF28547491442BA88A996C91D2E5C1874BD56131FDE6FC2C19F95B, Partner enc key at pos 0
+44469BA5EBF28547491442BA88A996C91D2E5C1874BD56131FDE6FC2C19F95B, NA
+725FAAA4E9862E5983979C85E58AA59347FF2C5C1AE0CC89201B34711588E957, NA
+725FAAA4E9862E5983979C85E58AA59347FF2C5C1AE0CC89201B34711588E957, NA
+```
+
+Output Secret shares at `etc/example/dpmc/output_partner_partner_features.csv`:
+```bash
+15639158529780438101,10355320774873656494
+13789343269605551875,7497287768912087672
+1103603035954233870,16491667106643692030
+16818785984424715280,17987764095998628279
+5216582505071635303,17033543400689351121
+9296137075950449940,6917021766104166842
+1775928733629157667,2173601871347247126
+10727446575062113091,6625868366339267723
+```
+
+Since DPMC focuses on left-join, wherever was a match in Company's dataset, we have secret shares
+of the partner's associated data, while wherever there was no match, we have secret shares of zero.
+
+Indeed, since `email1` and `email4` matched:
+```bash
+15639158529780438101 ^ 15639158529780438101 = 0,  10355320774873656494 ^ 10355320774873656494 = 0
+13789343269605551875 ^ 13789343269605551875 = 0,  7497287768912087672 ^ 7497287768912087672 = 0
+1103603035954233860 ^ 1103603035954233870 = 10,   16491667106643692030 ^ 16491667106643692030 = 0
+16818785984424715268 ^ 16818785984424715280 = 20, 17987764095998628258 ^ 17987764095998628279 = 21
+5216582505071635321 ^ 5216582505071635303 = 30,   17033543400689351118 ^ 17033543400689351121 = 31
+9296137075950449950 ^ 9296137075950449940 = 0,   6917021766104166842 ^ 6917021766104166842 = 0
+1775928733629157667 ^ 1775928733629157667 = 0,    2173601871347247126 ^ 2173601871347247126 = 0
+10727446575062113091 ^ 10727446575062113091 = 0,  6625868366339267723 ^ 6625868366339267723 = 0
+
+```
+Observe that `email1` matched with both partners and here we have secret shares for both.
+
+
+## Delegated Private Matching for Compute with Secure Shuffling (DsPMC)
 
 Start helper (server):
 ```bash
