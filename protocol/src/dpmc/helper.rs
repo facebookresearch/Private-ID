@@ -460,9 +460,15 @@ impl HelperDpmcProtocol for HelperDpmc {
                     let x = unique_partner_ids
                         .iter_mut()
                         .map(|(key, v)| {
-                            v.resize(num_of_matches, (0, 0));
+                            v.resize(num_of_matches, (usize::MAX, usize::MAX));
                             v.iter()
-                                .map(|(idx, from_p)| (key.to_string(), *idx, true, *from_p))
+                                .map(|(idx, from_p)| {
+                                    if *idx < usize::MAX {
+                                        (key.to_string(), *idx, true, *from_p)
+                                    } else {
+                                        (key.to_string(), 0, false, 0)
+                                    }
+                                })
                                 .collect::<Vec<_>>()
                         })
                         .collect::<Vec<_>>();
