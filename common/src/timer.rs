@@ -28,7 +28,7 @@ use wasm_timer::Instant;
 /// ```
 /// use common::timer;
 /// let mut t = timer::Timer::new("my method");
-/// let values = vec![1,2,3];
+/// let values = vec![1, 2, 3];
 /// // would send to log info a message like:
 /// // [my method | read input size: 3] elapsed 0.231 sec [qps: 2314]
 /// t.qps("read input", values.len());
@@ -126,11 +126,11 @@ impl Timer {
     ///
     /// ```
     /// use common::timer;
-    /// { // execution block to meter RAII
+    /// {
+    ///     // execution block to meter RAII
     ///     let mut timer = timer::Timer::new("my method");
     ///     timer.set_extra_label("perf");
     ///     timer.set_size(100);
-    ///
     /// } // on exiting the execution block the timer will fire
     /// ```
     pub fn new(label: &str) -> Timer {

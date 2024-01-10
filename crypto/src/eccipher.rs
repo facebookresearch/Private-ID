@@ -163,14 +163,17 @@ impl Default for ECRistrettoSequential {
 ///
 /// ```
 /// extern crate curve25519_dalek;
-/// use rand_core::OsRng;
-/// use curve25519_dalek::scalar::Scalar;
 /// use crypto::eccipher;
+/// use curve25519_dalek::scalar::Scalar;
+/// use rand_core::OsRng;
 /// let mut rng = OsRng;
 /// let (key, power) = (Scalar::random(&mut rng), Scalar::random(&mut rng));
 /// let eccipher = eccipher::ECRistrettoParallel::default();
 ///
-/// let text = vec!["a", "b", "c"].iter().map(|x| String::from(*x)).collect::<Vec<_>>();
+/// let text = vec!["a", "b", "c"]
+///     .iter()
+///     .map(|x| String::from(*x))
+///     .collect::<Vec<_>>();
 /// ```
 pub struct ECRistrettoParallel {}
 
