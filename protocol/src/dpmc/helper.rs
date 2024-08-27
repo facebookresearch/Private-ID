@@ -10,6 +10,8 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+use base64::engine::general_purpose::URL_SAFE;
+use base64::Engine;
 use common::permutations::gen_permute_pattern;
 use common::permutations::permute;
 use common::permutations::undo_permute;
@@ -162,7 +164,7 @@ impl HelperDpmcProtocol for HelperDpmc {
                         let y = self.ec_cipher.to_bytes(&x);
                         y[0].buffer.clone()
                     };
-                    base64::encode_config(aes_key_bytes, base64::URL_SAFE)
+                    URL_SAFE.encode(aes_key_bytes)
                 };
 
                 let alpha_t = {
