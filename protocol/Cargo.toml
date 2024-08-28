@@ -13,7 +13,7 @@ edition = "2021"
 common = {path = "../common", version = "0.1.0"}
 crypto = {path = "../crypto", version = "0.1.0"}
 
-base64 = "0.13"
+base64 = "0.21.7"
 csv = "1.1.1"
 fernet = "0.2.1"
 hex = "0.4.2"
