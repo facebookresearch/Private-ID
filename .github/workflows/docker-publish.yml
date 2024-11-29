@@ -67,7 +67,7 @@ jobs:
 
       - name: Set output
         id: vars
-        run: echo ::set-output name=ref::${GITHUB_REF##*/}
+        run: echo "ref=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
 
       - name: Tag docker image
         run: |
